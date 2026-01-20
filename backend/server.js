@@ -1,23 +1,20 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
+const productsRouter = require("./routes/products");
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN;
 
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
-});
+// The paths
 
-app.get("/products", (req, res) => {
-  res.json([
-    { id: 1, name: "Long-Sleeve Tee", price: 29 },
-    { id: 2, name: "Short Bomber Jacket", price: 89 },
-  ]);
-});
+app.use("/products", productsRouter);
 
-const PORT = 4000;
+const PORT = process.env.PORT;
+const HOST = process.env.HOST;
 app.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`);
+  console.log(`Backend running on ${HOST}:${PORT}`);
 });
