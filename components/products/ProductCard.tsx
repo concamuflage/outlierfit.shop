@@ -1,45 +1,52 @@
-
-
 import Link from "next/link";
 
+// Define a TypeScript type for a product object, which describes the shape of the data this component expects.
+// The `?` after some properties means they are optional and may be undefined.
 export type Product = {
   slug: string;
   name: string;
-  price: number;
-  currency?: string; // default USD
-  brand?: string;
-  imageUrl?: string;
-  fitNote?: string; // e.g., "Best for 160–168cm"
-  tags?: string[];  // e.g., ["Shorter sleeves", "Regular fit"]
+  price: number; // USD
+  brand: string;
+  imageUrl: string;
+  colors: string[];
 };
 
+// Define the props object type for the ProductCard component.
+// This tells TypeScript that ProductCard expects a single prop named `product` of type Product.
 type ProductCardProps = {
   product: Product;
 };
 
-function formatPrice(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
+// This is a React functional component named ProductCard.
+// React components are reusable pieces of UI that can accept inputs (props) and render elements.
+// This component renders a card displaying product details.
 export default function ProductCard({ product }: ProductCardProps) {
-  const currency = product.currency ?? "USD";
+  // Destructuring `{ product }` means extracting the product property from the props object directly.
+  
+  // Format the product price as US dollars using Intl.NumberFormat,
+  // which formats numbers according to locale and currency rules.
+  const priceText = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(product.price);
 
   return (
+    // The Link component from Next.js enables client-side navigation to the product's detail page.
     <Link
       href={`/products/${product.slug}`}
       className="group block overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:shadow"
     >
       <div className="aspect-[4/5] w-full bg-zinc-100">
+        {/* Conditional rendering: if product.imageUrl exists, show the image; otherwise, show a placeholder */}
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.imageUrl}
             alt={product.name}
             className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+            // `loading="lazy"` defers loading the image until it is close to being visible,
+            // improving page load performance.
             loading="lazy"
           />
         ) : (
@@ -58,36 +65,19 @@ export default function ProductCard({ product }: ProductCardProps) {
             <h3 className="mt-1 line-clamp-2 text-base font-medium text-zinc-900">
               {product.name}
             </h3>
+
+            {/* If product.colors exists and has items, join the array into a comma-separated string */}
+            {product.colors && product.colors.length > 0 ? (
+              <div className="mt-2 text-xs text-zinc-600">
+                Colors: {product.colors.join(", ")}
+              </div>
+            ) : null}
           </div>
+
           <div className="shrink-0 text-sm font-semibold text-zinc-900">
-            {formatPrice(product.price, currency)}
+            {priceText}
           </div>
         </div>
-
-        {product.fitNote ? (
-          <div className="mt-3 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700">
-            {product.fitNote}
-          </div>
-        ) : null}
-
-        {product.tags && product.tags.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {product.tags.slice(0, 3).map((t) => (
-              <span
-                key={t}
-                className="rounded-full bg-zinc-900/5 px-3 py-1 text-xs text-zinc-700"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {product.fitNote ? (
-          <p className="mt-3 text-sm text-zinc-600">{product.fitNote}</p>
-        ) : product.fitNote === undefined && product.fitNote !== "" ? (
-          <p className="mt-3 text-sm text-zinc-600">Fit-focused pick for shorter proportions.</p>
-        ) : null}
       </div>
     </Link>
   );

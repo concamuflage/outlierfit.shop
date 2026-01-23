@@ -1,87 +1,94 @@
-"use client";
+"use client"; 
+// "use client" directive tells Next.js that this file is a Client Component, meaning it will be rendered on the client side and can use React hooks like useState and useEffect.
 
-import React, { useMemo, useState } from "react";
+// Import necessary React hooks and components
+import React, { useEffect, useMemo, useState } from "react";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
 import { type Product } from "@/components/products/ProductCard";
 
-const CATEGORIES = ["Long-Sleeve Tees", "Jackets",""];
+// Define available product categories for filtering
+const CATEGORIES = ["Long Sleeve T-Shirt", "Jackets"];
 
-const PRODUCTS: Array<Product & { category: string }> = [
-  {
-    slug: "nike-club-tee",
-    name: "Nike Club Tee",
-    brand: "Nike",
-    price: 29,
-    imageUrl: "/images/nike-club-tee.jpg",
-    fitNote: "Not too long; good everyday tee",
-    tags: ["Regular fit", "Soft cotton", "Easy layering"],
-    category: "Tops",
-  },
-  {
-    slug: "adidas-essentials-hoodie",
-    name: "Adidas Essentials Hoodie",
-    brand: "Adidas",
-    price: 55,
-    imageUrl: "/images/adidas-hoodie.jpg",
-    fitNote: "Clean proportions; sleeves run shorter",
-    tags: ["Cozy", "Streetwear", "Everyday"],
-    category: "Tops",
-  },
-  {
-    slug: "uniqlo-smart-ankle-pants",
-    name: "Smart Ankle Pants",
-    brand: "Uniqlo",
-    price: 49,
-    imageUrl: "/images/ankle-pants.jpg",
-    fitNote: "Ankle length works well for shorter inseams",
-    tags: ["Office", "Stretch", "Slim taper"],
-    category: "Bottoms",
-  },
-  {
-    slug: "nike-club-joggers",
-    name: "Nike Club Joggers",
-    brand: "Nike",
-    price: 59,
-    imageUrl: "/images/nike-joggers.jpg",
-    fitNote: "Tapered leg; easy to cuff",
-    tags: ["Tapered", "Casual", "Fleece"],
-    category: "Bottoms",
-  },
-  {
-    slug: "bombers-minimal-jacket",
-    name: "Minimal Bomber Jacket",
-    brand: "Curated",
-    price: 89,
-    imageUrl: "/images/bomber.jpg",
-    fitNote: "Shorter hem and sleeves",
-    tags: ["Outerwear", "Minimal", "Layering"],
-    category: "Outerwear",
-  },
-  {
-    slug: "new-balance-530",
-    name: "New Balance 530",
-    brand: "New Balance",
-    price: 99,
-    imageUrl: "/images/nb-530.jpg",
-    fitNote: "Chunky silhouette; versatile styling",
-    tags: ["Everyday", "Comfort", "Sneakers"],
-    category: "Shoes",
-  },
-];
+// Base URL for API requests, loaded from environment variables
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+if (!API_BASE_URL) {
+  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+}
+
+// Conversion rate from RMB to USD, loaded from environment variables
+// This is used to convert prices from RMB to USD by multiplying RMB price by this rate.
+const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 export default function ProductsPage() {
+  // State to keep track of the currently selected category filter
+  // useState<string | null> means the state can hold either a string or null.
+  // The generic type parameter <string | null> tells TypeScript what type of value this state holds.
+  // The union type 'string | null' means the value can be either a string or null (no category selected).
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const products = useMemo(() => {
-    if (!selectedCategory) return PRODUCTS;
-    return PRODUCTS.filter((p) => p.category === selectedCategory);
+  // State to hold the raw product data fetched from the backend API
+  // Using any[] here means this is an array of any type of objects.
+  // This is not ideal because it disables type checking for the product data.
+  // Ideally, we would define a specific type/interface for the product data.
+  const [productsData, setProductsData] = useState<any[]>([]);
+
+  // State to indicate whether the product data is currently being loaded
+  const [loading, setLoading] = useState(false);
+
+  // State to store any error messages encountered during data fetching
+  const [error, setError] = useState<string | null>(null);
+
+  // useEffect runs side effects after the component renders.
+  // Here, it fetches product data whenever the selectedCategory changes.
+  // The dependency array [selectedCategory] means this effect runs whenever selectedCategory changes.
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // encodeURIComponent safely encodes the selectedCategory string to be used in a URL,
+        // escaping characters that could break the URL.
+        const url =
+          selectedCategory === null
+            ? `${API_BASE_URL}/products`
+            : `${API_BASE_URL}/products/styles/${encodeURIComponent(selectedCategory)}`;
+
+        const res = await fetch(url);
+        // res.ok is true if the HTTP status code is in the 200-299 range, indicating success.
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setProductsData(Array.isArray(data) ? data : []);
+      } catch (e: any) {
+        setError(e?.message ?? "Failed to load products");
+        setProductsData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, [selectedCategory]);
 
+  // useMemo memoizes the computed products array to avoid recalculating on every render
+  // It only recalculates when selectedCategory or productsData change.
+  // We use it here to efficiently map backend product data to the shape expected by ProductCard components.
+  const products = useMemo(() => {
+    return productsData.map((p) => ({
+      slug: String(p.product_id),
+      name: p.name,
+      brand: p.brand,
+      // Array.isArray checks if photos or images are arrays before accessing the first element to avoid errors.
+      imageUrl: p.photos[0],
+      colors: p.colors,
+      // Convert price from RMB to USD by multiplying the RMB price by RMB_TO_USD conversion rate.
+      price: p.lowest_cost_rmb * RMB_TO_USD,
+    }));
+  }, [selectedCategory, productsData]);
+
+  // Render the product page including the filter sidebar and product grid
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-
-
       <main className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-semibold tracking-tight">Shop</h1>
@@ -100,21 +107,25 @@ export default function ProductsPage() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <div className="text-sm text-zinc-600">
-                Showing <span className="font-medium text-zinc-900">{products.length}</span> item
+                Showing{" "}
+                <span className="font-medium text-zinc-900">{products.length}</span> item
                 {products.length === 1 ? "" : "s"}
                 {selectedCategory ? (
                   <>
-                    {" "}in <span className="font-medium text-zinc-900">{selectedCategory}</span>
+                    {" "}
+                    in <span className="font-medium text-zinc-900">{selectedCategory}</span>
                   </>
                 ) : null}
               </div>
             </div>
 
+            {loading ? <div className="mb-4 text-sm text-zinc-600">Loading...</div> : null}
+            {error ? <div className="mb-4 text-sm text-red-600">{error}</div> : null}
+
             <ProductGrid products={products} />
           </div>
         </div>
       </main>
-
     </div>
   );
 }
