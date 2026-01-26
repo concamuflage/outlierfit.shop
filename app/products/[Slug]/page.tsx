@@ -1,75 +1,78 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useParams } from "next/navigation";
 import ProductGallery from "@/components/products/ProductGallery";
+import ProductInfoPanel, {
+  type ProductInfoPanelProduct,
+} from "@/components/products/ProductInfoPanel";
+import { useCart } from "@/components/cart/CartContext";
 
-// Backend response shape for GET /products/:id
-// This matches the JSON you showed.
-type ApiMaterial = {
-  material: string;
-  percentage: number;
-};
+type ProductMaterial = { material: string; percentage: number | null };
 
-type ApiProduct = {
+type ProductVariant = {
+  variant_id: number;
   sku: string;
+  color: string;
   size: string;
   height_cm: number | null;
   chest_cm: number | null;
-  description: string;
-  id: number;
-  name: string;
-  brand: string;
-  style: string;
-  color: string;
+  cost_rmb: number | null;
   qty: number | null;
-  cost_rmb: string | number | null;
   images: string[];
-  materials: ApiMaterial[];
 };
 
-// In the Next.js App Router, a dynamic route like app/products/[slug]/page.tsx
-// receives the URL parameter via `params`.
-// Example: /products/1 -> params.slug === "1"
-export default function ProductDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  // Prefer the env var if set; otherwise build a sensible default based on the current host.
-  // This avoids hardcoding "localhost".
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    (typeof window !== "undefined" ? `http://${window.location.hostname}:4000` : "");
+type ProductDetail = {
+  product_id: number;
+  name: string;
+  description: string;
+  brand: string;
+  style: string;
+  materials: ProductMaterial[];
+  variants: ProductVariant[];
+};
 
-  // RMB -> USD conversion factor (you can override in .env.local)
-  const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+if (!API_BASE_URL) {
+  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+}
 
-  const slug = params.slug;
+export default function ProductDetailPage() {
+  const params = useParams<{ Slug: string }>();
+  const slug = params?.Slug ?? "";
+  const { addItem, openCart } = useCart();
 
-  // Local state for the product details.
-  const [product, setProduct] = useState<ApiProduct | null>(null);
+  const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch the product details when the page loads OR when the slug changes.
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (!API_BASE_URL) {
-        setError(
-          "Missing API base URL. Set NEXT_PUBLIC_API_BASE_URL in your frontend .env.local."
-        );
-        return;
-      }
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
+  const productId = useMemo(() => {
+    const parsed = Number(slug);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [slug]);
+
+  useEffect(() => {
+    if (productId == null) {
+      setProduct(null);
+      setError("Invalid product id");
+      return;
+    }
+
+    const fetchProduct = async () => {
       setLoading(true);
       setError(null);
-
       try {
-        const res = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(slug)}`);
+        const res = await fetch(`${API_BASE_URL}/products/${productId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = (await res.json()) as ApiProduct;
+        const data = await res.json();
+        if (typeof data !== "object" || data === null || !Array.isArray(data.variants)) {
+          setError("Invalid product data");
+          setProduct(null);
+          return;
+        }
         setProduct(data);
       } catch (e: any) {
         setError(e?.message ?? "Failed to load product");
@@ -80,142 +83,214 @@ export default function ProductDetailPage({
     };
 
     fetchProduct();
-  }, [API_BASE_URL, slug]);
+  }, [productId]);
 
-  // Convert price from RMB to USD, ensuring we handle string values like "229.00".
-  const priceUsdText = useMemo(() => {
-    if (!product) return "";
+  const variants = useMemo(
+    () => (product?.variants && Array.isArray(product.variants) ? product.variants : []),
+    [product]
+  );
 
-    const rmb = product.cost_rmb == null ? 0 : Number(product.cost_rmb);
-    const usd = rmb * RMB_TO_USD;
+  const availableColors = useMemo(() => {
+    const s = new Set<string>();
+    for (const v of variants) {
+      if (typeof v?.color === "string" && v.color.trim()) s.add(v.color);
+    }
+    return Array.from(s);
+  }, [variants]);
 
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(usd);
-  }, [product, RMB_TO_USD]);
+  const availableSizes = useMemo(() => {
+    const s = new Set<string>();
+    for (const v of variants) {
+      if (selectedColor && v.color !== selectedColor) continue;
+      if (typeof v?.size === "string" && v.size.trim()) s.add(v.size);
+    }
+    return Array.from(s);
+  }, [variants, selectedColor]);
+
+  const selectedVariant = useMemo(() => {
+    if (variants.length === 0) return null;
+    if (selectedColor && selectedSize) {
+      const exact = variants.find((v) => v.color === selectedColor && v.size === selectedSize);
+      if (exact) return exact;
+    }
+    if (selectedColor) {
+      const byColor = variants.find((v) => v.color === selectedColor);
+      if (byColor) return byColor;
+    }
+    return variants[0];
+  }, [variants, selectedColor, selectedSize]);
+
+  const selectedColorFirstImage = useMemo(() => {
+    if (!selectedColor) return null;
+    const match = variants.find((v) => v.color === selectedColor && Array.isArray(v.images) && v.images.length > 0);
+    if (!match) return null;
+    const first = match.images.find((img) => typeof img === "string" && img.trim().length > 0);
+    return first ?? null;
+  }, [variants, selectedColor]);
+
+  const galleryPhotos = useMemo(() => {
+    const allImages = new Set<string>();
+    for (const v of variants) {
+      const imgs = Array.isArray(v.images) ? v.images : [];
+      for (const img of imgs) {
+        if (typeof img === "string" && img.trim().length > 0) {
+          allImages.add(img);
+        }
+      }
+    }
+    return Array.from(allImages);
+  }, [variants]);
+
+  const galleryInitialIndex = useMemo(() => {
+    if (!selectedColorFirstImage) return 0;
+    const idx = galleryPhotos.indexOf(selectedColorFirstImage);
+    return idx >= 0 ? idx : 0;
+  }, [galleryPhotos, selectedColorFirstImage]);
+
+  const infoProduct = useMemo<ProductInfoPanelProduct | null>(() => {
+    if (!product || !selectedVariant) return null;
+    return {
+      sku: selectedVariant.sku,
+      size: selectedVariant.size,
+      height_cm: selectedVariant.height_cm,
+      chest_cm: selectedVariant.chest_cm,
+      description: product.description,
+      id: product.product_id,
+      name: product.name,
+      brand: product.brand,
+      style: product.style,
+      color: selectedVariant.color,
+      qty: selectedVariant.qty,
+      cost_rmb: selectedVariant.cost_rmb,
+      materials: product.materials ?? [],
+    };
+  }, [product, selectedVariant]);
+
+  useEffect(() => {
+    if (!product) return;
+    if (availableColors.length > 0 && selectedColor === null) {
+      setSelectedColor(availableColors[0]);
+    }
+  }, [product, availableColors, selectedColor]);
+
+  useEffect(() => {
+    if (availableSizes.length === 0) {
+      setSelectedSize(null);
+      return;
+    }
+    if (selectedSize === null || !availableSizes.includes(selectedSize)) {
+      setSelectedSize(availableSizes[0]);
+    }
+  }, [availableSizes, selectedColor, selectedSize]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-600">
+        Loading...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-600">
+        Product not found.
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      {/* Header */}
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/products" className="text-lg font-semibold tracking-tight">
-            Project888
-          </Link>
-          <nav className="text-sm text-zinc-600">
-            <Link href="/products" className="hover:text-zinc-900">
-              Shop
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      {/* Main content */}
       <main className="mx-auto max-w-6xl px-6 py-10">
-        {/* Loading / error states */}
-        {loading ? <div className="text-sm text-zinc-600">Loading...</div> : null}
-        {error ? <div className="mt-2 text-sm text-red-600">{error}</div> : null}
-
-        {/* Product UI */}
-        {product ? (
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-            {/* Left: image gallery */}
-            <div>
-              <ProductGallery photos={product.images ?? []} alt={product.name} />
-            </div>
-
-            {/* Right: product info */}
-            <div>
-              <div className="text-sm text-zinc-500">{product.brand}</div>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight">{product.name}</h1>
-              <div className="mt-3 text-lg font-semibold">{priceUsdText}</div>
-
-              <div className="mt-6 space-y-3 text-sm">
-                <div>
-                  <span className="text-zinc-500">Style:</span> {product.style}
-                </div>
-                <div>
-                  <span className="text-zinc-500">Color:</span> {product.color}
-                </div>
-                <div>
-                  <span className="text-zinc-500">Size:</span> {product.size}
-                </div>
-                <div>
-                  <span className="text-zinc-500">SKU:</span> {product.sku}
-                </div>
-                <div>
-                  <span className="text-zinc-500">Stock:</span>{" "}
-                  {product.qty == null ? "Unknown" : product.qty}
-                </div>
-              </div>
-
-              {/* Measurements */}
-              <div className="mt-8">
-                <h2 className="text-base font-medium">Measurements</h2>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                    <div className="text-xs text-zinc-500">Height (cm)</div>
-                    <div className="mt-1 font-medium">
-                      {product.height_cm == null ? "—" : product.height_cm}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                    <div className="text-xs text-zinc-500">Chest (cm)</div>
-                    <div className="mt-1 font-medium">
-                      {product.chest_cm == null ? "—" : product.chest_cm}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Materials */}
-              <div className="mt-8">
-                <h2 className="text-base font-medium">Materials</h2>
-                {Array.isArray(product.materials) && product.materials.length > 0 ? (
-                  <ul className="mt-3 space-y-2 text-sm">
-                    {product.materials.map((m, idx) => (
-                      <li
-                        key={`${m.material}-${idx}`}
-                        className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3"
-                      >
-                        <span className="text-zinc-900">{m.material}</span>
-                        <span className="text-zinc-600">{m.percentage}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="mt-2 text-sm text-zinc-600">No materials listed.</div>
-                )}
-              </div>
-
-              {/* Description */}
-              <div className="mt-8">
-                <h2 className="text-base font-medium">Description</h2>
-                <p className="mt-2 text-sm text-zinc-700">{product.description}</p>
-              </div>
-
-              <div className="mt-10">
-                <Link
-                  href="/products"
-                  className="text-sm font-medium text-zinc-900 underline underline-offset-4"
-                >
-                  Back to shop
-                </Link>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-zinc-200 bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-6 text-sm text-zinc-600">
-          <div>Project888</div>
-          <div className="mt-1">© {new Date().getFullYear()} All rights reserved.</div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
+          <p className="mt-2 text-sm text-zinc-600">{product.description}</p>
         </div>
-      </footer>
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_400px]">
+          <ProductGallery
+            photos={galleryPhotos}
+            alt={product.name}
+            initialIndex={galleryInitialIndex}
+          />
+
+          <div>
+            <div className="mt-6 space-y-4">
+              <div>
+                <div className="text-sm font-medium text-zinc-900">Color</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {availableColors.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSelectedColor(c)}
+                      className={
+                        "rounded-full border px-4 py-2 text-sm " +
+                        (c === selectedColor
+                          ? "border-zinc-900 bg-zinc-900 text-white"
+                          : "border-zinc-200 bg-white text-zinc-900")
+                      }
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-medium text-zinc-900">Size</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {availableSizes.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSelectedSize(s)}
+                      className={
+                        "rounded-full border px-4 py-2 text-sm " +
+                        (s === selectedSize
+                          ? "border-zinc-900 bg-zinc-900 text-white"
+                          : "border-zinc-200 bg-white text-zinc-900")
+                      }
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {infoProduct ? <ProductInfoPanel product={infoProduct} /> : null}
+            {infoProduct && selectedVariant ? (
+              <button
+                type="button"
+                onClick={() => {
+                  addItem({
+                    id: `${product.product_id}-${selectedVariant.variant_id}`,
+                    name: product.name,
+                    price: infoProduct.cost_rmb == null ? 0 : Number(infoProduct.cost_rmb),
+                    imageUrl: galleryPhotos[0] ?? null,
+                    color: selectedVariant.color,
+                    size: selectedVariant.size,
+                    qty: 1,
+                  });
+                  openCart();
+                }}
+                className="mt-6 w-full rounded-full bg-zinc-900 px-4 py-3 text-sm text-white hover:bg-zinc-800"
+              >
+                Add to cart
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

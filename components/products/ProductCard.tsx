@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { formatUsd } from "@/lib/formatters";
+
 
 // Define a TypeScript type for a product object, which describes the shape of the data this component expects.
 // The `?` after some properties means they are optional and may be undefined.
@@ -25,11 +27,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   
   // Format the product price as US dollars using Intl.NumberFormat,
   // which formats numbers according to locale and currency rules.
-  const priceText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(product.price);
+  const priceText = formatUsd(product.price);
 
   return (
     // The Link component from Next.js enables client-side navigation to the product's detail page.

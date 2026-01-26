@@ -5,14 +5,15 @@ exports.getProductById = async (req, res) => {
 
   const result = await pool.query(
     `SELECT 
+      product_variants.id AS variant_id,
       product_variants.sku,
       product_variants.cost_rmb,
       sizes.size,
       sizes.height_cm,
       sizes.chest_cm,
-      products.description,
-      products.id,
+      products.id AS product_id,
       products.name,
+      products.description,
       brands.brand,
       styles.style,
       colors.color,
@@ -39,61 +40,85 @@ exports.getProductById = async (req, res) => {
       ON product_variant_materials.product_variant_id = product_variants.id
     LEFT JOIN materials
       ON materials.id = product_variant_materials.material_id
-    WHERE product_variants.id = $1`,
+    WHERE products.id = $1`,
     [id]
   );
 
   if (!result.rows || result.rows.length === 0) {
-    return res.status(404).json({ error: "Product variant not found" });
+    return res.status(404).json({ error: "Product not found" });
   }
 
-  // Base fields (same across rows)
-  const base = {
-    sku: result.rows[0].sku,
-    size: result.rows[0].size,
-    height_cm: result.rows[0].height_cm,
-    chest_cm: result.rows[0].chest_cm,
-    description: result.rows[0].description,
-    id: result.rows[0].id,
-    name: result.rows[0].name,
-    brand: result.rows[0].brand,
-    style: result.rows[0].style,
-    color: result.rows[0].color,
-    qty: result.rows[0].qty,
-    cost_rmb: result.rows[0].cost_rmb,
+  // Product-level fields (same across all rows)
+  const first = result.rows[0];
+
+  const product = {
+    product_id: first.product_id,
+    name: first.name,
+    description: first.description,
+    brand: first.brand,
+    style: first.style,
+    // Materials are defined at the product level (same across variants)
+    materials: [],
+    // Variants are color/size specific, used for toggles in the frontend
+    variants: [],
   };
 
-  // Consolidate images (unique)
-  const imagesSet = new Set();
-  for (const row of result.rows) {
-    if (row.image_link) imagesSet.add(row.image_link);
-  }
-
-  // Consolidate materials (unique by material name)
+  // Consolidate product-level materials (unique by material name)
   const materialsMap = new Map();
+
+  // Consolidate variant-level info (unique by variant_id)
+  const variantsMap = new Map();
+
   for (const row of result.rows) {
-    if (!row.material) continue;
-
-    // If percentages come back as strings like "90.00", keep as number
-    const pct = row.percentage === null || row.percentage === undefined
-      ? null
-      : Number(row.percentage);
-
-    if (!materialsMap.has(row.material)) {
-      materialsMap.set(row.material, pct);
+    // 1) Materials (product-level)
+    if (row.material) {
+      const pct = row.percentage === null || row.percentage === undefined ? null : Number(row.percentage);
+      if (!materialsMap.has(row.material)) {
+        materialsMap.set(row.material, pct);
+      }
     }
+
+    // 2) Variants (color/size specific)
+    const variantId = row.variant_id;
+
+    if (!variantsMap.has(variantId)) {
+      variantsMap.set(variantId, {
+        variant_id: variantId,
+        sku: row.sku,
+        color: row.color,
+        size: row.size,
+        height_cm: row.height_cm,
+        chest_cm: row.chest_cm,
+        cost_rmb: row.cost_rmb === null || row.cost_rmb === undefined ? null : Number(row.cost_rmb),
+        qty: row.qty === null || row.qty === undefined ? null : Number(row.qty),
+        images: new Set(),
+      });
+    }
+
+    const v = variantsMap.get(variantId);
+
+    // Add images (unique)
+    if (row.image_link) v.images.add(row.image_link);
   }
 
-  const consolidated = {
-    ...base,
-    images: Array.from(imagesSet),
-    materials: Array.from(materialsMap.entries()).map(([material, percentage]) => ({
-      material,
-      percentage,
-    })),
-  };
+  product.materials = Array.from(materialsMap.entries()).map(([material, percentage]) => ({
+    material,
+    percentage,
+  }));
 
-  return res.json(consolidated);
+  product.variants = Array.from(variantsMap.values()).map((v) => ({
+    variant_id: v.variant_id,
+    sku: v.sku,
+    color: v.color,
+    size: v.size,
+    height_cm: v.height_cm,
+    chest_cm: v.chest_cm,
+    cost_rmb: v.cost_rmb,
+    qty: v.qty,
+    images: Array.from(v.images),
+  }));
+
+  return res.json(product);
 };
 
 

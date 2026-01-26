@@ -1,6 +1,6 @@
 
-
 import Link from "next/link";
+import CartButton from "@/components/cart/CartButton";
 
 export default function Header() {
   return (
@@ -20,6 +20,7 @@ export default function Header() {
           >
             Browse Items
           </Link>
+          <CartButton />
         </nav>
       </div>
     </header>
