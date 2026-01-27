@@ -3,12 +3,17 @@
 import React from "react";
 import { useCart } from "@/components/cart/CartContext";
 
+
+// this is the component shown in the upper right corner.
+
 export default function CartButton() {
+  // useCart() returns a CartContextValue, and we want the following two fields from the object.
   const { itemCount, openCart } = useCart();
 
   return (
     <button
       type="button"
+      // openCart will change isOpen
       onClick={openCart}
       className="flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-2 text-sm text-zinc-900 hover:border-zinc-400"
       aria-label="Open cart"

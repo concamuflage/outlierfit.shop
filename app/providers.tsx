@@ -1,8 +1,18 @@
+// Marks this file as a Client Component in Next.js App Router
 "use client";
 
+// Import React for creating React components
 import React from "react";
+// Import CartProvider to manage cart state across the app
 import { CartProvider } from "@/components/cart/CartContext";
 
+// Providers component serves as a wrapper for all global providers in the app
+// this component is used in layout. Everything under layout.tsx gets access to the cart context.
+
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return <CartProvider>{children}</CartProvider>;
+  // children: React.ReactNode means this component accepts any valid React child elements
+  return (
+    // CartProvider wraps the app to provide cart context to all children components
+    <CartProvider>{children}</CartProvider>
+  );
 }
