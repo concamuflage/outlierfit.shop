@@ -210,11 +210,6 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
-          <p className="mt-2 text-sm text-zinc-600">{product.description}</p>
-        </div>
-
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_400px]">
           <ProductGallery
             photos={galleryPhotos}
@@ -223,51 +218,56 @@ export default function ProductDetailPage() {
           />
 
           <div>
-            <div className="mt-6 space-y-4">
-              <div>
-                <div className="text-sm font-medium text-zinc-900">Color</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {availableColors.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setSelectedColor(c)}
-                      className={
-                        "rounded-full border px-4 py-2 text-sm " +
-                        (c === selectedColor
-                          ? "border-zinc-900 bg-zinc-900 text-white"
-                          : "border-zinc-200 bg-white text-zinc-900")
-                      }
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {infoProduct ? (
+              <ProductInfoPanel
+                product={infoProduct}
+                variantControls={
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-medium text-zinc-900">Color</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {availableColors.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setSelectedColor(c)}
+                            className={
+                              "rounded-full border px-4 py-2 text-sm " +
+                              (c === selectedColor
+                                ? "border-zinc-900 bg-zinc-900 text-white"
+                                : "border-zinc-200 bg-white text-zinc-900")
+                            }
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-              <div>
-                <div className="text-sm font-medium text-zinc-900">Size</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {availableSizes.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSelectedSize(s)}
-                      className={
-                        "rounded-full border px-4 py-2 text-sm " +
-                        (s === selectedSize
-                          ? "border-zinc-900 bg-zinc-900 text-white"
-                          : "border-zinc-200 bg-white text-zinc-900")
-                      }
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {infoProduct ? <ProductInfoPanel product={infoProduct} /> : null}
+                    <div>
+                      <div className="text-sm font-medium text-zinc-900">Size</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {availableSizes.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setSelectedSize(s)}
+                            className={
+                              "rounded-full border px-4 py-2 text-sm " +
+                              (s === selectedSize
+                                ? "border-zinc-900 bg-zinc-900 text-white"
+                                : "border-zinc-200 bg-white text-zinc-900")
+                            }
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                }
+              />
+            ) : null}
             {infoProduct && selectedVariant ? (
               <button
                 type="button"

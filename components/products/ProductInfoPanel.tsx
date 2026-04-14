@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, type ReactNode } from "react";
 import { formatUsd } from "@/lib/formatters";
 
 // This component displays the "text" portion of a product detail page:
@@ -33,9 +33,10 @@ export type ProductInfoPanelProduct = {
 
 export type ProductInfoPanelProps = {
   product: ProductInfoPanelProduct;
+  variantControls?: ReactNode;
 };
 
-export default function ProductInfoPanel({ product }: ProductInfoPanelProps) {
+export default function ProductInfoPanel({ product, variantControls }: ProductInfoPanelProps) {
   const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD);
 
   // Convert cost_rmb (often a string like "229.00") to a number,
@@ -48,9 +49,10 @@ export default function ProductInfoPanel({ product }: ProductInfoPanelProps) {
 
   return (
     <div>
-      <div className="text-sm text-zinc-500">{product.brand}</div>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">{product.name}</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
+      <div className="mt-1 text-base font-semibold text-zinc-700">{product.brand}</div>
       <div className="mt-3 text-lg font-semibold">{priceUsdText}</div>
+      {variantControls ? <div className="mt-6">{variantControls}</div> : null}
 
       <div className="mt-6 space-y-3 text-sm">
         <div>
@@ -70,31 +72,12 @@ export default function ProductInfoPanel({ product }: ProductInfoPanelProps) {
         </div>
       </div>
 
-      {/* Materials */}
-      {/* This section renders the materials composition of the product */}
-      {/* The conditional here checks if product.materials is an array and has at least one element */}
-      {/* The `? (...) : (...)` syntax is a ternary operator used for conditional rendering */}
       {Array.isArray(product.materials) && product.materials.length > 0 ? (
-        /* <ul> represents an unordered list, and <li> represents each list item */
-        <ul className="mt-3 grid grid-cols-2 gap-3 text-sm">
-          {/* .map((m, idx) => ...) iterates over each material in the materials array */}
-          {/* `m` is the current material object, `idx` is its index in the array */}
-          {product.materials.map((m, idx) => (
-            <li
-              /* The `key` prop helps React identify which items have changed, added, or removed */
-              key={`${m.material}-${idx}`}
-              className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3"
-            >
-              {/* {m.material} is the material name, {m.percentage} is its percentage */}
-              <span className="text-zinc-900">{m.material}</span>
-              <span className="text-zinc-600">{m.percentage}%</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        /* This fallback message shows when there are no materials listed */
-        <div className="mt-2 text-sm text-zinc-600">No materials listed.</div>
-      )}
+        <div className="mt-3 text-sm">
+          <span className="text-zinc-500">Materials:</span>{" "}
+          {product.materials.map((m) => `${m.material} ${m.percentage}%`).join(", ")}
+        </div>
+      ) : null}
 
       {/* Description */}
       <div className="mt-8">

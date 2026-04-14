@@ -3,6 +3,8 @@
 
 // Import React for creating React components
 import React from "react";
+// Import SessionProvider to manage auth state across the app
+import { SessionProvider } from "next-auth/react";
 // Import CartProvider to manage cart state across the app
 import { CartProvider } from "@/components/cart/CartContext";
 
@@ -12,7 +14,9 @@ import { CartProvider } from "@/components/cart/CartContext";
 export default function Providers({ children }: { children: React.ReactNode }) {
   // children: React.ReactNode means this component accepts any valid React child elements
   return (
-    // CartProvider wraps the app to provide cart context to all children components
-    <CartProvider>{children}</CartProvider>
+    // SessionProvider + CartProvider wrap the app to provide context to all children components
+    <SessionProvider>
+      <CartProvider>{children}</CartProvider>
+    </SessionProvider>
   );
 }

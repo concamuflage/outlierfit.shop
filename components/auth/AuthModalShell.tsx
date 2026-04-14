@@ -1,0 +1,80 @@
+// AuthModalShell (client component)
+//
+// Shared modal wrapper for auth forms.
+
+"use client";
+
+import React from "react";
+
+type AuthModalShellProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+};
+
+/**
+ * Shared modal wrapper for auth forms.
+ * Handles backdrop, positioning, and open/close transitions.
+ */
+export default function AuthModalShell({ isOpen, onClose, children }: AuthModalShellProps) {
+  return (
+    /*
+      Full-screen overlay container. We keep it mounted for smooth transitions
+      and control interactivity with pointer-events.
+    */
+    <div
+      className={
+        "fixed inset-0 z-50 transition " +
+        // When closed, block pointer events so the page underneath is clickable.
+        (isOpen ? "pointer-events-auto" : "pointer-events-none")
+      }
+      aria-hidden={!isOpen}
+    >
+      {/* Backdrop overlay that closes the modal on click. */}
+      <div
+        className={
+          "absolute inset-0 bg-black/40 transition-opacity " +
+          // Fade the backdrop in/out instead of mounting/unmounting it.
+          (isOpen ? "opacity-100" : "opacity-0")
+        }
+        onClick={onClose}
+      />
+
+      {/* Centered modal card container. */}
+      <div
+        className={
+          "absolute left-1/2 top-20 w-[90vw] max-w-md -translate-x-1/2 transition " +
+          // Keep layout stable while animating opacity.
+          (isOpen ? "opacity-100" : "opacity-0")
+        }
+      >
+        <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-900"
+              aria-label="Close"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="mt-4">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -5,8 +5,6 @@ import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
 import { type Product } from "@/components/products/ProductCard";
 
-const CATEGORIES = ["Long Sleeve T-Shirt", "Jackets"];
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!API_BASE_URL) {
   throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
@@ -14,9 +12,20 @@ if (!API_BASE_URL) {
 
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
+type ProductsApiItem = {
+  product_id?: number | string | null;
+  id?: number | string | null;
+  name?: string | null;
+  brand?: string | null;
+  style?: string | null;
+  photos?: string[] | null;
+  colors?: string[] | null;
+  lowest_cost_rmb?: number | string | null;
+};
+
 export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [productsData, setProductsData] = useState<any[]>([]);
+  const [productsData, setProductsData] = useState<ProductsApiItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,16 +34,12 @@ export default function ProductsPage() {
       setLoading(true);
       setError(null);
       try {
-        const url =
-          selectedCategory === null
-            ? `${API_BASE_URL}/products`
-            : `${API_BASE_URL}/products/styles/${encodeURIComponent(selectedCategory)}`;
-        const res = await fetch(url);
+        const res = await fetch(`${API_BASE_URL}/products`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setProductsData(Array.isArray(data) ? data : []);
-      } catch (e: any) {
-        setError(e?.message ?? "Failed to load products");
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to load products");
         setProductsData([]);
       } finally {
         setLoading(false);
@@ -42,18 +47,39 @@ export default function ProductsPage() {
     };
 
     fetchProducts();
-  }, [selectedCategory]);
+  }, []);
+
+  const categories = useMemo(() => {
+    const styles = new Set<string>();
+    for (const p of productsData) {
+      if (typeof p?.style === "string" && p.style.trim()) {
+        styles.add(p.style.trim());
+      }
+    }
+    return Array.from(styles).sort((a, b) => a.localeCompare(b));
+  }, [productsData]);
+
+  useEffect(() => {
+    if (selectedCategory !== null && !categories.includes(selectedCategory)) {
+      setSelectedCategory(null);
+    }
+  }, [categories, selectedCategory]);
+
+  const filteredProductsData = useMemo(() => {
+    if (selectedCategory === null) return productsData;
+    return productsData.filter((p) => p?.style === selectedCategory);
+  }, [productsData, selectedCategory]);
 
   const products = useMemo<Product[]>(() => {
-    return productsData.map((p) => ({
+    return filteredProductsData.map((p) => ({
       slug: String(p.product_id ?? p.id ?? ""),
-      name: p.name,
-      brand: p.brand,
-      imageUrl: Array.isArray(p.photos) ? p.photos[0] : "",
+      name: p.name ?? "",
+      brand: p.brand ?? "",
+      imageUrl: Array.isArray(p.photos) ? (p.photos[0] ?? "") : "",
       colors: Array.isArray(p.colors) ? p.colors : [],
       price: p.lowest_cost_rmb == null ? 0 : Number(p.lowest_cost_rmb) * RMB_TO_USD,
     }));
-  }, [productsData]);
+  }, [filteredProductsData]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -67,7 +93,7 @@ export default function ProductsPage() {
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr]">
           <FilterSidebar
-            categories={CATEGORIES}
+            categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
           />

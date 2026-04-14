@@ -1,6 +1,5 @@
 "use client"; // This directive marks the component to be rendered on the client side. This is necessary because this component uses React hooks and stateful logic that require client-side rendering.
 
-import React from "react";
 import Link from "next/link";
 import { useCart } from "@/components/cart/CartContext"; // useCart is a custom hook that provides access to the shopping cart's state and actions.
 import CartItemRow from "@/components/cart/CartItemRow"; // Component representing a single item row in the cart.

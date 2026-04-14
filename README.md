@@ -2,22 +2,25 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development NEXT server:
+First, run both servers together:
+
+```bash
+npm run dev:full
+```
+
+Or run them separately:
+
+Frontend (Next.js):
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-Second, run the node.js server. 
-You must be in backend folder and run the following.
+
+Backend (Node.js):
 
 ```bash
-npm run dev 
+cd backend
+npm run dev
 ```
 
 
