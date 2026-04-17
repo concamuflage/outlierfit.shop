@@ -107,11 +107,11 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
       {/* Main form. autoComplete keeps browser password managers happy. */}
       <form className="mt-6 space-y-4" onSubmit={handleSubmit} autoComplete="on">
         <div>
-          <label className="text-xs font-medium text-zinc-600" htmlFor="email">
+          <label className="text-xs font-medium text-zinc-600" htmlFor="login-email">
             Email
           </label>
           <input
-            id="email"
+            id="login-email"
             name="email"
             type="email"
             value={email}
@@ -124,11 +124,11 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
         </div>
 
         <div>
-          <label className="text-xs font-medium text-zinc-600" htmlFor="password">
+          <label className="text-xs font-medium text-zinc-600" htmlFor="login-password">
             Password
           </label>
           <input
-            id="password"
+            id="login-password"
             name="password"
             type="password"
             value={password}

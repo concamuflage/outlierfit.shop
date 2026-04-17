@@ -17,37 +17,21 @@ type AuthModalShellProps = {
  * Handles backdrop, positioning, and open/close transitions.
  */
 export default function AuthModalShell({ isOpen, onClose, children }: AuthModalShellProps) {
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    /*
-      Full-screen overlay container. We keep it mounted for smooth transitions
-      and control interactivity with pointer-events.
-    */
+    /* Full-screen overlay container. */
     <div
-      className={
-        "fixed inset-0 z-50 transition " +
-        // When closed, block pointer events so the page underneath is clickable.
-        (isOpen ? "pointer-events-auto" : "pointer-events-none")
-      }
-      aria-hidden={!isOpen}
+      className="fixed inset-0 z-50 transition pointer-events-auto"
+      aria-hidden={false}
     >
       {/* Backdrop overlay that closes the modal on click. */}
-      <div
-        className={
-          "absolute inset-0 bg-black/40 transition-opacity " +
-          // Fade the backdrop in/out instead of mounting/unmounting it.
-          (isOpen ? "opacity-100" : "opacity-0")
-        }
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/40 transition-opacity opacity-100" onClick={onClose} />
 
       {/* Centered modal card container. */}
-      <div
-        className={
-          "absolute left-1/2 top-20 w-[90vw] max-w-md -translate-x-1/2 transition " +
-          // Keep layout stable while animating opacity.
-          (isOpen ? "opacity-100" : "opacity-0")
-        }
-      >
+      <div className="absolute left-1/2 top-20 w-[90vw] max-w-md -translate-x-1/2 transition opacity-100">
         <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <button

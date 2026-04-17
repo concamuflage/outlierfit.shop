@@ -103,11 +103,11 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
       <form className="mt-6 space-y-4" onSubmit={handleSubmit} autoComplete="on">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-zinc-600" htmlFor="firstName">
+            <label className="text-xs font-medium text-zinc-600" htmlFor="signup-first-name">
               First name
             </label>
             <input
-              id="firstName"
+              id="signup-first-name"
               name="given-name"
               type="text"
               value={firstName}
@@ -119,11 +119,11 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-600" htmlFor="lastName">
+            <label className="text-xs font-medium text-zinc-600" htmlFor="signup-last-name">
               Last name
             </label>
             <input
-              id="lastName"
+              id="signup-last-name"
               name="family-name"
               type="text"
               value={lastName}
@@ -137,11 +137,11 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
         </div>
 
         <div>
-          <label className="text-xs font-medium text-zinc-600" htmlFor="email">
+          <label className="text-xs font-medium text-zinc-600" htmlFor="signup-email">
             Email
           </label>
           <input
-            id="email"
+            id="signup-email"
             name="email"
             type="email"
             value={email}
@@ -154,11 +154,11 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
         </div>
 
         <div>
-          <label className="text-xs font-medium text-zinc-600" htmlFor="password">
+          <label className="text-xs font-medium text-zinc-600" htmlFor="signup-password">
             Password
           </label>
           <input
-            id="password"
+            id="signup-password"
             name="password"
             type="password"
             value={password}
@@ -171,11 +171,11 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
         </div>
 
         <div>
-          <label className="text-xs font-medium text-zinc-600" htmlFor="confirmPassword">
+          <label className="text-xs font-medium text-zinc-600" htmlFor="signup-confirm-password">
             Confirm password
           </label>
           <input
-            id="confirmPassword"
+            id="signup-confirm-password"
             name="confirm-password"
             type="password"
             value={confirmPassword}
