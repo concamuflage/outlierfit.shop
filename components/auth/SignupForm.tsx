@@ -229,8 +229,16 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
           />
         </div>
 
-        {error ? <div className="text-xs text-red-600">{error}</div> : null}
-        {successMessage ? <div className="text-xs text-emerald-700">{successMessage}</div> : null}
+        {error ? (
+          <div id="signup-error" className="text-xs text-red-600">
+            {error}
+          </div>
+        ) : null}
+        {successMessage ? (
+          <div id="signup-success" className="text-xs text-emerald-700">
+            {successMessage}
+          </div>
+        ) : null}
 
         {successMessage ? (
           <button
@@ -244,6 +252,7 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
         ) : null}
 
         <button
+          id="signup-submit"
           type="submit"
           disabled={loading}
           className="w-full rounded-full bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-70"

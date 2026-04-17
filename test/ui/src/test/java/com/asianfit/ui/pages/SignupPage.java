@@ -6,14 +6,14 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 public class SignupPage extends BasePage {
-  private static final By FIRST_NAME = By.cssSelector("input#firstName");
-  private static final By LAST_NAME = By.cssSelector("input#lastName");
-  private static final By EMAIL = By.cssSelector("input#email");
-  private static final By PASSWORD = By.cssSelector("input#password");
-  private static final By CONFIRM_PASSWORD = By.cssSelector("input#confirmPassword");
-  private static final By SUBMIT = By.cssSelector("button[type='submit']");
-  private static final By ERROR = By.cssSelector(".text-red-600");
-  private static final By SUCCESS = By.cssSelector(".text-emerald-700");
+  private static final By FIRST_NAME = By.id("signup-first-name");
+  private static final By LAST_NAME = By.id("signup-last-name");
+  private static final By EMAIL = By.id("signup-email");
+  private static final By PASSWORD = By.id("signup-password");
+  private static final By CONFIRM_PASSWORD = By.id("signup-confirm-password");
+  private static final By SUBMIT = By.id("signup-submit");
+  private static final By ERROR = By.id("signup-error");
+  private static final By SUCCESS = By.id("signup-success");
 
   public SignupPage(WebDriver driver) {
     super(driver);
