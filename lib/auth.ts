@@ -60,8 +60,14 @@ export const authOptions: NextAuthOptions = {
           }),
         });
 
-        // If the response status is not 200 OK, treat it as invalid credentials and return null.
-        if (!res.ok) return null;
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null);
+          const message =
+            typeof payload?.error === "string" && payload.error.trim()
+              ? payload.error.trim()
+              : "Invalid email or password.";
+          throw new Error(message);
+        }
 
         // Parse the response JSON to get the user data returned by the backend.
         const user = await res.json();

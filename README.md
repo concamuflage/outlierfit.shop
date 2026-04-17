@@ -23,8 +23,32 @@ cd backend
 npm run dev
 ```
 
-
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Email Verification
+
+Email verification is handled by the backend and sent through Resend.
+
+Required backend env vars:
+
+```bash
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL=onboarding@your-domain.com
+CLIENT_ORIGIN=http://localhost:3000
+```
+
+Optional backend env vars:
+
+```bash
+EMAIL_VERIFICATION_APP_URL=http://localhost:3000
+EMAIL_VERIFICATION_TTL_HOURS=24
+```
+
+Notes:
+
+- `CLIENT_ORIGIN` is already used for CORS and is also the default base URL for verification links.
+- `EMAIL_VERIFICATION_APP_URL` overrides the link target if you want emails to point somewhere else.
+- New signups must verify their email before they can log in.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

@@ -12,16 +12,29 @@
 "use client";
 
 import React, { useState } from "react";
-import { signIn } from "next-auth/react";
 
 type SignupFormProps = {
   onSuccess?: () => void;
   compact?: boolean;
 };
 
+const PASSWORD_REQUIREMENTS_MESSAGE =
+  "Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.";
+
+function isStrongPassword(password: string) {
+  return (
+    password.length >= 12 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password) &&
+    !/\s/.test(password)
+  );
+}
+
 /**
  * Signup form UI and client-side submission handler.
- * Creates a user in the backend and then logs in via NextAuth.
+ * Creates a user in the backend and prompts for email verification.
  */
 export default function SignupForm({ onSuccess, compact = false }: SignupFormProps) {
   const [email, setEmail] = useState("");
@@ -30,20 +43,29 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   /**
    * Submit handler for the signup form.
-   * Validates password confirmation, creates the user, then signs in.
+   * Validates password confirmation, creates the user, then shows verification instructions.
    */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     // Client-side check to avoid an unnecessary network call.
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+
+    if (!isStrongPassword(password)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
       setLoading(false);
       return;
     }
@@ -71,21 +93,37 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
       return;
     }
 
-    // After successful signup, log the user in via NextAuth.
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    setLoading(false);
+    const data = await res.json().catch(() => null);
+    setSuccessMessage(data?.message ?? "Check your email to verify your account before signing in.");
+    onSuccess?.();
+  };
 
-    if (result?.error) {
-      setError("Invalid email or password.");
-      setLoading(false);
+  const handleResendVerification = async () => {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!apiBase) {
+      setError("Missing API base URL.");
       return;
     }
 
-    setLoading(false);
-    onSuccess?.();
+    setResending(true);
+    setError(null);
+
+    const res = await fetch(`${apiBase}/auth/resend-verification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setError(data?.error ?? "Unable to resend verification email.");
+      setResending(false);
+      return;
+    }
+
+    setSuccessMessage(data?.message ?? "Verification email sent.");
+    setResending(false);
   };
 
   return (
@@ -168,6 +206,10 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
             autoComplete="new-password"
             required
           />
+          <p className="mt-2 text-xs text-zinc-500">
+            Use at least 12 characters with uppercase, lowercase, a number, a special character,
+            and no spaces.
+          </p>
         </div>
 
         <div>
@@ -188,6 +230,18 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
         </div>
 
         {error ? <div className="text-xs text-red-600">{error}</div> : null}
+        {successMessage ? <div className="text-xs text-emerald-700">{successMessage}</div> : null}
+
+        {successMessage ? (
+          <button
+            type="button"
+            disabled={resending || !email}
+            onClick={handleResendVerification}
+            className="text-left text-xs text-zinc-700 underline disabled:opacity-50"
+          >
+            {resending ? "Sending verification email..." : "Resend verification email"}
+          </button>
+        ) : null}
 
         <button
           type="submit"

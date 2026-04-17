@@ -5,6 +5,7 @@ import com.asianfit.ui.pages.CartDrawer;
 import com.asianfit.ui.pages.LoginPage;
 import com.asianfit.ui.pages.ProductDetailPage;
 import com.asianfit.ui.pages.ProductsPage;
+import com.asianfit.ui.pages.SignupPage;
 import com.asianfit.ui.utils.DriverFactory;
 import com.asianfit.ui.utils.TestConfig;
 import io.cucumber.java.en.Given;
@@ -13,7 +14,13 @@ import io.cucumber.java.en.When;
 import org.testng.Assert;
 
 public class CartSteps {
+  private static final String PASSWORD_REQUIREMENTS_MESSAGE =
+    "Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.";
+  private static final String SIGNUP_SUCCESS_MESSAGE =
+    "Check your email to verify your account before signing in.";
+
   private String rememberedSubtotal;
+  private String generatedSignupEmail;
 
   private ProductsPage productsPage() {
     return new ProductsPage(DriverFactory.getDriver());
@@ -35,6 +42,10 @@ public class CartSteps {
     return new CartPage(DriverFactory.getDriver());
   }
 
+  private SignupPage signupPage() {
+    return new SignupPage(DriverFactory.getDriver());
+  }
+
   @Given("I open the products page")
   public void iOpenTheProductsPage() {
     productsPage().open();
@@ -43,6 +54,16 @@ public class CartSteps {
   @Given("I open the protected cart page")
   public void iOpenTheProtectedCartPage() {
     productsPage().openProtectedCartPage();
+  }
+
+  @Given("I open the login page")
+  public void iOpenTheLoginPage() {
+    DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
+  }
+
+  @Given("I open the signup page")
+  public void iOpenTheSignupPage() {
+    signupPage().open();
   }
 
   @When("I open the first product from the grid")
@@ -114,8 +135,58 @@ public class CartSteps {
     loginPage().signIn(TestConfig.testUserEmail(), TestConfig.testUserPassword());
   }
 
+  @When("I sign up with a generated account")
+  public void iSignUpWithAGeneratedAccount() {
+    long uniqueSuffix = System.currentTimeMillis();
+    generatedSignupEmail = "ui-test-" + uniqueSuffix + "@example.com";
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, "StrongPass123A!");
+  }
+
+  @When("I sign up with the configured existing account email")
+  public void iSignUpWithTheConfiguredExistingAccountEmail() {
+    signupPage().signUp("Existing", "User", TestConfig.testUserEmail(), "StrongPass123A!");
+  }
+
+  @When("I sign up with a generated account using password {string}")
+  public void iSignUpWithAGeneratedAccountUsingPassword(String password) {
+    long uniqueSuffix = System.currentTimeMillis();
+    String email = "ui-test-invalid-" + uniqueSuffix + "@example.com";
+    signupPage().signUp("UI", "Tester", email, password);
+  }
+
   @Then("I should land on the cart page")
   public void iShouldLandOnTheCartPage() {
     Assert.assertTrue(cartPage().isVisible(), "Expected cart page to be visible");
+  }
+
+  @Then("I should be on the signup page")
+  public void iShouldBeOnTheSignupPage() {
+    Assert.assertTrue(signupPage().isVisible(), "Expected signup page to be visible");
+  }
+
+  @Then("the login page should not show an authentication error")
+  public void theLoginPageShouldNotShowAnAuthenticationError() {
+    Assert.assertFalse(loginPage().hasErrorMessage(), "Login page should not show an authentication error");
+  }
+
+  @Then("the signup page should not show a validation error")
+  public void theSignupPageShouldNotShowAValidationError() {
+    Assert.assertFalse(signupPage().hasErrorMessage(), "Signup page should not show a validation error");
+  }
+
+  @Then("the signup page should show a validation error")
+  public void theSignupPageShouldShowAValidationError() {
+    Assert.assertTrue(signupPage().hasErrorMessage(), "Signup page should show a validation error");
+  }
+
+  @Then("the signup page should show the password requirements error")
+  public void theSignupPageShouldShowThePasswordRequirementsError() {
+    Assert.assertEquals(signupPage().errorMessage(), PASSWORD_REQUIREMENTS_MESSAGE);
+  }
+
+  @Then("the signup page should show a verification success message")
+  public void theSignupPageShouldShowAVerificationSuccessMessage() {
+    Assert.assertTrue(signupPage().hasSuccessMessage(), "Signup page should show a verification success message");
+    Assert.assertEquals(signupPage().successMessage(), SIGNUP_SUCCESS_MESSAGE);
   }
 }

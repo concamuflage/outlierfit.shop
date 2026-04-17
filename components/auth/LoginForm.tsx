@@ -26,6 +26,8 @@ type LoginFormProps = {
   compact?: boolean;
 };
 
+const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
+
 /**
  * Login form UI and client-side submission handler.
  * Delegates auth to NextAuth credentials provider.
@@ -35,7 +37,9 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   /**
    * Submit handler for the login form.
@@ -52,6 +56,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
 
     // Clear any previous error message before attempting login
     setError(null);
+    setNotice(null);
 
     // TEMP DEV: Add small artificial delay so we can SEE the loading state.
     // In production, you normally would NOT do this.
@@ -78,7 +83,8 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     });
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      const decodedError = decodeURIComponent(result.error);
+      setError(decodedError || "Invalid email or password.");
       setLoading(false);
       return;
     }
@@ -91,6 +97,33 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
 
     router.push(result?.url ?? "/");
     router.refresh();
+  };
+
+  const handleResendVerification = async () => {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!apiBase) {
+      setError("Missing API base URL.");
+      return;
+    }
+
+    setResending(true);
+    setNotice(null);
+
+    const response = await fetch(`${apiBase}/auth/resend-verification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      setError(payload?.error ?? "Unable to resend verification email.");
+      setResending(false);
+      return;
+    }
+
+    setNotice(payload?.message ?? "Verification email sent.");
+    setResending(false);
   };
 
   return (
@@ -141,6 +174,18 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
         </div>
 
         {error ? <div className="text-xs text-red-600">{error}</div> : null}
+        {notice ? <div className="text-xs text-emerald-700">{notice}</div> : null}
+
+        {error === EMAIL_NOT_VERIFIED_MESSAGE ? (
+          <button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={resending || !email}
+            className="text-left text-xs text-zinc-700 underline disabled:opacity-50"
+          >
+            {resending ? "Sending verification email..." : "Resend verification email"}
+          </button>
+        ) : null}
 
         <button
           type="submit"

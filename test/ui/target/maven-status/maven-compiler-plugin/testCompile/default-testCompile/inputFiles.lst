@@ -5,6 +5,7 @@
 /Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/pages/LoginPage.java
 /Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductDetailPage.java
 /Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductsPage.java
+/Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/pages/SignupPage.java
 /Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/runner/CartRunner.java
 /Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/steps/CartSteps.java
 /Users/Mark_1/IdeaProjects/project888/test/ui/src/test/java/com/asianfit/ui/utils/DriverFactory.java
