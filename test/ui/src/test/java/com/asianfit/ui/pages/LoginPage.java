@@ -6,10 +6,10 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class LoginPage extends BasePage {
-  private static final By EMAIL = By.cssSelector("input#email");
-  private static final By PASSWORD = By.cssSelector("input#password");
-  private static final By SUBMIT = By.cssSelector("button[type='submit']");
-  private static final By ERROR = By.cssSelector(".text-red-600");
+  private static final By EMAIL = By.id("login-email");
+  private static final By PASSWORD = By.id("login-password");
+  private static final By SUBMIT = By.id("login-submit");
+  private static final By ERROR = By.id("login-error");
 
   public LoginPage(WebDriver driver) {
     super(driver);

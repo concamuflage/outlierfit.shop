@@ -173,8 +173,16 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
           />
         </div>
 
-        {error ? <div className="text-xs text-red-600">{error}</div> : null}
-        {notice ? <div className="text-xs text-emerald-700">{notice}</div> : null}
+        {error ? (
+          <div id="login-error" className="text-xs text-red-600">
+            {error}
+          </div>
+        ) : null}
+        {notice ? (
+          <div id="login-notice" className="text-xs text-emerald-700">
+            {notice}
+          </div>
+        ) : null}
 
         {error === EMAIL_NOT_VERIFIED_MESSAGE ? (
           <button
@@ -188,6 +196,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
         ) : null}
 
         <button
+          id="login-submit"
           type="submit"
           disabled={loading}
           className="w-full rounded-full bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-70"
