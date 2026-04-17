@@ -19,6 +19,7 @@
 
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -30,6 +31,7 @@ type LoginFormProps = {
  * Delegates auth to NextAuth credentials provider.
  */
 export default function LoginForm({ onSuccess, compact = false }: LoginFormProps) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,13 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     }
 
     setLoading(false);
-    onSuccess?.();
+    if (onSuccess) {
+      onSuccess();
+      return;
+    }
+
+    router.push(result?.url ?? "/");
+    router.refresh();
   };
 
   return (
@@ -142,8 +150,6 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
-
-      <div className="mt-4 text-xs text-zinc-500">Signin via Google is currently disabled.</div>
     </div>
   );
 }

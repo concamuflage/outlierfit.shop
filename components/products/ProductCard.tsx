@@ -34,6 +34,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     <Link
       href={`/products/${product.slug}`}
       className="group block overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:shadow"
+      data-testid={`product-card-${product.slug}`}
     >
       <div className="aspect-[4/5] w-full bg-zinc-100">
         {/* Conditional rendering: if product.imageUrl exists, show the image; otherwise, show a placeholder */}

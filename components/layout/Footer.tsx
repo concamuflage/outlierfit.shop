@@ -12,6 +12,9 @@ export default function Footer() {
           <Link className="hover:underline" href="/policies/shipping">
             Shipping
           </Link>
+          <Link className="hover:underline" href="/contact">
+            Contact Us
+          </Link>
         </div>
       </div>
     </footer>

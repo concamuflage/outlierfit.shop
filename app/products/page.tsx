@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
 import { type Product } from "@/components/products/ProductCard";
@@ -23,8 +24,27 @@ type ProductsApiItem = {
   lowest_cost_rmb?: number | string | null;
 };
 
+function getPreferredCoverPhoto(photos: string[] | null | undefined) {
+  if (!Array.isArray(photos)) return "";
+
+  const cleanedPhotos = photos
+    .filter((photo): photo is string => typeof photo === "string")
+    .map((photo) => photo.trim())
+    .filter((photo) => photo.length > 0);
+
+  const preferredPhoto = cleanedPhotos.find((photo) => {
+    const fileName = photo.split("/").pop() ?? "";
+    const baseName = fileName.replace(/\.[^.]+$/, "");
+    return baseName === "1";
+  });
+
+  return preferredPhoto ?? cleanedPhotos[0] ?? "";
+}
+
 export default function ProductsPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [productsData, setProductsData] = useState<ProductsApiItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,11 +79,33 @@ export default function ProductsPage() {
     return Array.from(styles).sort((a, b) => a.localeCompare(b));
   }, [productsData]);
 
-  useEffect(() => {
-    if (selectedCategory !== null && !categories.includes(selectedCategory)) {
-      setSelectedCategory(null);
+  const categoryFromUrl = searchParams.get("category");
+  const selectedCategory =
+    categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : null;
+
+  const handleSelectCategory = (category: string | null) => {
+    const nextParams = new URLSearchParams(searchParams.toString());
+
+    if (category === null) {
+      nextParams.delete("category");
+    } else {
+      nextParams.set("category", category);
     }
-  }, [categories, selectedCategory]);
+
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  };
+
+  useEffect(() => {
+    if (categoryFromUrl === null) return;
+    if (categories.length === 0) return;
+    if (categories.includes(categoryFromUrl)) return;
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("category");
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  }, [categories, categoryFromUrl, pathname, router, searchParams]);
 
   const filteredProductsData = useMemo(() => {
     if (selectedCategory === null) return productsData;
@@ -75,7 +117,7 @@ export default function ProductsPage() {
       slug: String(p.product_id ?? p.id ?? ""),
       name: p.name ?? "",
       brand: p.brand ?? "",
-      imageUrl: Array.isArray(p.photos) ? (p.photos[0] ?? "") : "",
+      imageUrl: getPreferredCoverPhoto(p.photos),
       colors: Array.isArray(p.colors) ? p.colors : [],
       price: p.lowest_cost_rmb == null ? 0 : Number(p.lowest_cost_rmb) * RMB_TO_USD,
     }));
@@ -84,34 +126,14 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">Shop</h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Curated picks with better proportions for shorter frames.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr]">
           <FilterSidebar
             categories={categories}
             selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
+            onSelectCategory={handleSelectCategory}
           />
 
           <div>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm text-zinc-600">
-                Showing <span className="font-medium text-zinc-900">{products.length}</span> item
-                {products.length === 1 ? "" : "s"}
-                {selectedCategory ? (
-                  <>
-                    {" "}
-                    in <span className="font-medium text-zinc-900">{selectedCategory}</span>
-                  </>
-                ) : null}
-              </div>
-            </div>
-
             {loading ? <div className="mb-4 text-sm text-zinc-600">Loading...</div> : null}
             {error ? <div className="mb-4 text-sm text-red-600">{error}</div> : null}
 

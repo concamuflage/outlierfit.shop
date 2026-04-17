@@ -28,6 +28,7 @@ type ProductDetail = {
   description: string;
   brand: string;
   style: string;
+  weight_kg: number | null;
   materials: ProductMaterial[];
   variants: ProductVariant[];
 };
@@ -101,10 +102,35 @@ export default function ProductDetailPage() {
   const availableSizes = useMemo(() => {
     const s = new Set<string>();
     for (const v of variants) {
+      if (typeof v?.size === "string" && v.size.trim()) s.add(v.size);
+    }
+    return Array.from(s);
+  }, [variants]);
+
+  const sizesForSelectedColor = useMemo(() => {
+    const s = new Set<string>();
+    for (const v of variants) {
       if (selectedColor && v.color !== selectedColor) continue;
       if (typeof v?.size === "string" && v.size.trim()) s.add(v.size);
     }
     return Array.from(s);
+  }, [variants, selectedColor]);
+
+  const sizeDetailsByLabel = useMemo(() => {
+    const details = new Map<string, { height_cm: number | null; chest_cm: number | null }>();
+
+    for (const variant of variants) {
+      if (selectedColor && variant.color !== selectedColor) continue;
+      if (!variant.size) continue;
+      if (details.has(variant.size)) continue;
+
+      details.set(variant.size, {
+        height_cm: variant.height_cm,
+        chest_cm: variant.chest_cm,
+      });
+    }
+
+    return details;
   }, [variants, selectedColor]);
 
   const selectedVariant = useMemo(() => {
@@ -113,12 +139,18 @@ export default function ProductDetailPage() {
       const exact = variants.find((v) => v.color === selectedColor && v.size === selectedSize);
       if (exact) return exact;
     }
+    if (selectedColor || selectedSize) return null;
+    return variants[0];
+  }, [variants, selectedColor, selectedSize]);
+
+  const displayVariant = useMemo(() => {
+    if (selectedVariant) return selectedVariant;
     if (selectedColor) {
       const byColor = variants.find((v) => v.color === selectedColor);
       if (byColor) return byColor;
     }
-    return variants[0];
-  }, [variants, selectedColor, selectedSize]);
+    return variants[0] ?? null;
+  }, [variants, selectedColor, selectedVariant]);
 
   const selectedColorFirstImage = useMemo(() => {
     if (!selectedColor) return null;
@@ -148,23 +180,24 @@ export default function ProductDetailPage() {
   }, [galleryPhotos, selectedColorFirstImage]);
 
   const infoProduct = useMemo<ProductInfoPanelProduct | null>(() => {
-    if (!product || !selectedVariant) return null;
+    if (!product || !displayVariant) return null;
     return {
-      sku: selectedVariant.sku,
-      size: selectedVariant.size,
-      height_cm: selectedVariant.height_cm,
-      chest_cm: selectedVariant.chest_cm,
+      sku: selectedVariant?.sku ?? displayVariant.sku,
+      size: selectedSize ?? selectedVariant?.size ?? displayVariant.size,
+      height_cm: selectedVariant?.height_cm ?? displayVariant.height_cm,
+      chest_cm: selectedVariant?.chest_cm ?? displayVariant.chest_cm,
+      weight_kg: product.weight_kg,
       description: product.description,
       id: product.product_id,
       name: product.name,
       brand: product.brand,
       style: product.style,
-      color: selectedVariant.color,
-      qty: selectedVariant.qty,
-      cost_rmb: selectedVariant.cost_rmb,
+      color: selectedColor ?? selectedVariant?.color ?? displayVariant.color,
+      qty: selectedVariant?.qty ?? displayVariant.qty,
+      cost_rmb: selectedVariant?.cost_rmb ?? displayVariant.cost_rmb,
       materials: product.materials ?? [],
     };
-  }, [product, selectedVariant]);
+  }, [displayVariant, product, selectedColor, selectedSize, selectedVariant]);
 
   useEffect(() => {
     if (!product) return;
@@ -174,14 +207,11 @@ export default function ProductDetailPage() {
   }, [product, availableColors, selectedColor]);
 
   useEffect(() => {
-    if (availableSizes.length === 0) {
-      setSelectedSize(null);
-      return;
-    }
-    if (selectedSize === null || !availableSizes.includes(selectedSize)) {
+    if (availableSizes.length === 0 || selectedSize !== null) return;
+    if (selectedSize === null) {
       setSelectedSize(availableSizes[0]);
     }
-  }, [availableSizes, selectedColor, selectedSize]);
+  }, [availableSizes, selectedSize]);
 
   if (loading) {
     return (
@@ -246,36 +276,64 @@ export default function ProductDetailPage() {
 
                     <div>
                       <div className="text-sm font-medium text-zinc-900">Size</div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {availableSizes.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setSelectedSize(s)}
-                            className={
-                              "rounded-full border px-4 py-2 text-sm " +
-                              (s === selectedSize
-                                ? "border-zinc-900 bg-zinc-900 text-white"
-                                : "border-zinc-200 bg-white text-zinc-900")
-                            }
-                          >
-                            {s}
-                          </button>
-                        ))}
+                      <div className="mt-2 space-y-2">
+                        {availableSizes.map((s) => {
+                          const isSelected = s === selectedSize;
+                          const isAvailableForColor =
+                            selectedColor === null || sizesForSelectedColor.includes(s);
+                          const sizeDetails = sizeDetailsByLabel.get(s);
+                          const sizeMeta = [
+                            sizeDetails?.height_cm != null ? `Height ${sizeDetails.height_cm} cm` : null,
+                            sizeDetails?.chest_cm != null ? `Chest ${sizeDetails.chest_cm} cm` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ");
+
+                          return (
+                            <div key={s} className="grid grid-cols-[96px_1fr] items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedSize(s)}
+                                className={
+                                  "w-fit rounded-full border px-4 py-2 text-sm " +
+                                  (isSelected
+                                    ? "border-zinc-900 bg-zinc-900 text-white"
+                                    : isAvailableForColor
+                                      ? "border-zinc-200 bg-white text-zinc-900"
+                                      : "border-zinc-200 bg-zinc-100 text-zinc-400")
+                                }
+                              >
+                                {s}
+                              </button>
+                              {sizeMeta ? (
+                                <span className="text-xs text-zinc-500">{sizeMeta}</span>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
                 }
               />
             ) : null}
-            {infoProduct && selectedVariant ? (
+            {infoProduct ? (
               <button
                 type="button"
+                disabled={!selectedVariant}
                 onClick={() => {
+                  if (!selectedVariant) return;
                   addItem({
                     id: `${product.product_id}-${selectedVariant.variant_id}`,
                     name: product.name,
-                    price: infoProduct.cost_rmb == null ? 0 : Number(infoProduct.cost_rmb),
+                    price:
+                      infoProduct.cost_rmb == null
+                        ? 0
+                        : Math.round(
+                            Number(infoProduct.cost_rmb) *
+                              Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14")
+                          ),
+                    weightKg: product.weight_kg,
                     imageUrl: galleryPhotos[0] ?? null,
                     color: selectedVariant.color,
                     size: selectedVariant.size,
@@ -283,9 +341,15 @@ export default function ProductDetailPage() {
                   });
                   openCart();
                 }}
-                className="mt-6 w-full rounded-full bg-zinc-900 px-4 py-3 text-sm text-white hover:bg-zinc-800"
+                className={
+                  "mt-6 w-full rounded-full px-4 py-3 text-sm text-white " +
+                  (selectedVariant
+                    ? "bg-zinc-900 hover:bg-zinc-800"
+                    : "cursor-not-allowed bg-zinc-400")
+                }
+                data-testid="add-to-cart-button"
               >
-                Add to cart
+                {selectedVariant ? "Add to cart" : "Select an available size"}
               </button>
             ) : null}
           </div>

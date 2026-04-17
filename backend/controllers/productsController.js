@@ -16,6 +16,7 @@ exports.getProductById = async (req, res) => {
       products.description,
       brands.brand,
       styles.style,
+      styles.weight_kg,
       colors.color,
       inventory.qty,
       product_variant_images.image_link,
@@ -57,6 +58,8 @@ exports.getProductById = async (req, res) => {
     description: first.description,
     brand: first.brand,
     style: first.style,
+    weight_kg:
+      first.weight_kg === null || first.weight_kg === undefined ? null : Number(first.weight_kg),
     // Materials are defined at the product level (same across variants)
     materials: [],
     // Variants are color/size specific, used for toggles in the frontend

@@ -197,8 +197,6 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
           {loading ? "Signing up..." : "Sign up"}
         </button>
       </form>
-
-      <div className="mt-4 text-xs text-zinc-500">Signin via Google is currently disabled.</div>
     </div>
   );
 }

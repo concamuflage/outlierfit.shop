@@ -48,6 +48,7 @@ export default function CartDrawer() {
         role="dialog"
         aria-modal="true"
         aria-label="Shopping cart"
+        data-testid="cart-drawer"
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
@@ -56,6 +57,7 @@ export default function CartDrawer() {
               type="button"
               onClick={closeCart} // Close button closes the cart drawer
               className="text-sm text-zinc-500 hover:text-zinc-900"
+              data-testid="cart-drawer-close"
             >
               Close
             </button>
@@ -77,6 +79,7 @@ export default function CartDrawer() {
                   item={item} // Pass individual cart item data
                   onRemove={removeItem} // Pass removeItem function to allow removing this item
                   onUpdateQty={updateQty} // Pass updateQty function to update quantity
+                  priceFractionDigits={0}
                 />
               ))
             )}
@@ -87,7 +90,9 @@ export default function CartDrawer() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-zinc-600">Subtotal</span>
               {/* subtotal is the total price of all items; formatUsd formats it as a USD currency string */}
-              <span className="font-semibold text-zinc-900">{formatUsd(subtotal)}</span>
+              <span className="font-semibold text-zinc-900" data-testid="cart-drawer-subtotal">
+                {formatUsd(subtotal)}
+              </span>
             </div>
 
             <div className="mt-4 grid gap-2">
@@ -96,6 +101,7 @@ export default function CartDrawer() {
                 href="/cart"
                 className="rounded-full border border-zinc-200 px-4 py-2 text-center text-sm text-zinc-900 hover:border-zinc-400"
                 onClick={closeCart}
+                data-testid="cart-drawer-view-cart"
               >
                 View cart
               </Link>
@@ -103,6 +109,7 @@ export default function CartDrawer() {
               <button
                 type="button"
                 className="rounded-full bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-800"
+                data-testid="cart-drawer-checkout"
               >
                 Checkout
               </button>
@@ -112,6 +119,7 @@ export default function CartDrawer() {
                   type="button"
                   onClick={clearCart} // Clears all items from the cart
                   className="text-xs text-zinc-500 hover:text-zinc-900"
+                  data-testid="cart-drawer-clear-cart"
                 >
                   Clear cart
                 </button>

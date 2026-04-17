@@ -1,5 +1,18 @@
 const bcrypt = require("bcryptjs");
 const pool = require("../database/pool");
+const MIN_PASSWORD_LENGTH = 12;
+
+function normalizeEmail(email) {
+  return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
+
+function isStrongPassword(password) {
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) return false;
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  return hasLower && hasUpper && hasDigit;
+}
 
 const ensureUsersTable = async () => {
   await pool.query(
@@ -19,21 +32,35 @@ const ensureUsersTable = async () => {
 exports.signup = async (req, res) => {
   try {
     const { email, password, firstName, lastName } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedFirstName = typeof firstName === "string" ? firstName.trim() : "";
+    const normalizedLastName = typeof lastName === "string" ? lastName.trim() : "";
+
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({ error: "Email, password, first name, and last name are required" });
     }
 
+    if (!normalizedEmail) {
+      return res.status(400).json({ error: "A valid email is required." });
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        error: "Password must be at least 12 characters and include uppercase, lowercase, and a number.",
+      });
+    }
+
     await ensureUsersTable();
 
-    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: "Email already registered" });
+      return res.status(400).json({ error: "Unable to create account." });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await pool.query(
       "INSERT INTO users (email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4) RETURNING id, email, first_name, last_name",
-      [email, passwordHash, firstName, lastName]
+      [normalizedEmail, passwordHash, normalizedFirstName, normalizedLastName]
     );
 
     return res.status(201).json(result.rows[0]);
@@ -46,6 +73,7 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
@@ -54,7 +82,7 @@ exports.login = async (req, res) => {
 
     const result = await pool.query(
       "SELECT id, email, first_name, last_name, password_hash FROM users WHERE email = $1",
-      [email]
+      [normalizedEmail]
     );
 
     if (result.rows.length === 0) {

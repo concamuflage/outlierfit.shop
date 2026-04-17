@@ -9,11 +9,15 @@ import React, {
   useRef      // Hook to persist mutable values across renders without triggering re-renders
 } from "react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
+
 // Represents a single item in the shopping cart with all necessary details and quantity
 type CartItem = {
   id: string;
   name: string;
   price: number;
+  weightKg?: number | null;
   imageUrl?: string | null;
   color?: string | null;
   size?: string | null;
@@ -33,6 +37,7 @@ type CartContextValue = {
   isOpen: boolean;
   itemCount: number; // total quantity of all items
   subtotal: number;  // total price of all items
+  totalWeightKg: number;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
@@ -52,6 +57,7 @@ type CartAction =
   | { type: "ADD"; item: CartItem }            // Add new item or increase quantity of existing item
   | { type: "REMOVE"; id: string }             // Remove item by id
   | { type: "UPDATE_QTY"; id: string; qty: number } // Update quantity of specific item
+  | { type: "MERGE_ITEMS"; items: Array<Partial<CartItem> & { id: string }> }
   | { type: "CLEAR" }                           // Clear all items from cart
   | { type: "OPEN" }                            // Open the cart UI
   | { type: "CLOSE" }                           // Close the cart UI
@@ -107,6 +113,14 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       // create an new array of items, so the items state can be updated correctly. in-place change doesn't work.
 
       const nextItems = state.items.map((i) => (i.id === action.id ? { ...i, qty } : i));
+      return { ...state, items: nextItems };
+    }
+    case "MERGE_ITEMS": {
+      const updatesById = new Map(action.items.map((item) => [item.id, item]));
+      const nextItems = state.items.map((item) => {
+        const update = updatesById.get(item.id);
+        return update ? { ...item, ...update } : item;
+      });
       return { ...state, items: nextItems };
     }
     case "CLEAR":
@@ -196,6 +210,101 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.items]);
 
+  useEffect(() => {
+    if (!API_BASE_URL || state.items.length === 0) return;
+
+    const productIds = Array.from(
+      new Set(
+        state.items
+          .map((item) => {
+            const [productId] = item.id.split("-");
+            return productId;
+          })
+          .filter((productId) => productId.length > 0)
+      )
+    );
+
+    if (productIds.length === 0) return;
+
+    let cancelled = false;
+
+    const syncCartWeights = async () => {
+      try {
+        const products = await Promise.all(
+          productIds.map(async (productId) => {
+            const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return {
+              productId,
+              variants: Array.isArray(data?.variants) ? data.variants : [],
+              weightKg:
+                data?.weight_kg === null || data?.weight_kg === undefined
+                  ? null
+                  : Number(data.weight_kg),
+            };
+          })
+        );
+
+        if (cancelled) return;
+
+        const productById = new Map(
+          products
+            .filter(
+              (
+                product
+              ): product is {
+                productId: string;
+                weightKg: number | null;
+                variants: Array<{ variant_id?: number; cost_rmb?: number | null }>;
+              } => product !== null
+            )
+            .map((product) => [product.productId, product])
+        );
+
+        const mergedItems = state.items
+          .map((item) => {
+            const [productId, variantIdText] = item.id.split("-");
+            const product = productById.get(productId);
+            if (!product) return null;
+
+            const nextWeightKg = product.weightKg ?? null;
+            const variantId = Number(variantIdText);
+            const matchedVariant = product.variants.find(
+              (variant) => Number(variant.variant_id) === variantId
+            );
+            const nextPrice =
+              matchedVariant?.cost_rmb == null
+                ? item.price
+                : Math.round(Number(matchedVariant.cost_rmb) * RMB_TO_USD);
+
+            if (item.weightKg === nextWeightKg && item.price === nextPrice) return null;
+
+            return {
+              id: item.id,
+              weightKg: nextWeightKg,
+              price: nextPrice,
+            };
+          })
+          .filter(
+            (item): item is { id: string; weightKg: number | null; price: number } => item !== null
+          );
+
+        if (mergedItems.length > 0) {
+          dispatch({ type: "MERGE_ITEMS", items: mergedItems });
+        }
+      } catch {
+        // Ignore fetch errors and keep existing cart contents.
+      }
+    };
+
+    syncCartWeights();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.items]);
+
   // Memoize the context value to avoid unnecessary re-renders in consuming components
   // itemCount and subtotal are derived values calculated from current cart items
   // Functions dispatch actions to update state, keeping state logic centralized in reducer
@@ -214,12 +323,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // just concise why of looping through the items in the array and accumlate a sum.
     const itemCount = state.items.reduce((sum, item) => sum + item.qty, 0); // 0 the initial value of sum, the running total.
     const subtotal = state.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const totalWeightKg = state.items.reduce(
+      (sum, item) => sum + (item.weightKg == null ? 0 : item.weightKg * item.qty),
+      0
+    );
     // the following is CartContextValue type
     return {
       items: state.items,
       isOpen: state.isOpen,
       itemCount,
       subtotal,
+      totalWeightKg,
       // the reducer will receive all the actions.
       // dispatch({ type: "ADD", item }) the object parameter is the action
 

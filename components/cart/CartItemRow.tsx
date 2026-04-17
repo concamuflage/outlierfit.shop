@@ -13,11 +13,17 @@ type CartItemRowProps = {
   onRemove: (id: string) => void;
   // Callback function to update the quantity of the item in the cart
   onUpdateQty: (id: string, qty: number) => void;
+  priceFractionDigits?: number;
 };
 
-export default function CartItemRow({ item, onRemove, onUpdateQty }: CartItemRowProps) {
+export default function CartItemRow({
+  item,
+  onRemove,
+  onUpdateQty,
+  priceFractionDigits = 2,
+}: CartItemRowProps) {
   return (
-    <div className="flex gap-4 rounded-2xl border border-zinc-200 bg-white p-4">
+    <div className="flex gap-4 rounded-2xl border border-zinc-200 bg-white p-4" data-testid={`cart-line-item-${item.id}`}>
       {/* Product image section */}
       <div className="h-20 w-20 flex-none overflow-hidden rounded-xl bg-zinc-100">
         {item.imageUrl ? (
@@ -41,8 +47,15 @@ export default function CartItemRow({ item, onRemove, onUpdateQty }: CartItemRow
               {item.color && item.size ? " · " : ""}
               {item.size ? `Size: ${item.size}` : ""}
             </div>
+            {item.weightKg != null ? (
+              <div className="mt-1 text-xs text-zinc-500">
+                Estimated weight per item: {item.weightKg.toFixed(2)} kg
+              </div>
+            ) : null}
           </div>
-          <div className="text-sm font-semibold text-zinc-900">{formatUsd(item.price)}</div>
+          <div className="text-sm font-semibold text-zinc-900">
+            {formatUsd(item.price, priceFractionDigits)}
+          </div>
         </div>
 
         {/* Quantity controls and remove button */}
@@ -58,11 +71,12 @@ export default function CartItemRow({ item, onRemove, onUpdateQty }: CartItemRow
               onClick={() => onUpdateQty(item.id, item.qty - 1)}
               className="h-8 w-8 rounded-full border border-zinc-200 text-sm hover:border-zinc-400"
               aria-label="Decrease quantity"
+              data-testid={`cart-item-decrease-${item.id}`}
             >
               -
             </button>
             {/* Current quantity display */}
-            <div className="w-6 text-center text-sm">{item.qty}</div>
+            <div className="w-6 text-center text-sm" data-testid={`cart-item-qty-${item.id}`}>{item.qty}</div>
             {/* Increase quantity button */}
             <button
               type="button"
@@ -70,6 +84,7 @@ export default function CartItemRow({ item, onRemove, onUpdateQty }: CartItemRow
               onClick={() => onUpdateQty(item.id, item.qty + 1)}
               className="h-8 w-8 rounded-full border border-zinc-200 text-sm hover:border-zinc-400"
               aria-label="Increase quantity"
+              data-testid={`cart-item-increase-${item.id}`}
             >
               +
             </button>
@@ -81,6 +96,7 @@ export default function CartItemRow({ item, onRemove, onUpdateQty }: CartItemRow
             // Calls onRemove to remove this item from the cart
             onClick={() => onRemove(item.id)}
             className="text-xs text-zinc-500 hover:text-zinc-900"
+            data-testid={`cart-item-remove-${item.id}`}
           >
             Remove
           </button>

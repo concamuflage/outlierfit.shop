@@ -59,6 +59,7 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
   const mainSrc = safePhotos[selectedIndex];
 
   const canNavigate = safePhotos.length > 1;
+  const shouldUseTwoThumbnailColumns = safePhotos.length > 6;
 
   const goPrev = () => {
     if (!canNavigate) return;
@@ -72,13 +73,25 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
 
   return (
     // Outer grid layout: single column on mobile, switches to two columns at md breakpoint
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-[96px_1fr]">
+    <div
+      className={
+        "grid grid-cols-1 gap-4 " +
+        (shouldUseTwoThumbnailColumns ? "md:grid-cols-[204px_1fr]" : "md:grid-cols-[96px_1fr]")
+      }
+    >
       {/* 
         Thumbnails container:
         On mobile, it's a horizontal scrollable row to fit many thumbnails in limited width.
         On desktop (md and up), switches to vertical column with visible overflow.
       */}
-      <div className="order-2 flex gap-3 overflow-auto md:order-1 md:flex-col md:overflow-visible">
+      <div
+        className={
+          "order-2 flex gap-3 overflow-auto md:order-1 md:overflow-visible " +
+          (shouldUseTwoThumbnailColumns
+            ? "md:grid md:grid-cols-2 md:gap-3 md:content-start"
+            : "md:flex-col")
+        }
+      >
         {/*
           Render thumbnails using .map():
           Iterates over safePhotos array to create a button for each thumbnail.
@@ -94,7 +107,9 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
               type="button"
               onClick={() => setSelectedIndex(idx)}
               className={
-                "relative h-20 w-20 flex-none overflow-hidden rounded-2xl border bg-white " +
+                "relative h-20 w-20 overflow-hidden rounded-2xl border bg-white " +
+                (shouldUseTwoThumbnailColumns ? "" : " flex-none") +
+                " " +
                 (isActive ? "border-zinc-900" : "border-zinc-200 hover:border-zinc-400")
               }
               aria-label={`View photo ${idx + 1}`} // aria-label improves accessibility by describing button purpose to screen readers

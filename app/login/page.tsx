@@ -1,13 +1,25 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import LoginForm from "@/components/auth/LoginForm";
 
 /**
  * Standalone login page (non-modal).
  */
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+    router.replace(callbackUrl);
+  }, [router, searchParams, status]);
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto flex max-w-6xl justify-center px-6 py-16">

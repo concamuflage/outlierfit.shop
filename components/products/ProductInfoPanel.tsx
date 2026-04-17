@@ -20,6 +20,7 @@ export type ProductInfoPanelProduct = {
   size: string;
   height_cm: number | null;
   chest_cm: number | null;
+  weight_kg: number | null;
   description: string;
   id: number;
   name: string;
@@ -63,6 +64,10 @@ export default function ProductInfoPanel({ product, variantControls }: ProductIn
         </div>
         <div>
           <span className="text-zinc-500">Size:</span> {product.size}
+        </div>
+        <div>
+          <span className="text-zinc-500">Estimated Weight:</span>{" "}
+          {product.weight_kg == null ? "N/A" : `${product.weight_kg.toFixed(2)} kg`}
         </div>
         <div>
           <span className="text-zinc-500">SKU:</span> {product.sku}

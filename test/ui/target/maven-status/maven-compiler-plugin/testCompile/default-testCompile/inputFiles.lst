@@ -1,0 +1,11 @@
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/hooks/Hooks.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/BasePage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CartDrawer.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CartPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/LoginPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductDetailPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductsPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/CartRunner.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/CartSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DriverFactory.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/TestConfig.java

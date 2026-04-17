@@ -19,17 +19,7 @@ export default function FilterSidebar({
 }: FilterSidebarProps) {
   return (
     <aside className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
-        <button
-          type="button"
-          className="text-xs text-zinc-600 hover:underline"
-          onClick={() => onSelectCategory(null)}
-          disabled={selectedCategory === null}
-        >
-          Clear
-        </button>
-      </div>
+      <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
 
       <div className="mt-4 flex flex-col gap-2">
         <button
@@ -59,10 +49,6 @@ export default function FilterSidebar({
             </button>
           );
         })}
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-xs text-zinc-600">
-        Tip: start with your height range and preferred fit. You can refine filters later.
       </div>
     </aside>
   );
