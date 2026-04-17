@@ -41,3 +41,13 @@ Feature: Cart
     Then I should be on the login page
     When I sign in with the configured test account
     Then I should land on the cart page
+
+  Scenario: Manually verify a generated account before signing in
+    Given I open the signup page
+    Then I should be on the signup page
+    When I sign up with a generated account
+    Then the signup page should show a verification success message
+    When I wait 10 seconds before signing in
+    Given I open the login page
+    When I sign in with the generated account
+    Then the login page should not show an authentication error

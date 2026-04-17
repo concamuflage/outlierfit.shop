@@ -58,11 +58,12 @@ async function sendVerificationEmail({ to, firstName, verificationLink }) {
     body: JSON.stringify({
       from,
       to: [to],
-      subject: "Verify your Asian Fit account",
+      subject: "Verify your AsianFit account",
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #18181b;">
           <p>Hi ${greetingName},</p>
-          <p>Verify your email address to finish creating your Asian Fit account.</p>
+          <p>Welcome to AsianFit, and thank you for creating an account with us.</p>
+          <p>To finish setting up your account, please verify your email address by clicking the button below.</p>
           <p>
             <a
               href="${verificationLink}"
@@ -71,13 +72,16 @@ async function sendVerificationEmail({ to, firstName, verificationLink }) {
               Verify email
             </a>
           </p>
-          <p>If the button does not work, copy and paste this link into your browser:</p>
+          <p>If the button does not work, please copy and paste the following link into your browser:</p>
           <p><a href="${verificationLink}">${verificationLink}</a></p>
         </div>
       `,
       text:
         `Hi ${greetingName},\n\n` +
-        `Verify your email address to finish creating your Asian Fit account.\n\n` +
+        `Welcome to AsianFit, and thank you for creating an account with us.\n\n` +
+        `To finish setting up your account, please verify your email address by clicking the button below.\n\n` +
+        `Verify email\n\n` +
+        `If the button does not work, please copy and paste the following link into your browser:\n\n` +
         `${verificationLink}\n`,
     }),
   });

@@ -163,6 +163,11 @@ public class CartSteps {
     loginPage().signIn(generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
   }
 
+  @When("I wait 10 seconds before signing in")
+  public void iWaitTenSecondsBeforeSigningIn() throws InterruptedException {
+    Thread.sleep(10_000);
+  }
+
   @Then("I should land on the cart page")
   public void iShouldLandOnTheCartPage() {
     Assert.assertTrue(cartPage().isVisible(), "Expected cart page to be visible");
