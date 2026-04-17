@@ -20,10 +20,6 @@ public abstract class BasePage {
     return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
   }
 
-  protected WebElement waitForPresent(By locator) {
-    return wait.until(ExpectedConditions.presenceOfElementLocated(locator));
-  }
-
   protected WebElement waitForClickable(By locator) {
     return wait.until(ExpectedConditions.elementToBeClickable(locator));
   }
@@ -36,8 +32,8 @@ public abstract class BasePage {
     return waitForVisible(locator).getText().trim();
   }
 
-  protected int count(By locator) {
-    return driver.findElements(locator).size();
+protected int count(By locator) {
+    return wait.until(driver -> driver.findElements(locator).size());
   }
 
   protected String currentUrl() {

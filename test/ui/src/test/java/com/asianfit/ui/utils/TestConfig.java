@@ -3,12 +3,17 @@ package com.asianfit.ui.utils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class TestConfig {
-  private static final Path LOCAL_ENV_PATH = Path.of(".env.local");
+  
+  private static final List<Path> LOCAL_ENV_PATHS = List.of(
+    Path.of(".env.local"),
+    Path.of("test/ui/.env.local")
+  );
   private static final Map<String, String> LOCAL_ENV = loadLocalEnv();
 
   private TestConfig() {}
@@ -63,12 +68,13 @@ public final class TestConfig {
 
   private static Map<String, String> loadLocalEnv() {
     Map<String, String> values = new HashMap<>();
-    if (!Files.exists(LOCAL_ENV_PATH)) {
+    Path localEnvPath = resolveLocalEnvPath();
+    if (localEnvPath == null) {
       return values;
     }
 
     try {
-      List<String> lines = Files.readAllLines(LOCAL_ENV_PATH);
+      List<String> lines = Files.readAllLines(localEnvPath);
       for (String rawLine : lines) {
         String line = rawLine.trim();
         if (line.isEmpty() || line.startsWith("#")) {
@@ -85,10 +91,19 @@ public final class TestConfig {
         values.put(key, stripWrappingQuotes(value));
       }
     } catch (IOException e) {
-      throw new IllegalStateException("Failed to read " + LOCAL_ENV_PATH, e);
+      throw new IllegalStateException("Failed to read " + localEnvPath, e);
     }
 
     return values;
+  }
+
+  private static Path resolveLocalEnvPath() {
+    for (Path candidate : LOCAL_ENV_PATHS) {
+      if (Files.exists(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   private static String stripWrappingQuotes(String value) {
