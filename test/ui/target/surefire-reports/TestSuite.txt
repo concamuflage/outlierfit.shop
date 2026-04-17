@@ -1,0 +1,19 @@
+-------------------------------------------------------------------------------
+Test set: TestSuite
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 16.08 s <<< FAILURE! -- in TestSuite
+com.asianfit.ui.runner.LoginRunner.runScenario["User cannot sign in with an unverified email address", "Login"](1) -- Time elapsed: 8.689 s <<< FAILURE!
+java.lang.IllegalStateException: Missing unverified test user email. Set -DunverifiedTestUserEmail, TEST_UNVERIFIED_USER_EMAIL, or test/ui/.env.local
+	at com.asianfit.ui.utils.TestConfig.unverifiedTestUserEmail(TestConfig.java:103)
+	at com.asianfit.ui.steps.CartSteps.iSignInWithTheUnverifiedTestAccount(CartSteps.java:143)
+	at ✽.I sign in with the unverified test account(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/login.feature:14)
+
+com.asianfit.ui.runner.SignupRunner.runScenario["User can create an account and is prompted to verify the email address", "Signup"](1) -- Time elapsed: 6.873 s <<< FAILURE!
+java.lang.AssertionError: Signup page should show a verification success message expected [true] but found [false]
+	at org.testng.Assert.fail(Assert.java:111)
+	at org.testng.Assert.failNotEquals(Assert.java:1578)
+	at org.testng.Assert.assertTrue(Assert.java:57)
+	at com.asianfit.ui.steps.CartSteps.theSignupPageShouldShowAVerificationSuccessMessage(CartSteps.java:224)
+	at com.asianfit.ui.steps.CartSteps.theSignupShouldBeSuccessfulAndAskTheUserToVerifyTheirEmailAddress(CartSteps.java:230)
+	at ✽.the signup should be successful and ask the user to verify their email address(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/signup.feature:8)
+

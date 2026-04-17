@@ -1,8 +1,10 @@
+@cart
 Feature: Cart
 
 #   Scenario: place an order without login
 
 
+   @cartDrawer
    Scenario: Add an item to cart and update quantity from the drawer
      Given I open the products page
      When I open the first product from the grid
@@ -12,6 +14,7 @@ Feature: Cart
      When I increase the quantity of the first cart item
      Then the first cart item quantity should be 2
 
+   @cartDrawer
    Scenario: Remove an item from the cart drawer
      Given I open the products page
      When I open the first product from the grid
@@ -20,6 +23,7 @@ Feature: Cart
      When I remove the first cart item
      Then the cart drawer should contain 0 items
 
+   @cartDrawer
    Scenario: Clear the cart drawer
      Given I open the products page
      When I open the first product from the grid
@@ -28,6 +32,7 @@ Feature: Cart
      When I clear the cart drawer
      Then the cart drawer should contain 0 items
 
+   @cartDrawer
    Scenario: Subtotal updates when item quantity changes
      Given I open the products page
      When I open the first product from the grid
@@ -36,12 +41,14 @@ Feature: Cart
      When I increase the quantity of the first cart item
      Then the cart drawer subtotal should change
 
+  @auth
   Scenario: Login-required cart flow
     Given I open the protected cart page
     Then I should be on the login page
     When I sign in with the configured test account
     Then I should land on the cart page
 
+  @auth @signup
   Scenario: Manually verify a generated account before signing in
     Given I open the signup page
     Then I should be on the signup page

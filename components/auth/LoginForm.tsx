@@ -19,7 +19,7 @@
 
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -34,6 +34,7 @@ const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in."
  */
 export default function LoginForm({ onSuccess, compact = false }: LoginFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,8 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
     // In production, you normally would NOT do this.
     await new Promise((resolve) => setTimeout(resolve, 800));
 
+    const callbackUrl = searchParams.get("callbackUrl") ?? "/products";
+
     // Ask NextAuth to validate credentials without doing a full redirect.
     // Call NextAuth's credentials provider.
     // This does NOT talk directly to your backend.
@@ -76,6 +79,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
       // which then forwards them to your backend for validation.
       email,
       password,
+      callbackUrl,
 
       // Disable automatic redirect so we can check `result.error`
       // and display custom UI feedback.
@@ -95,7 +99,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
       return;
     }
 
-    router.push(result?.url ?? "/");
+    router.push(result?.url ?? callbackUrl);
     router.refresh();
   };
 

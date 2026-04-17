@@ -138,10 +138,20 @@ public class CartSteps {
     loginPage().signIn(TestConfig.testUserEmail(), TestConfig.testUserPassword());
   }
 
+  @When("I sign in with the unverified test account")
+  public void iSignInWithTheUnverifiedTestAccount() {
+    loginPage().signIn(TestConfig.unverifiedTestUserEmail(), TestConfig.unverifiedTestUserPassword());
+  }
+
+  @When("I sign up with a specified email address and password")
+  public void iSignUpWithASpecifiedEmailAddressAndPassword() {
+    generatedSignupEmail = TestConfig.signupUserEmail();
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+  }
+
   @When("I sign up with a generated account")
   public void iSignUpWithAGeneratedAccount() {
-    long uniqueSuffix = System.currentTimeMillis();
-    generatedSignupEmail = "ui-test-" + uniqueSuffix + "@example.com";
+    generatedSignupEmail = TestConfig.signupUserEmail();
     signupPage().signUp("UI", "Tester", generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
   }
 
@@ -171,6 +181,11 @@ public class CartSteps {
   @Then("I should land on the cart page")
   public void iShouldLandOnTheCartPage() {
     Assert.assertTrue(cartPage().isVisible(), "Expected cart page to be visible");
+  }
+
+  @Then("I should land on the products page")
+  public void iShouldLandOnTheProductsPage() {
+    Assert.assertTrue(productsPage().showsAllFilter(), "Expected products page to show the All filter");
   }
 
   @Then("I should be on the signup page")
@@ -208,5 +223,10 @@ public class CartSteps {
   public void theSignupPageShouldShowAVerificationSuccessMessage() {
     Assert.assertTrue(signupPage().hasSuccessMessage(), "Signup page should show a verification success message");
     Assert.assertEquals(signupPage().successMessage(), SIGNUP_SUCCESS_MESSAGE);
+  }
+
+  @Then("the signup should be successful and ask the user to verify their email address")
+  public void theSignupShouldBeSuccessfulAndAskTheUserToVerifyTheirEmailAddress() {
+    theSignupPageShouldShowAVerificationSuccessMessage();
   }
 }

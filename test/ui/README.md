@@ -55,7 +55,15 @@ Or store them locally in `test/ui/.env.local`:
 ```bash
 TEST_USER_EMAIL=your-email@example.com
 TEST_USER_PASSWORD=your-password
+TEST_UNVERIFIED_USER_EMAIL=your-unverified-email@example.com
+TEST_UNVERIFIED_USER_PASSWORD=your-unverified-password
+TEST_SIGNUP_EMAIL=concamuflage@gmail.com
+TEST_SIGNUP_PASSWORD=StrongPass123A!
 ```
+
+`TEST_SIGNUP_EMAIL` is used by the signup flow. If it is not set, the tests will reuse `TEST_USER_EMAIL`; if that is also missing, they fall back to `concamuflage@gmail.com`.
+`TEST_UNVERIFIED_USER_EMAIL` and `TEST_UNVERIFIED_USER_PASSWORD` are used by the unverified-login scenario.
+`TEST_SIGNUP_PASSWORD` is used by the specified-email signup scenario and falls back to `StrongPass123A!`.
 
 Then you can run the login scenario without extra flags:
 

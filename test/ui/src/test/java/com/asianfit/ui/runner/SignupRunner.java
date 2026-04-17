@@ -7,9 +7,10 @@ import org.testng.annotations.DataProvider;
 @CucumberOptions(
   features = "src/test/resources/features",
   glue = {"com.asianfit.ui.steps", "com.asianfit.ui.hooks"},
-  plugin = {"pretty", "html:target/cucumber-report.html"}
+  plugin = {"pretty", "html:target/cucumber-report.html"},
+  tags = "@Signup"
 )
-public class CartRunner extends AbstractTestNGCucumberTests {
+public class SignupRunner extends AbstractTestNGCucumberTests {
   @Override
   @DataProvider(parallel = true)
   public Object[][] scenarios() {
