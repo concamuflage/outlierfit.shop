@@ -7,46 +7,40 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class LoginPage extends BasePage {
-  private static final By EMAIL = By.cssSelector("input[name='email']");
-  private static final By PASSWORD = By.cssSelector("input[name='password']");
-  private static final By SUBMIT = By.cssSelector("button[type='submit']");
-  private static final By PAGE_HEADING = By.xpath("//*[normalize-space()='Welcome back']");
+  // Page Object representing the Login page.
 
+  // Locators for login page elements
+  private static final By EMAIL = By.xpath("//input[@id='login-email']");
+  private static final By PASSWORD = By.xpath("//input[@id='login-password']");
+  private static final By SUBMIT = By.xpath("//button[@type='submit']");
+  // Constructor initializes the page with WebDriver instance
   public LoginPage(WebDriver driver) {
     super(driver);
   }
 
+  // Checks if the login page is visible by verifying URL and presence of email field
   public boolean isVisible() {
     if (!waitForUrlContains("/login")) {
       return false;
     }
-
-    return count(EMAIL) > 0 || count(PAGE_HEADING) > 0;
+    return count(EMAIL) > 0;
   }
 
+  // Performs sign-in action.
+  // Waits for either login form to be present OR redirect to cart page (if already logged in)
   public void signIn(String email, String password) {
     waitForUrlContains("/login");
-    wait.until(
-      ExpectedConditions.or(
-        ExpectedConditions.presenceOfElementLocated(EMAIL),
-        ExpectedConditions.urlContains("/cart")
-      )
-    );
-
-    if (currentUrl().contains("/cart")) {
-      return;
-    }
-
+    // Wait until login form appears
+    wait.until(ExpectedConditions.presenceOfElementLocated(EMAIL));
     typeIntoField(EMAIL, email);
     typeIntoField(PASSWORD, password);
     click(SUBMIT);
   }
 
+  // Helper method to click into a field and type value using explicit wait for clickability
   private void typeIntoField(By locator, String value) {
     WebElement field = waitForClickable(locator);
     field.click();
-    field.sendKeys(Keys.chord(Keys.COMMAND, "a"));
-    field.sendKeys(Keys.DELETE);
     field.sendKeys(value);
   }
 }
