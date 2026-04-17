@@ -18,6 +18,9 @@ public class CartSteps {
     "Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.";
   private static final String SIGNUP_SUCCESS_MESSAGE =
     "Check your email to verify your account before signing in.";
+  private static final String EMAIL_NOT_VERIFIED_MESSAGE =
+    "Please verify your email before signing in.";
+  private static final String GENERATED_SIGNUP_PASSWORD = "StrongPass123A!";
 
   private String rememberedSubtotal;
   private String generatedSignupEmail;
@@ -139,12 +142,12 @@ public class CartSteps {
   public void iSignUpWithAGeneratedAccount() {
     long uniqueSuffix = System.currentTimeMillis();
     generatedSignupEmail = "ui-test-" + uniqueSuffix + "@example.com";
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, "StrongPass123A!");
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
   }
 
   @When("I sign up with the configured existing account email")
   public void iSignUpWithTheConfiguredExistingAccountEmail() {
-    signupPage().signUp("Existing", "User", TestConfig.testUserEmail(), "StrongPass123A!");
+    signupPage().signUp("Existing", "User", TestConfig.testUserEmail(), GENERATED_SIGNUP_PASSWORD);
   }
 
   @When("I sign up with a generated account using password {string}")
@@ -152,6 +155,12 @@ public class CartSteps {
     long uniqueSuffix = System.currentTimeMillis();
     String email = "ui-test-invalid-" + uniqueSuffix + "@example.com";
     signupPage().signUp("UI", "Tester", email, password);
+  }
+
+  @When("I sign in with the generated account")
+  public void iSignInWithTheGeneratedAccount() {
+    Assert.assertNotNull(generatedSignupEmail, "Generated signup email should have been created first");
+    loginPage().signIn(generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
   }
 
   @Then("I should land on the cart page")
@@ -167,6 +176,12 @@ public class CartSteps {
   @Then("the login page should not show an authentication error")
   public void theLoginPageShouldNotShowAnAuthenticationError() {
     Assert.assertFalse(loginPage().hasErrorMessage(), "Login page should not show an authentication error");
+  }
+
+  @Then("the login page should show the email verification error")
+  public void theLoginPageShouldShowTheEmailVerificationError() {
+    Assert.assertTrue(loginPage().hasErrorMessage(), "Login page should show the email verification error");
+    Assert.assertEquals(loginPage().errorMessage(), EMAIL_NOT_VERIFIED_MESSAGE);
   }
 
   @Then("the signup page should not show a validation error")

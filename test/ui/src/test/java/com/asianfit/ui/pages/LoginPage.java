@@ -34,6 +34,10 @@ public class LoginPage extends BasePage {
     return count(ERROR) > 0;
   }
 
+  public String errorMessage() {
+    return text(ERROR);
+  }
+
   private void typeIntoField(By locator, String value) {
     WebElement field = waitForClickable(locator);
     field.click();
