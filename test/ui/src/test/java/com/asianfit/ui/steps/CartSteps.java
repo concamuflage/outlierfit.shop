@@ -3,6 +3,7 @@ package com.asianfit.ui.steps;
 import com.asianfit.ui.pages.CartPage;
 import com.asianfit.ui.pages.CartDrawer;
 import com.asianfit.ui.pages.LoginPage;
+import com.asianfit.ui.pages.HomePage;
 import com.asianfit.ui.pages.ProductDetailPage;
 import com.asianfit.ui.pages.ProductsPage;
 import com.asianfit.ui.pages.SignupPage;
@@ -27,6 +28,10 @@ public class CartSteps {
 
   private ProductsPage productsPage() {
     return new ProductsPage(DriverFactory.getDriver());
+  }
+
+  private HomePage homePage() {
+    return new HomePage(DriverFactory.getDriver());
   }
 
   private ProductDetailPage productDetailPage() {
@@ -54,6 +59,11 @@ public class CartSteps {
     productsPage().open();
   }
 
+  @Given("I open the home page")
+  public void iOpenTheHomePage() {
+    homePage().open();
+  }
+
   @Given("I open the protected cart page")
   public void iOpenTheProtectedCartPage() {
     productsPage().openProtectedCartPage();
@@ -74,6 +84,21 @@ public class CartSteps {
     productsPage().openFirstProduct();
   }
 
+  @When("I open the login modal")
+  public void iOpenTheLoginModal() {
+    homePage().openLoginModal();
+  }
+
+  @When("I switch to the signup modal")
+  public void iSwitchToTheSignupModal() {
+    homePage().switchLoginModalToSignupModal();
+  }
+
+  @When("I close the auth modal")
+  public void iCloseTheAuthModal() {
+    homePage().closeModal();
+  }
+
   @When("I add the product to the cart")
   public void iAddTheProductToTheCart() {
     productDetailPage().addToCart();
@@ -82,6 +107,21 @@ public class CartSteps {
   @Then("the cart drawer should be visible")
   public void theCartDrawerShouldBeVisible() {
     Assert.assertTrue(cartDrawer().isVisible(), "Cart drawer should be visible");
+  }
+
+  @Then("the login modal should be visible")
+  public void theLoginModalShouldBeVisible() {
+    Assert.assertTrue(homePage().isLoginModalVisible(), "Expected login modal to be visible");
+  }
+
+  @Then("the signup modal should be visible")
+  public void theSignupModalShouldBeVisible() {
+    Assert.assertTrue(homePage().isSignupModalVisible(), "Expected signup modal to be visible");
+  }
+
+  @Then("the auth modal should be closed")
+  public void theAuthModalShouldBeClosed() {
+    Assert.assertTrue(homePage().isModalClosed(), "Expected auth modal to be closed");
   }
 
   @Then("the cart drawer should contain at least {int} item")

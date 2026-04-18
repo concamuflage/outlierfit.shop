@@ -2,46 +2,46 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2026-04-17T20:07:06 EDT" name="Surefire suite" finished-at="2026-04-17T20:07:22 EDT" duration-ms="16412">
+  <suite started-at="2026-04-17T20:19:34 EDT" name="Surefire suite" finished-at="2026-04-17T20:19:51 EDT" duration-ms="17446">
     <groups>
       <group name="cucumber">
-        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@27c86f2d]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.ModalRunner@27c86f2d]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
       </group> <!-- cucumber -->
     </groups>
-    <test started-at="2026-04-17T20:07:06 EDT" name="Surefire test" finished-at="2026-04-17T20:07:22 EDT" duration-ms="16412">
-      <class name="com.asianfit.ui.runner.SignupRunner">
-        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@27c86f2d]" started-at="2026-04-17T20:07:06 EDT" name="setUpClass" finished-at="2026-04-17T20:07:06 EDT" duration-ms="297" status="PASS">
+    <test started-at="2026-04-17T20:19:34 EDT" name="Surefire test" finished-at="2026-04-17T20:19:51 EDT" duration-ms="17446">
+      <class name="com.asianfit.ui.runner.ModalRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.ui.runner.ModalRunner@27c86f2d]" started-at="2026-04-17T20:19:34 EDT" name="setUpClass" finished-at="2026-04-17T20:19:34 EDT" duration-ms="262" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA[org.testng.TestRunner@5a85c92]]>
+                <![CDATA[org.testng.TestRunner@4351c8c3]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- setUpClass -->
-        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@27c86f2d]" started-at="2026-04-17T20:07:06 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-17T20:07:22 EDT" duration-ms="16073" status="PASS">
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.ModalRunner@27c86f2d]" started-at="2026-04-17T20:19:34 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-17T20:19:51 EDT" duration-ms="17156" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA["User cannot sign up twice with the same email address"]]>
+                <![CDATA["User can open the login modal, switch to signup, and close it"]]>
               </value>
             </param>
             <param index="1">
               <value>
-                <![CDATA["Signup"]]>
+                <![CDATA["Auth modals"]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- runScenario -->
-        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.ui.runner.SignupRunner@27c86f2d]" started-at="2026-04-17T20:07:22 EDT" name="tearDownClass" finished-at="2026-04-17T20:07:22 EDT" duration-ms="20" status="PASS">
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.ui.runner.ModalRunner@27c86f2d]" started-at="2026-04-17T20:19:51 EDT" name="tearDownClass" finished-at="2026-04-17T20:19:51 EDT" duration-ms="11" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- tearDownClass -->
-      </class> <!-- com.asianfit.ui.runner.SignupRunner -->
+      </class> <!-- com.asianfit.ui.runner.ModalRunner -->
     </test> <!-- Surefire test -->
   </suite> <!-- Surefire suite -->
 </testng-results>
