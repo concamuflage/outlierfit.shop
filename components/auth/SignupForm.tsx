@@ -79,24 +79,29 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
     }
 
     // Create the user in the backend first.
-    const res = await fetch(`${apiBase}/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, firstName, lastName }),
-    });
+    try {
+      const res = await fetch(`${apiBase}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, firstName, lastName }),
+      });
 
-    // If signup fails, show backend error (if any) and stop.
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setError(data?.error ?? "Signup failed.");
+      // If signup fails, show backend error (if any) and stop.
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? "Signup failed.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
+      const data = await res.json().catch(() => null);
+      setSuccessMessage(data?.message ?? "Check your email to verify your account before signing in.");
+      onSuccess?.();
+    } catch {
+      setError("Unable to reach the signup service.");
+      setLoading(false);
     }
-
-    setLoading(false);
-    const data = await res.json().catch(() => null);
-    setSuccessMessage(data?.message ?? "Check your email to verify your account before signing in.");
-    onSuccess?.();
   };
 
   const handleResendVerification = async () => {
@@ -109,21 +114,26 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
     setResending(true);
     setError(null);
 
-    const res = await fetch(`${apiBase}/auth/resend-verification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const res = await fetch(`${apiBase}/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      setError(data?.error ?? "Unable to resend verification email.");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error ?? "Unable to resend verification email.");
+        setResending(false);
+        return;
+      }
+
+      setSuccessMessage(data?.message ?? "Verification email sent.");
       setResending(false);
-      return;
+    } catch {
+      setError("Unable to reach the signup service.");
+      setResending(false);
     }
-
-    setSuccessMessage(data?.message ?? "Verification email sent.");
-    setResending(false);
   };
 
   return (

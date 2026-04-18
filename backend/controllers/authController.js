@@ -65,12 +65,20 @@ async function issueEmailVerification(user) {
     [user.id, hashedToken, expiresAt]
   );
 
-  await sendVerificationEmail({
-    to: user.email,
-    firstName: user.first_name || user.firstName,
-    verificationLink: buildVerificationLink(user.email, rawToken),
-  });
-};
+  try {
+    await sendVerificationEmail({
+      to: user.email,
+      firstName: user.first_name || user.firstName,
+      verificationLink: buildVerificationLink(user.email, rawToken),
+    });
+  } catch (error) {
+    const isProduction = process.env.NODE_ENV === "production";
+    console.error("verification email error:", error);
+    if (isProduction) {
+      throw error;
+    }
+  }
+}
 
 exports.signup = async (req, res) => {
   try {

@@ -11,6 +11,12 @@ public final class TestConfig {
   private static final List<Path> LOCAL_ENV_PATHS = List.of(
     Path.of(".env"),
     Path.of(".env.local"),
+    Path.of("backend/.env"),
+    Path.of("backend/database/.env"),
+    Path.of("../backend/.env"),
+    Path.of("../backend/database/.env"),
+    Path.of("../../backend/.env"),
+    Path.of("../../backend/database/.env"),
     Path.of("test/ui/.env"),
     Path.of("test/ui/.env.local")
   );
@@ -45,6 +51,78 @@ public final class TestConfig {
     if (value == null || value.isBlank()) {
       throw new IllegalStateException(
         "Missing test user email. Set -DtestUserEmail, TEST_USER_EMAIL, or test/ui/.env.local for login-required UI tests"
+      );
+    }
+    return value;
+  }
+
+  public static String databaseUrl() {
+    String value = System.getProperty("testDatabaseUrl");
+    if (value == null || value.isBlank()) {
+      value = System.getenv("TEST_DATABASE_URL");
+    }
+    if (value == null || value.isBlank()) {
+      value = LOCAL_ENV.get("TEST_DATABASE_URL");
+    }
+    if (value == null || value.isBlank()) {
+      value = System.getenv("DATABASE_URL");
+    }
+    if (value == null || value.isBlank()) {
+      value = LOCAL_ENV.get("DATABASE_URL");
+    }
+    if (value == null || value.isBlank()) {
+      String host = firstNonBlank(
+        System.getProperty("pgHost"),
+        System.getenv("PGHOST"),
+        LOCAL_ENV.get("PGHOST")
+      );
+      String port = firstNonBlank(
+        System.getProperty("pgPort"),
+        System.getenv("PGPORT"),
+        LOCAL_ENV.get("PGPORT"),
+        "5432"
+      );
+      String database = firstNonBlank(
+        System.getProperty("pgDatabase"),
+        System.getenv("PGDATABASE"),
+        LOCAL_ENV.get("PGDATABASE")
+      );
+
+      if (host != null && database != null) {
+        value = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+      }
+    }
+    if (value == null || value.isBlank()) {
+      throw new IllegalStateException(
+        "Missing database connection. Set -DtestDatabaseUrl, TEST_DATABASE_URL, DATABASE_URL, or PGHOST/PGPORT/PGDATABASE in test/ui/.env.local"
+      );
+    }
+    return toJdbcUrl(value);
+  }
+
+  public static String databaseUser() {
+    String value = firstNonBlank(
+      System.getProperty("pgUser"),
+      System.getenv("PGUSER"),
+      LOCAL_ENV.get("PGUSER")
+    );
+    if (value == null) {
+      throw new IllegalStateException(
+        "Missing database user. Set -DpgUser, PGUSER, or test/ui/.env.local"
+      );
+    }
+    return value;
+  }
+
+  public static String databasePassword() {
+    String value = firstNonBlank(
+      System.getProperty("pgPassword"),
+      System.getenv("PGPASSWORD"),
+      LOCAL_ENV.get("PGPASSWORD")
+    );
+    if (value == null) {
+      throw new IllegalStateException(
+        "Missing database password. Set -DpgPassword, PGPASSWORD, or test/ui/.env.local"
       );
     }
     return value;
@@ -125,42 +203,34 @@ public final class TestConfig {
 
   private static Map<String, String> loadLocalEnv() {
     Map<String, String> values = new HashMap<>();
-    Path localEnvPath = resolveLocalEnvPath();
-    if (localEnvPath == null) {
-      return values;
-    }
-
-    try {
-      List<String> lines = Files.readAllLines(localEnvPath);
-      for (String rawLine : lines) {
-        String line = rawLine.trim();
-        if (line.isEmpty() || line.startsWith("#")) {
-          continue;
-        }
-
-        int separatorIndex = line.indexOf('=');
-        if (separatorIndex <= 0) {
-          continue;
-        }
-
-        String key = line.substring(0, separatorIndex).trim();
-        String value = line.substring(separatorIndex + 1).trim();
-        values.put(key, stripWrappingQuotes(value));
+    for (Path localEnvPath : LOCAL_ENV_PATHS) {
+      if (!Files.exists(localEnvPath)) {
+        continue;
       }
-    } catch (IOException e) {
-      throw new IllegalStateException("Failed to read " + localEnvPath, e);
+
+      try {
+        List<String> lines = Files.readAllLines(localEnvPath);
+        for (String rawLine : lines) {
+          String line = rawLine.trim();
+          if (line.isEmpty() || line.startsWith("#")) {
+            continue;
+          }
+
+          int separatorIndex = line.indexOf('=');
+          if (separatorIndex <= 0) {
+            continue;
+          }
+
+          String key = line.substring(0, separatorIndex).trim();
+          String value = line.substring(separatorIndex + 1).trim();
+          values.put(key, stripWrappingQuotes(value));
+        }
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to read " + localEnvPath, e);
+      }
     }
 
     return values;
-  }
-
-  private static Path resolveLocalEnvPath() {
-    for (Path candidate : LOCAL_ENV_PATHS) {
-      if (Files.exists(candidate)) {
-        return candidate;
-      }
-    }
-    return null;
   }
 
   private static String stripWrappingQuotes(String value) {
@@ -170,6 +240,28 @@ public final class TestConfig {
       if (wrappedInDoubleQuotes || wrappedInSingleQuotes) {
         return value.substring(1, value.length() - 1);
       }
+    }
+    return value;
+  }
+
+  private static String firstNonBlank(String... values) {
+    for (String value : values) {
+      if (value != null && !value.isBlank()) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  private static String toJdbcUrl(String value) {
+    if (value.startsWith("jdbc:postgresql://")) {
+      return value;
+    }
+    if (value.startsWith("postgresql://")) {
+      return "jdbc:" + value;
+    }
+    if (value.startsWith("postgres://")) {
+      return "jdbc:postgresql://" + value.substring("postgres://".length());
     }
     return value;
   }

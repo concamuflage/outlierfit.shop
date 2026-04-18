@@ -1,9 +1,13 @@
 package com.asianfit.ui.pages;
 
 import com.asianfit.ui.utils.TestConfig;
+import java.time.Duration;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class SignupPage extends BasePage {
   private static final By FIRST_NAME = By.id("signup-first-name");
@@ -40,11 +44,11 @@ public class SignupPage extends BasePage {
     typeIntoField(EMAIL, email);
     typeIntoField(PASSWORD, password);
     typeIntoField(CONFIRM_PASSWORD, confirmPassword);
-    click(SUBMIT);
+    submitForm();
   }
 
   public boolean hasErrorMessage() {
-    return count(ERROR) > 0;
+    return waitForSubmissionResult(ERROR);
   }
 
   public String errorMessage() {
@@ -52,16 +56,92 @@ public class SignupPage extends BasePage {
   }
 
   public boolean hasSuccessMessage() {
-    return count(SUCCESS) > 0;
+    return waitForSubmissionResult(SUCCESS);
   }
 
   public String successMessage() {
     return text(SUCCESS);
   }
 
+  public String submissionState() {
+    if (count(SUCCESS) > 0) {
+      return "success: " + successMessage();
+    }
+    if (count(ERROR) > 0) {
+      return "error: " + errorMessage();
+    }
+
+    String emailValidationMessage = validationMessage(EMAIL);
+    if (!emailValidationMessage.isBlank()) {
+      return "email validation: " + emailValidationMessage;
+    }
+
+    String passwordValidationMessage = validationMessage(PASSWORD);
+    if (!passwordValidationMessage.isBlank()) {
+      return "password validation: " + passwordValidationMessage;
+    }
+
+    String confirmPasswordValidationMessage = validationMessage(CONFIRM_PASSWORD);
+    if (!confirmPasswordValidationMessage.isBlank()) {
+      return "confirm password validation: " + confirmPasswordValidationMessage;
+    }
+
+    return "no success or error message rendered"
+      + ", url=" + currentUrl()
+      + ", submitDisabled=" + isSubmitDisabled()
+      + ", submitLabel=" + submitLabel();
+  }
+
   private void typeIntoField(By locator, String value) {
     WebElement field = waitForClickable(locator);
     field.click();
+    field.clear();
+    field.sendKeys(Keys.chord(Keys.COMMAND, "a"));
+    field.sendKeys(Keys.DELETE);
     field.sendKeys(value);
+  }
+
+  private void submitForm() {
+    WebElement submitButton = waitForClickable(SUBMIT);
+    ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block: 'center'});", submitButton);
+    submitButton.click();
+  }
+
+  private boolean waitForSubmissionResult(By locator) {
+    try {
+      return new WebDriverWait(driver, Duration.ofSeconds(10))
+        .until(currentDriver -> !currentDriver.findElements(locator).isEmpty());
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
+  private String validationMessage(By locator) {
+    try {
+      WebElement element = waitForVisible(locator);
+      Object result = ((JavascriptExecutor) driver).executeScript(
+        "return arguments[0].validationMessage || '';",
+        element
+      );
+      return result == null ? "" : result.toString().trim();
+    } catch (Exception ignored) {
+      return "";
+    }
+  }
+
+  private boolean isSubmitDisabled() {
+    try {
+      return waitForVisible(SUBMIT).getDomProperty("disabled") != null;
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
+  private String submitLabel() {
+    try {
+      return waitForVisible(SUBMIT).getText().trim();
+    } catch (Exception ignored) {
+      return "";
+    }
   }
 }

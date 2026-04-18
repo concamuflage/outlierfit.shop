@@ -1,6 +1,7 @@
 package com.asianfit.ui.hooks;
 
 import com.asianfit.ui.utils.DriverFactory;
+import com.asianfit.ui.utils.DatabaseCleanup;
 import io.cucumber.java.After;
 import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
@@ -13,6 +14,11 @@ public class Hooks {
   public void setUp() {
     // Each scenario gets its own browser session to avoid cross-test state bleed.
     DriverFactory.createDriver();
+  }
+
+  @Before("@Signup")
+  public void cleanSignupUserBeforeScenario() {
+    DatabaseCleanup.deleteSignupUser();
   }
 
   // Runs after every individual step in a scenario.
@@ -32,5 +38,10 @@ public class Hooks {
   public void tearDown() {
     // Always close the driver so parallel scenarios do not leak browser processes.
     DriverFactory.quitDriver();
+  }
+
+  @After("@Signup")
+  public void cleanSignupUserAfterScenario() {
+    DatabaseCleanup.deleteSignupUser();
   }
 }

@@ -221,7 +221,10 @@ public class CartSteps {
 
   @Then("the signup page should show a verification success message")
   public void theSignupPageShouldShowAVerificationSuccessMessage() {
-    Assert.assertTrue(signupPage().hasSuccessMessage(), "Signup page should show a verification success message");
+    Assert.assertTrue(
+      signupPage().hasSuccessMessage(),
+      "Signup page should show a verification success message, but got: " + signupPage().submissionState()
+    );
     Assert.assertEquals(signupPage().successMessage(), SIGNUP_SUCCESS_MESSAGE);
   }
 

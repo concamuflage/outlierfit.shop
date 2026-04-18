@@ -9,5 +9,6 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/LoginRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/SignupRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/CartSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DatabaseCleanup.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DriverFactory.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/TestConfig.java
