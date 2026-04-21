@@ -14,6 +14,7 @@
     <testng.version>7.10.2</testng.version>
     <cucumber.version>7.20.1</cucumber.version>
     <webdrivermanager.version>5.9.3</webdrivermanager.version>
+    <restassured.version>5.5.1</restassured.version>
   </properties>
 
   <dependencies>
@@ -51,6 +52,12 @@
       <version>42.7.7</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>${restassured.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -61,6 +68,7 @@
         <configuration>
           <includes>
             <include>**/*Runner.java</include>
+            <include>**/*Test.java</include>
           </includes>
           <systemPropertyVariables>
             <baseUrl>${baseUrl}</baseUrl>

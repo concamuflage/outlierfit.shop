@@ -14,6 +14,7 @@ type CartItemRowProps = {
   // Callback function to update the quantity of the item in the cart
   onUpdateQty: (id: string, qty: number) => void;
   priceFractionDigits?: number;
+  testIdPrefix?: string;
 };
 
 export default function CartItemRow({
@@ -21,9 +22,13 @@ export default function CartItemRow({
   onRemove,
   onUpdateQty,
   priceFractionDigits = 2,
+  testIdPrefix = "cart",
 }: CartItemRowProps) {
   return (
-    <div className="flex gap-4 rounded-2xl border border-zinc-200 bg-white p-4" data-testid={`cart-line-item-${item.id}`}>
+    <div
+      className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-4 sm:flex-row"
+      data-testid={`${testIdPrefix}-line-item-${item.id}`}
+    >
       {/* Product image section */}
       <div className="h-20 w-20 flex-none overflow-hidden rounded-xl bg-zinc-100">
         {item.imageUrl ? (
@@ -39,9 +44,9 @@ export default function CartItemRow({
       {/* Product info and controls */}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         {/* Product name, color, size, and price */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-zinc-900">{item.name}</div>
+            <div className="text-sm font-medium text-zinc-900 sm:truncate">{item.name}</div>
             <div className="mt-1 text-xs text-zinc-500">
               {item.color ? `Color: ${item.color}` : ""}
               {item.color && item.size ? " · " : ""}
@@ -53,13 +58,13 @@ export default function CartItemRow({
               </div>
             ) : null}
           </div>
-          <div className="text-sm font-semibold text-zinc-900">
+          <div className="text-sm font-semibold text-zinc-900 sm:text-right">
             {formatUsd(item.price, priceFractionDigits)}
           </div>
         </div>
 
         {/* Quantity controls and remove button */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Quantity adjustment buttons */}
           <div className="flex items-center gap-2">
             {/* Decrease quantity button */}
@@ -71,12 +76,12 @@ export default function CartItemRow({
               onClick={() => onUpdateQty(item.id, item.qty - 1)}
               className="h-8 w-8 rounded-full border border-zinc-200 text-sm hover:border-zinc-400"
               aria-label="Decrease quantity"
-              data-testid={`cart-item-decrease-${item.id}`}
+              data-testid={`${testIdPrefix}-item-decrease-${item.id}`}
             >
               -
             </button>
             {/* Current quantity display */}
-            <div className="w-6 text-center text-sm" data-testid={`cart-item-qty-${item.id}`}>{item.qty}</div>
+            <div className="w-6 text-center text-sm" data-testid={`${testIdPrefix}-item-qty-${item.id}`}>{item.qty}</div>
             {/* Increase quantity button */}
             <button
               type="button"
@@ -84,7 +89,7 @@ export default function CartItemRow({
               onClick={() => onUpdateQty(item.id, item.qty + 1)}
               className="h-8 w-8 rounded-full border border-zinc-200 text-sm hover:border-zinc-400"
               aria-label="Increase quantity"
-              data-testid={`cart-item-increase-${item.id}`}
+              data-testid={`${testIdPrefix}-item-increase-${item.id}`}
             >
               +
             </button>
@@ -95,8 +100,8 @@ export default function CartItemRow({
             type="button"
             // Calls onRemove to remove this item from the cart
             onClick={() => onRemove(item.id)}
-            className="text-xs text-zinc-500 hover:text-zinc-900"
-            data-testid={`cart-item-remove-${item.id}`}
+            className="self-start text-xs text-zinc-500 hover:text-zinc-900 sm:self-auto"
+            data-testid={`${testIdPrefix}-item-remove-${item.id}`}
           >
             Remove
           </button>

@@ -1,10 +1,10 @@
 export default function ReturnsPolicyPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto flex min-h-[calc(100vh-12rem)] max-w-3xl flex-col justify-center px-6 py-12">
+      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14 lg:py-16">
         <h1 className="text-3xl font-semibold tracking-tight">Returns</h1>
 
-        <div className="mt-6 space-y-4 text-base leading-8 text-zinc-700">
+        <div className="mt-6 max-w-3xl space-y-4 text-base leading-8 text-zinc-700">
           <p>
             If an item doesn&apos;t fit quite right, you&apos;re welcome to return it.
             Just let us know within 7 days of receiving your order, and we&apos;ll

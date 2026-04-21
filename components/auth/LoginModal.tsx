@@ -22,16 +22,17 @@ type LoginModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToSignup?: () => void;
+  onSuccess?: () => void;
 };
 
 /**
  * Login modal wrapper that renders the login form inside the shared shell.
  */
-export default function LoginModal({ isOpen, onClose, onSwitchToSignup }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSuccess }: LoginModalProps) {
   return (
     <AuthModalShell isOpen={isOpen} onClose={onClose}>
       {/* Main login form content. */}
-      <LoginForm compact onSuccess={onClose} />
+      <LoginForm compact onSuccess={onSuccess ?? onClose} />
       {/* Optional switch link so this modal can be used standalone. */}
       {onSwitchToSignup ? (
         <div className="mt-4 text-center text-xs text-zinc-600">

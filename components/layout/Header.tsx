@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 import CartButton from "@/components/cart/CartButton";
+import { useAuthModal } from "@/components/auth/AuthModalContext";
 import LoginModal from "@/components/auth/LoginModal";
 import SignupModal from "@/components/auth/SignupModal";
 
@@ -13,61 +15,103 @@ import SignupModal from "@/components/auth/SignupModal";
  */
 export default function Header() {
   const { data: session } = useSession();
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const {
+    authMode,
+    isAuthOpen,
+    openLoginModal,
+    openSignupModal,
+    switchToLogin,
+    switchToSignup,
+    closeAuthModal,
+  } = useAuthModal();
+  const pathname = usePathname();
+  const router = useRouter();
+  const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
+  const trialBannerText =
+    "The site is in trial operation. If you want to buy some clothes that are not on the site, you can send us the link so we can list them on the site. If you have any suggestions, you can also write to us. At this moment, you can register as a client and add the items to your cart; however, you can't pay us yet. All products are original, but they are bought in China and only have tags in Chinese. Shipping takes 7-60 days depending on the shipping services you choose. If U.S. Customs applies import tariffs or duties to your shipment, those charges would be the customer's responsibility; however, in most cases, orders from this site are not charged tariffs.";
+
+  const handleLoginModalSuccess = () => {
+    closeAuthModal();
+    if (openedFromAuthPage) {
+      router.push("/products");
+      router.refresh();
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="border-b border-zinc-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div className="text-lg font-semibold tracking-tight">AsianFit</div>
-        <nav className="flex items-center gap-6 text-sm">
-          <Link className="hover:underline" href="/about">
+      <div className="border-b border-amber-200 bg-amber-50">
+        <div className="mx-auto max-w-6xl px-4 py-3 text-xs leading-5 text-amber-950 sm:px-6">
+          {trialBannerText}
+        </div>
+      </div>
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="text-lg font-semibold tracking-tight sm:text-xl">AsianFit</div>
+        <nav className="flex flex-wrap items-center gap-3 text-sm sm:gap-4 lg:justify-end lg:gap-6">
+          <Link className="whitespace-nowrap hover:underline" href="/about">
             About
           </Link>
+          <Link className="whitespace-nowrap hover:underline" href="/contact">
+            Contact Us
+          </Link>
           <Link
-            className="rounded-full bg-zinc-900 px-4 py-2 text-white hover:bg-zinc-800"
+            className="whitespace-nowrap rounded-full bg-zinc-900 px-3 py-2 text-white hover:bg-zinc-800 sm:px-4"
             href="/products"
           >
             Browse Items
           </Link>
           {session?.user ? (
             <div className="flex items-center gap-3">
-              <div className="text-xs text-zinc-600">
-                Hi, {session.user.name ?? session.user.email}
-              </div>
+              <Link
+                href="/profile"
+                aria-label="Open profile"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 21a8 8 0 0 0-16 0" />
+                  <circle cx="12" cy="8" r="4" />
+                </svg>
+              </Link>
               <button
                 type="button"
-                onClick={() => signOut()}
-                className="text-xs text-zinc-600 hover:text-zinc-900"
+                onClick={handleSignOut}
+                className="whitespace-nowrap text-xs text-zinc-600 hover:text-zinc-900"
               >
                 Sign out
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setAuthMode("signup");
-                  setIsAuthOpen(true);
-                }}
-                className="rounded-full border border-zinc-200 px-4 py-2 text-sm text-zinc-900 hover:border-zinc-400"
+                onClick={openSignupModal}
+                className="whitespace-nowrap rounded-full border border-zinc-200 px-4 py-2 text-sm text-zinc-900 hover:border-zinc-400"
               >
                 Sign up
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setAuthMode("login");
-                  setIsAuthOpen(true);
-                }}
-                className="rounded-full border border-zinc-200 px-4 py-2 text-sm text-zinc-900 hover:border-zinc-400"
+                onClick={openLoginModal}
+                className="whitespace-nowrap rounded-full border border-zinc-200 px-4 py-2 text-sm text-zinc-900 hover:border-zinc-400"
               >
                 Sign in
               </button>
             </div>
           )}
-          <CartButton />
+          {session?.user ? <CartButton /> : null}
         </nav>
       </div>
 
@@ -75,16 +119,17 @@ export default function Header() {
       {authMode === "login" ? (
         <LoginModal
           isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
+          onClose={closeAuthModal}
+          onSuccess={handleLoginModalSuccess}
           // Switching modes keeps the modal open and swaps the content.
-          onSwitchToSignup={() => setAuthMode("signup")}
+          onSwitchToSignup={switchToSignup}
         />
       ) : (
         <SignupModal
           isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
+          onClose={closeAuthModal}
           // Switching modes keeps the modal open and swaps the content.
-          onSwitchToLogin={() => setAuthMode("login")}
+          onSwitchToLogin={switchToLogin}
         />
       )}
     </header>

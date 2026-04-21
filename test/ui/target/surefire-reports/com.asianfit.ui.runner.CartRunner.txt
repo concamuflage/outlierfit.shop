@@ -1,12 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.asianfit.ui.runner.CartRunner
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 38.54 s <<< FAILURE! -- in com.asianfit.ui.runner.CartRunner
-com.asianfit.ui.runner.CartRunner.runScenario["Verified user can sign in after verifying the email address", "Signup"](1) -- Time elapsed: 38.10 s <<< FAILURE!
-java.lang.AssertionError: Login page should show the email verification error expected [true] but found [false]
-	at org.testng.Assert.fail(Assert.java:111)
-	at org.testng.Assert.failNotEquals(Assert.java:1578)
-	at org.testng.Assert.assertTrue(Assert.java:57)
-	at com.asianfit.ui.steps.CartSteps.theLoginPageShouldShowTheEmailVerificationError(CartSteps.java:187)
-	at ✽.the login page should show the email verification error(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/signup.feature:27)
-
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 37.30 s -- in com.asianfit.ui.runner.CartRunner

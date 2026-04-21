@@ -50,7 +50,7 @@ export default function ProductInfoPanel({ product, variantControls }: ProductIn
 
   return (
     <div>
-      <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{product.name}</h1>
       <div className="mt-1 text-base font-semibold text-zinc-700">{product.brand}</div>
       <div className="mt-3 text-lg font-semibold">{priceUsdText}</div>
       {variantControls ? <div className="mt-6">{variantControls}</div> : null}

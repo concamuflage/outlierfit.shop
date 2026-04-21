@@ -21,6 +21,11 @@ public class Hooks {
     DatabaseCleanup.deleteSignupUser();
   }
 
+  @Before("@Cart")
+  public void cleanCartBeforeScenario() {
+    DatabaseCleanup.deleteTestUserCart();
+  }
+
   // Runs after every individual step in a scenario.
   @AfterStep
   public void pauseAfterEachStep() {
@@ -43,5 +48,10 @@ public class Hooks {
   @After("@Signup")
   public void cleanSignupUserAfterScenario() {
     DatabaseCleanup.deleteSignupUser();
+  }
+
+  @After("@Cart")
+  public void cleanCartAfterScenario() {
+    DatabaseCleanup.deleteTestUserCart();
   }
 }

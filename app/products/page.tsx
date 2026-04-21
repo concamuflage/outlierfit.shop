@@ -125,8 +125,8 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr]">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
           <FilterSidebar
             categories={categories}
             selectedCategory={selectedCategory}

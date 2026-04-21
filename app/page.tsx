@@ -6,12 +6,12 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
      
       <main>
-        <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
+        <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-10 sm:px-6 sm:py-16 lg:grid-cols-2 lg:py-24">
           <div className="flex flex-col justify-center">
-            <h1 className="text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
+            <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               Clothes that actually fit short Asian men.
             </h1>
-            <p className="mt-4 text-lg leading-8 text-zinc-600">
+            <p className="mt-4 text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
               Curated streetwear and essentials with better sleeve length, inseam,
               and proportions. Shop faster. Return less.
             </p>
@@ -31,7 +31,7 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="mt-8 grid grid-cols-3 gap-4 text-sm text-zinc-600">
+            <div className="mt-8 grid grid-cols-1 gap-4 text-sm text-zinc-600 sm:grid-cols-3">
               <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                 <div className="font-medium text-zinc-900">Better fit</div>
                 <div className="mt-1">Shorter sleeves & inseams</div>
@@ -56,7 +56,7 @@ export default function Home() {
                 <div className="text-xs text-zinc-500">Example items</div>
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
                   <div className="text-sm font-medium">Slim-fit joggers</div>
                   <div className="mt-1 text-xs text-zinc-600">
@@ -96,7 +96,7 @@ export default function Home() {
         </section>
 
         <section className="border-t border-zinc-200 bg-white">
-          <div className="mx-auto max-w-6xl px-6 py-12">
+          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
             <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-2xl border border-zinc-200 p-6">

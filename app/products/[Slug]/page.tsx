@@ -2,11 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import ProductGallery from "@/components/products/ProductGallery";
 import ProductInfoPanel, {
   type ProductInfoPanelProduct,
 } from "@/components/products/ProductInfoPanel";
 import { useCart } from "@/components/cart/CartContext";
+import { useAuthModal } from "@/components/auth/AuthModalContext";
 
 type ProductMaterial = { material: string; percentage: number | null };
 
@@ -42,6 +44,8 @@ export default function ProductDetailPage() {
   const params = useParams<{ Slug: string }>();
   const slug = params?.Slug ?? "";
   const { addItem, openCart } = useCart();
+  const { status } = useSession();
+  const { openLoginModal } = useAuthModal();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -75,8 +79,8 @@ export default function ProductDetailPage() {
           return;
         }
         setProduct(data);
-      } catch (e: any) {
-        setError(e?.message ?? "Failed to load product");
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to load product");
         setProduct(null);
       } finally {
         setLoading(false);
@@ -105,6 +109,17 @@ export default function ProductDetailPage() {
       if (typeof v?.size === "string" && v.size.trim()) s.add(v.size);
     }
     return Array.from(s);
+  }, [variants]);
+
+  const lowestPricedVariant = useMemo(() => {
+    if (variants.length === 0) return null;
+
+    return variants.reduce<ProductVariant | null>((lowest, variant) => {
+      if (lowest == null) return variant;
+      const lowestCost = lowest.cost_rmb == null ? Number.POSITIVE_INFINITY : Number(lowest.cost_rmb);
+      const variantCost = variant.cost_rmb == null ? Number.POSITIVE_INFINITY : Number(variant.cost_rmb);
+      return variantCost < lowestCost ? variant : lowest;
+    }, null);
   }, [variants]);
 
   const sizesForSelectedColor = useMemo(() => {
@@ -140,8 +155,8 @@ export default function ProductDetailPage() {
       if (exact) return exact;
     }
     if (selectedColor || selectedSize) return null;
-    return variants[0];
-  }, [variants, selectedColor, selectedSize]);
+    return lowestPricedVariant ?? variants[0];
+  }, [lowestPricedVariant, variants, selectedColor, selectedSize]);
 
   const displayVariant = useMemo(() => {
     if (selectedVariant) return selectedVariant;
@@ -149,8 +164,8 @@ export default function ProductDetailPage() {
       const byColor = variants.find((v) => v.color === selectedColor);
       if (byColor) return byColor;
     }
-    return variants[0] ?? null;
-  }, [variants, selectedColor, selectedVariant]);
+    return lowestPricedVariant ?? variants[0] ?? null;
+  }, [lowestPricedVariant, variants, selectedColor, selectedVariant]);
 
   const selectedColorFirstImage = useMemo(() => {
     if (!selectedColor) return null;
@@ -200,18 +215,16 @@ export default function ProductDetailPage() {
   }, [displayVariant, product, selectedColor, selectedSize, selectedVariant]);
 
   useEffect(() => {
-    if (!product) return;
-    if (availableColors.length > 0 && selectedColor === null) {
-      setSelectedColor(availableColors[0]);
-    }
-  }, [product, availableColors, selectedColor]);
+    if (!lowestPricedVariant) return;
+    if (selectedColor !== null) return;
+    setSelectedColor(lowestPricedVariant.color);
+  }, [lowestPricedVariant, selectedColor]);
 
   useEffect(() => {
-    if (availableSizes.length === 0 || selectedSize !== null) return;
-    if (selectedSize === null) {
-      setSelectedSize(availableSizes[0]);
-    }
-  }, [availableSizes, selectedSize]);
+    if (!lowestPricedVariant) return;
+    if (selectedSize !== null) return;
+    setSelectedSize(lowestPricedVariant.size);
+  }, [lowestPricedVariant, selectedSize]);
 
   if (loading) {
     return (
@@ -239,9 +252,10 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_400px]">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
           <ProductGallery
+            key={`${product.product_id}-${galleryInitialIndex}-${galleryPhotos.length}`}
             photos={galleryPhotos}
             alt={product.name}
             initialIndex={galleryInitialIndex}
@@ -290,7 +304,7 @@ export default function ProductDetailPage() {
                             .join(" · ");
 
                           return (
-                            <div key={s} className="grid grid-cols-[96px_1fr] items-center gap-3">
+                            <div key={s} className="grid grid-cols-1 gap-2 sm:grid-cols-[96px_1fr] sm:items-center sm:gap-3">
                               <button
                                 type="button"
                                 onClick={() => setSelectedSize(s)}
@@ -323,6 +337,10 @@ export default function ProductDetailPage() {
                 disabled={!selectedVariant}
                 onClick={() => {
                   if (!selectedVariant) return;
+                  if (status !== "authenticated") {
+                    openLoginModal();
+                    return;
+                  }
                   addItem({
                     id: `${product.product_id}-${selectedVariant.variant_id}`,
                     name: product.name,

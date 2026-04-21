@@ -12,7 +12,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
   // Conditional rendering: if there are no products, show a message instead of the grid.
   if (!products || products.length === 0) {
     return (
-      <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-600">
+      <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-600 sm:p-8">
         No products yet.
       </div>
     );
@@ -20,7 +20,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
 
   // If there are products, render them in a grid.
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
       {/* 
         .map() is used to render a list of components.
         For each product 'p' in the products array, a ProductCard is rendered.

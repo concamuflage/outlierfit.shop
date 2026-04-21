@@ -8,6 +8,7 @@ import React, {
   useReducer,  // Hook to manage complex state logic with a reducer function
   useRef      // Hook to persist mutable values across renders without triggering re-renders
 } from "react";
+import { useSession } from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
@@ -69,9 +70,6 @@ type CartAction =
 // CartContext.Provider and CartContext.Consumer.
 
 const CartContext = createContext<CartContextValue | null>(null);
-
-// Key used to store cart items in localStorage as a JSON string
-const STORAGE_KEY = "cart";
 
 // a reducer is single place that decides
 // “Given the current cart state and an action, what should the next state be?”
@@ -151,6 +149,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
   // children represents nested components that will have access to the cart context
   // <CartProvider>
   //   <Header />
@@ -165,50 +164,87 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // CartState is just a TS type, not a state in memory.
 
   const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
+  const cartHydrated = useRef(false);
+  const lastSyncedSignature = useRef<string | null>(null);
 
-  // useRef is used to track if the initialization from localStorage has already run
-  // This avoids double initialization caused by React Strict Mode in development which invokes effects twice
-  // useRef(false) creates an object like this:
-  // didInit = { current: false }
-  const didInit = useRef(false);
-
-  // Initialize cart items from localStorage on first render only
   useEffect(() => {
-    //if current is true, do nothing
-    if (didInit.current) return; // Prevent double init in React Strict Mode during development
-    
-    didInit.current = true;
-    // do the initialization
-    try {
-      // raw is null or an object.
+    if (status === "loading") return;
 
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      // if raw is null
-      // do nothing
-      if (!raw) return;
-      // if raw is not null
-      // converts a JSON string into the corresponding JavaScript object.
+    let cancelled = false;
 
-      const parsed = JSON.parse(raw);
-      
-      // Verify parsed data is an array before initializing cart items
-      if (Array.isArray(parsed)) {
-        dispatch({ type: "INIT", items: parsed });
+    const hydrateCart = async () => {
+      if (!session?.user) {
+        cartHydrated.current = false;
+        lastSyncedSignature.current = JSON.stringify([]);
+        dispatch({ type: "INIT", items: [] });
+        return;
       }
-    } catch {
-      // Ignore JSON parsing or storage errors and fallback to empty cart
-    }
-  }, []);
 
-  // Persist cart items to localStorage whenever the items array changes
-  // Dependency on state.items ensures this effect runs only when cart content changes, not UI open state
+      try {
+        const response = await fetch("/api/cart", { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+        if (cancelled) return;
+
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+        dispatch({ type: "INIT", items });
+        lastSyncedSignature.current = JSON.stringify(
+          items.map((item: CartItem) => ({ id: item.id, qty: item.qty }))
+        );
+      } catch {
+        if (cancelled) return;
+        dispatch({ type: "INIT", items: [] });
+        lastSyncedSignature.current = JSON.stringify([]);
+      } finally {
+        if (!cancelled) {
+          cartHydrated.current = true;
+        }
+      }
+    };
+
+    void hydrateCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user, status]);
+
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
-    } catch {
-      // Ignore storage errors (e.g. quota exceeded)
+    if (status !== "authenticated" || !session?.user || !cartHydrated.current) {
+      return;
     }
-  }, [state.items]);
+
+    const payloadItems = state.items.map((item) => ({ id: item.id, qty: item.qty }));
+    const signature = JSON.stringify(payloadItems);
+    if (signature === lastSyncedSignature.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const persistCart = async () => {
+      try {
+        const response = await fetch("/api/cart", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: payloadItems }),
+        });
+
+        if (!response.ok || cancelled) {
+          return;
+        }
+
+        lastSyncedSignature.current = signature;
+      } catch {
+        // Ignore sync errors and keep the in-memory cart.
+      }
+    };
+
+    void persistCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user, state.items, status]);
 
   useEffect(() => {
     if (!API_BASE_URL || state.items.length === 0) return;

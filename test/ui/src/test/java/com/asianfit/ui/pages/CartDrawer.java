@@ -2,13 +2,15 @@ package com.asianfit.ui.pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import java.util.List;
 
 public class CartDrawer extends BasePage {
   private static final By DRAWER = By.cssSelector("[data-testid='cart-drawer']");
-  private static final By CART_ITEMS = By.cssSelector("[data-testid^='cart-line-item-']");
-  private static final By FIRST_ITEM_INCREASE = By.cssSelector("[data-testid^='cart-item-increase-']");
-  private static final By FIRST_ITEM_QTY = By.cssSelector("[data-testid^='cart-item-qty-']");
-  private static final By FIRST_ITEM_REMOVE = By.cssSelector("[data-testid^='cart-item-remove-']");
+  private static final By CART_ITEMS = By.cssSelector("[data-testid^='cart-drawer-line-item-']");
+  private static final By FIRST_ITEM_INCREASE = By.cssSelector("[data-testid^='cart-drawer-item-increase-']");
+  private static final By FIRST_ITEM_QTY = By.cssSelector("[data-testid^='cart-drawer-item-qty-']");
+  private static final By FIRST_ITEM_REMOVE = By.cssSelector("[data-testid^='cart-drawer-item-remove-']");
   private static final By SUBTOTAL = By.cssSelector("[data-testid='cart-drawer-subtotal']");
   private static final By CLEAR_CART = By.cssSelector("[data-testid='cart-drawer-clear-cart']");
 
@@ -31,6 +33,16 @@ public class CartDrawer extends BasePage {
 
   public void increaseFirstItemQuantity() {
     click(FIRST_ITEM_INCREASE);
+  }
+
+  public void increaseSecondItemQuantity() {
+    List<WebElement> items = driver.findElements(CART_ITEMS);
+    if (items.size() < 2) {
+      throw new IllegalStateException("Expected at least 2 cart items in the drawer");
+    }
+    WebElement secondItem = items.get(1);
+    WebElement increaseButton = secondItem.findElement(By.cssSelector("[data-testid^='cart-drawer-item-increase-']"));
+    increaseButton.click();
   }
 
   public String firstItemQuantity() {

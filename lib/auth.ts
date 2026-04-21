@@ -3,6 +3,7 @@
 // This configuration sets up credential-based login by verifying user credentials against a backend API.
 
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
+import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
 
 // The `authOptions` object defines how NextAuth should handle authentication in this app.
@@ -92,6 +93,20 @@ export const authOptions: NextAuthOptions = {
   // Use JSON Web Tokens (JWT) for session management instead of database sessions.
   // This means user sessions are encoded in tokens passed between client and server.
   session: { strategy: "jwt" },
+  callbacks: {
+    async jwt({ token, user }: { token: JWT; user?: { id?: string } }) {
+      if (user?.id) {
+        token.userId = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && typeof token.userId === "string") {
+        session.user.id = token.userId;
+      }
+      return session;
+    },
+  },
   // Specify a custom sign-in page URL to route users to when they need to log in.
   pages: { signIn: "/login" },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Image from "next/image";
 
 // ProductGallery shows a main product photo plus a list of thumbnails.
@@ -26,37 +26,13 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
       .filter((p) => p.length > 0);
   }, [photos]);
 
-  // Keep track of which photo is currently selected.
-
-
-  const [selectedIndex, setSelectedIndex] = useState<number>(
-    // hard to understand
-    // make sure the default value is legit. 
-    Math.min(
-        Math.max(initialIndex, 0), // if someone passes in -5, this will be 0
-        Math.max(safePhotos.length - 1, 0) // if length is 4, this will be 3. if the length is 0, this is will be 0. 
-    )
+  const initialSelectedIndex = Math.min(
+    Math.max(initialIndex, 0),
+    Math.max(safePhotos.length - 1, 0)
   );
-
-  // If the photos list changes (e.g. navigating to a different product),
-  // ensure the selected index is still valid.
-  useEffect(() => {
-    setSelectedIndex((prev) => {
-      if (safePhotos.length === 0) return 0;
-      return Math.min(Math.max(prev, 0), safePhotos.length - 1);
-    });
-  }, [safePhotos.length]);
-
-  // When the requested initial index changes (e.g. color selection),
-  // move the main photo to that index if it's in range.
-  useEffect(() => {
-    if (safePhotos.length === 0) return;
-    const nextIndex = Math.min(Math.max(initialIndex, 0), safePhotos.length - 1);
-    setSelectedIndex(nextIndex);
-  }, [initialIndex, safePhotos.length]);
-
-
-  const mainSrc = safePhotos[selectedIndex];
+  const [selectedIndex, setSelectedIndex] = useState<number>(initialSelectedIndex);
+  const activeIndex = Math.min(Math.max(selectedIndex, 0), Math.max(safePhotos.length - 1, 0));
+  const mainSrc = safePhotos[activeIndex];
 
   const canNavigate = safePhotos.length > 1;
   const shouldUseTwoThumbnailColumns = safePhotos.length > 6;
@@ -76,7 +52,7 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
     <div
       className={
         "grid grid-cols-1 gap-4 " +
-        (shouldUseTwoThumbnailColumns ? "md:grid-cols-[204px_1fr]" : "md:grid-cols-[96px_1fr]")
+        (shouldUseTwoThumbnailColumns ? "lg:grid-cols-[204px_1fr]" : "lg:grid-cols-[96px_1fr]")
       }
     >
       {/* 
@@ -86,10 +62,10 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
       */}
       <div
         className={
-          "order-2 flex gap-3 overflow-auto md:order-1 md:overflow-visible " +
+          "order-2 flex gap-3 overflow-auto lg:order-1 lg:overflow-visible " +
           (shouldUseTwoThumbnailColumns
-            ? "md:grid md:grid-cols-2 md:gap-3 md:content-start"
-            : "md:flex-col")
+            ? "lg:grid lg:grid-cols-2 lg:gap-3 lg:content-start"
+            : "lg:flex-col")
         }
       >
         {/*
@@ -99,7 +75,7 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
         */}
         {safePhotos.map((src, idx) => {
           // isActive indicates if this thumbnail is currently selected
-          const isActive = idx === selectedIndex;
+          const isActive = idx === activeIndex;
 
           return (
             <button
@@ -131,7 +107,7 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
         Uses aspect-square to keep the container square regardless of width.
         This ensures consistent layout and image aspect ratio.
       */}
-      <div className="order-1 md:order-2">
+      <div className="order-1 lg:order-2">
         <div className="relative overflow-hidden rounded-3xl border border-zinc-200 bg-white">
           <div className="relative aspect-square w-full">
             <Image
@@ -173,7 +149,7 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
         {/* Small helper text */}
         {canNavigate ? (
           <div className="mt-2 text-xs text-zinc-600">
-            Photo {selectedIndex + 1} of {safePhotos.length}
+            Photo {activeIndex + 1} of {safePhotos.length}
           </div>
         ) : null}
       </div>

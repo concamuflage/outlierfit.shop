@@ -141,7 +141,7 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
       Root container. The `compact` flag is used when the form is embedded
       inside a modal that already has a padded card background.
     */
-    <div className={compact ? "" : "rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm"}>
+    <div className={compact ? "" : "rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"}>
       <h1 className={compact ? "text-base font-semibold" : "text-2xl font-semibold"}>
         Create your account
       </h1>

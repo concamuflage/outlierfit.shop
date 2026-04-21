@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useCart } from "@/components/cart/CartContext"; // useCart is a custom hook that provides access to the shopping cart's state and actions.
-import CartItemRow from "@/components/cart/CartItemRow"; // Component representing a single item row in the cart.
-import { formatUsd } from "@/lib/formatters"; // Utility function to format numbers as USD currency strings.
+import ItemsPanel from "@/components/cart/ItemsPanel";
+import OrderSummary from "@/components/cart/OrderSummary";
+import { useShippingOptions } from "@/components/cart/useShippingOptions";
+import { getBoxWeightKg } from "@/lib/shipping";
 
 export default function CartDrawer() {
   
@@ -15,7 +17,17 @@ export default function CartDrawer() {
   // - removeItem: function to remove an item from the cart
   // - updateQty: function to update quantity of an item
   // - clearCart: function to remove all items from the cart
-  const { items, isOpen, subtotal, closeCart, removeItem, updateQty, clearCart } = useCart();
+  const { items, isOpen, subtotal, totalWeightKg, closeCart, removeItem, updateQty, clearCart } = useCart();
+  const boxWeightKg = getBoxWeightKg(totalWeightKg);
+  const shipmentWeightKg = totalWeightKg + boxWeightKg;
+  const {
+    shippingError,
+    shippingLoading,
+    shippingOptions,
+    selectedShippingModeId,
+    selectedShippingOption,
+    setSelectedShippingModeId,
+  } = useShippingOptions(shipmentWeightKg);
 
   return (
     <div
@@ -40,8 +52,8 @@ export default function CartDrawer() {
       />
 
       <aside
-        className={
-          "absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl transition-transform " +
+          className={
+          "absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-xl transition-transform " +
           // isOpen controls the drawer sliding in and out from the right
           (isOpen ? "translate-x-0" : "translate-x-full")
         }
@@ -51,7 +63,7 @@ export default function CartDrawer() {
         data-testid="cart-drawer"
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4 sm:px-6">
             <div className="text-base font-semibold">Cart</div>
             <button
               type="button"
@@ -63,56 +75,42 @@ export default function CartDrawer() {
             </button>
           </div>
 
-          {/* Main content area: scrollable list of cart items or empty message */}
-
-          <div className="flex-1 space-y-4 overflow-auto px-6 py-4">
-            {items.length === 0 ? (
-              // Conditional rendering: if no items, show a message indicating empty cart
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-600">
-                Your cart is empty.
-              </div>
-            ) : (
-              // Otherwise, map over items to render a CartItemRow for each
-              items.map((item) => (
-                <CartItemRow
-                  key={item.id}
-                  item={item} // Pass individual cart item data
-                  onRemove={removeItem} // Pass removeItem function to allow removing this item
-                  onUpdateQty={updateQty} // Pass updateQty function to update quantity
-                  priceFractionDigits={0}
-                />
-              ))
-            )}
+          <div className="flex-1 space-y-4 overflow-auto px-4 py-4 sm:px-6">
+            <ItemsPanel
+              items={items}
+              onRemove={removeItem}
+              onUpdateQty={updateQty}
+              priceFractionDigits={0}
+              testIdPrefix="cart-drawer"
+            />
+            <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+              <OrderSummary
+                subtotal={subtotal}
+                totalWeightKg={totalWeightKg}
+                shippingOptions={shippingOptions}
+                selectedShippingModeId={selectedShippingModeId}
+                selectedShippingOption={selectedShippingOption}
+                onSelectShippingMode={setSelectedShippingModeId}
+                shippingError={shippingError}
+                shippingLoading={shippingLoading}
+                radioName="drawer-shipping-mode"
+                testIdPrefix="cart-drawer"
+                legacySubtotalTestId="cart-drawer-subtotal"
+              />
+            </section>
           </div>
 
-          {/* Footer area showing subtotal and action buttons */}
-          <div className="border-t border-zinc-200 px-6 py-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600">Subtotal</span>
-              {/* subtotal is the total price of all items; formatUsd formats it as a USD currency string */}
-              <span className="font-semibold text-zinc-900" data-testid="cart-drawer-subtotal">
-                {formatUsd(subtotal)}
-              </span>
-            </div>
-
+          <div className="border-t border-zinc-200 px-4 py-4 sm:px-6">
             <div className="mt-4 grid gap-2">
               {/* Link to the full cart page; clicking it also closes the drawer */}
               <Link
                 href="/cart"
-                className="rounded-full border border-zinc-200 px-4 py-2 text-center text-sm text-zinc-900 hover:border-zinc-400"
+                className="rounded-full bg-zinc-900 px-4 py-2 text-center text-sm text-white hover:bg-zinc-800"
                 onClick={closeCart}
                 data-testid="cart-drawer-view-cart"
               >
                 View cart
               </Link>
-              {/* Checkout button (no action defined here) */}
-              <button
-                type="button"
-                className="rounded-full bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-800"
-                data-testid="cart-drawer-checkout"
-              >
-                Checkout
-              </button>
               {/* If there are items, show a Clear cart button to remove all items */}
               {items.length > 0 ? (
                 <button
