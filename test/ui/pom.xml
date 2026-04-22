@@ -70,6 +70,16 @@
             <include>**/*Runner.java</include>
             <include>**/*Test.java</include>
           </includes>
+          <properties>
+            <property>
+              <name>dataproviderthreadcount</name>
+              <value>1</value>
+            </property>
+            <property>
+              <name>listener</name>
+              <value>com.asianfit.ui.listeners.FailFastListener</value>
+            </property>
+          </properties>
           <systemPropertyVariables>
             <baseUrl>${baseUrl}</baseUrl>
             <headless>${headless}</headless>

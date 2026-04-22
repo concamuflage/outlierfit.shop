@@ -3,13 +3,13 @@
 <suite name="Failed suite [Surefire suite]" verbose="0">
   <test thread-count="5" name="Surefire test(failed)" verbose="0">
     <classes>
-      <class name="com.asianfit.ui.runner.CartRunner">
+      <class name="com.asianfit.ui.runner.CartAndDrawerSyncRunner">
         <methods>
           <include name="setUpClass"/>
           <include name="runScenario" invocation-numbers="0"/>
           <include name="tearDownClass"/>
         </methods>
-      </class> <!-- com.asianfit.ui.runner.CartRunner -->
+      </class> <!-- com.asianfit.ui.runner.CartAndDrawerSyncRunner -->
     </classes>
   </test> <!-- Surefire test(failed) -->
 </suite> <!-- Failed suite [Surefire suite] -->

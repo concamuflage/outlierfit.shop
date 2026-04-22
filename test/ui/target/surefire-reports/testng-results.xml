@@ -1,47 +1,183 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
+<testng-results ignored="0" total="5" passed="5" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2026-04-20T22:19:52 EDT" name="Surefire suite" finished-at="2026-04-20T22:20:29 EDT" duration-ms="37144">
+  <suite started-at="2026-04-21T19:35:54 EDT" name="Surefire suite" finished-at="2026-04-21T19:36:01 EDT" duration-ms="6824">
     <groups>
       <group name="cucumber">
-        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.CartRunner@7f1302d6]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.CartApiRunner@358ee631]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.CheckoutApiRunner@3c72f59f]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.OrdersApiRunner@ec756bd]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.OrdersInvoiceApiRunner@60dcc9fe]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.ProfileApiRunner@223f3642]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
       </group> <!-- cucumber -->
     </groups>
-    <test started-at="2026-04-20T22:19:52 EDT" name="Surefire test" finished-at="2026-04-20T22:20:29 EDT" duration-ms="37144">
-      <class name="com.asianfit.ui.runner.CartRunner">
-        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.ui.runner.CartRunner@7f1302d6]" started-at="2026-04-20T22:19:52 EDT" name="setUpClass" finished-at="2026-04-20T22:19:52 EDT" duration-ms="226" status="PASS">
+    <test started-at="2026-04-21T19:35:54 EDT" name="Surefire test" finished-at="2026-04-21T19:36:01 EDT" duration-ms="6824">
+      <class name="com.asianfit.api.runner.OrdersInvoiceApiRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.api.runner.OrdersInvoiceApiRunner@60dcc9fe]" started-at="2026-04-21T19:36:00 EDT" name="setUpClass" finished-at="2026-04-21T19:36:00 EDT" duration-ms="24" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA[org.testng.TestRunner@1021f6c9]]>
+                <![CDATA[org.testng.TestRunner@763b0996]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- setUpClass -->
-        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.CartRunner@7f1302d6]" started-at="2026-04-20T22:19:52 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-20T22:20:29 EDT" duration-ms="36893" status="PASS">
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.OrdersInvoiceApiRunner@60dcc9fe]" started-at="2026-04-21T19:36:00 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-21T19:36:01 EDT" duration-ms="519" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA["the carts should display the correct total weight and price"]]>
+                <![CDATA["Authenticated user can retrieve invoice-ready data for an order"]]>
               </value>
             </param>
             <param index="1">
               <value>
-                <![CDATA["Cart"]]>
+                <![CDATA["Orders invoice API"]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- runScenario -->
-        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.ui.runner.CartRunner@7f1302d6]" started-at="2026-04-20T22:20:29 EDT" name="tearDownClass" finished-at="2026-04-20T22:20:29 EDT" duration-ms="11" status="PASS">
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.api.runner.OrdersInvoiceApiRunner@60dcc9fe]" started-at="2026-04-21T19:36:01 EDT" name="tearDownClass" finished-at="2026-04-21T19:36:01 EDT" duration-ms="4" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- tearDownClass -->
-      </class> <!-- com.asianfit.ui.runner.CartRunner -->
+      </class> <!-- com.asianfit.api.runner.OrdersInvoiceApiRunner -->
+      <class name="com.asianfit.api.runner.CheckoutApiRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.api.runner.CheckoutApiRunner@3c72f59f]" started-at="2026-04-21T19:35:59 EDT" name="setUpClass" finished-at="2026-04-21T19:35:59 EDT" duration-ms="11" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[org.testng.TestRunner@763b0996]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setUpClass -->
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.CheckoutApiRunner@3c72f59f]" started-at="2026-04-21T19:35:59 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-21T19:36:00 EDT" duration-ms="1594" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA["Authenticated user can submit mock payment and retrieve invoice PDFs"]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA["Checkout API"]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- runScenario -->
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.api.runner.CheckoutApiRunner@3c72f59f]" started-at="2026-04-21T19:36:00 EDT" name="tearDownClass" finished-at="2026-04-21T19:36:00 EDT" duration-ms="5" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDownClass -->
+      </class> <!-- com.asianfit.api.runner.CheckoutApiRunner -->
+      <class name="com.asianfit.api.runner.OrdersApiRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.api.runner.OrdersApiRunner@ec756bd]" started-at="2026-04-21T19:35:58 EDT" name="setUpClass" finished-at="2026-04-21T19:35:58 EDT" duration-ms="21" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[org.testng.TestRunner@763b0996]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setUpClass -->
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.OrdersApiRunner@ec756bd]" started-at="2026-04-21T19:35:58 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-21T19:35:59 EDT" duration-ms="520" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA["Authenticated user can retrieve all orders and a single order"]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA["Orders API"]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- runScenario -->
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.api.runner.OrdersApiRunner@ec756bd]" started-at="2026-04-21T19:35:59 EDT" name="tearDownClass" finished-at="2026-04-21T19:35:59 EDT" duration-ms="6" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDownClass -->
+      </class> <!-- com.asianfit.api.runner.OrdersApiRunner -->
+      <class name="com.asianfit.api.runner.ProfileApiRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.api.runner.ProfileApiRunner@223f3642]" started-at="2026-04-21T19:35:54 EDT" name="setUpClass" finished-at="2026-04-21T19:35:54 EDT" duration-ms="274" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[org.testng.TestRunner@763b0996]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setUpClass -->
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.ProfileApiRunner@223f3642]" started-at="2026-04-21T19:35:54 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-21T19:35:58 EDT" duration-ms="3198" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA["Authenticated user can retrieve and update profile information"]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA["Profile API"]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- runScenario -->
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.api.runner.ProfileApiRunner@223f3642]" started-at="2026-04-21T19:35:58 EDT" name="tearDownClass" finished-at="2026-04-21T19:35:58 EDT" duration-ms="11" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDownClass -->
+      </class> <!-- com.asianfit.api.runner.ProfileApiRunner -->
+      <class name="com.asianfit.api.runner.CartApiRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.api.runner.CartApiRunner@358ee631]" started-at="2026-04-21T19:35:58 EDT" name="setUpClass" finished-at="2026-04-21T19:35:58 EDT" duration-ms="24" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[org.testng.TestRunner@763b0996]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setUpClass -->
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.CartApiRunner@358ee631]" started-at="2026-04-21T19:35:58 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-21T19:35:58 EDT" duration-ms="584" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA["Authenticated user can persist and retrieve the current cart"]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA["Cart API"]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- runScenario -->
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.api.runner.CartApiRunner@358ee631]" started-at="2026-04-21T19:35:58 EDT" name="tearDownClass" finished-at="2026-04-21T19:35:58 EDT" duration-ms="7" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDownClass -->
+      </class> <!-- com.asianfit.api.runner.CartApiRunner -->
     </test> <!-- Surefire test -->
   </suite> <!-- Surefire suite -->
 </testng-results>

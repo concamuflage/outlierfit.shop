@@ -17,17 +17,26 @@ export default function CartDrawer() {
   // - removeItem: function to remove an item from the cart
   // - updateQty: function to update quantity of an item
   // - clearCart: function to remove all items from the cart
-  const { items, isOpen, subtotal, totalWeightKg, closeCart, removeItem, updateQty, clearCart } = useCart();
+  const {
+    items,
+    isOpen,
+    subtotal,
+    totalWeightKg,
+    selectedShippingModeId,
+    setSelectedShippingModeId,
+    closeCart,
+    removeItem,
+    updateQty,
+    clearCart,
+  } = useCart();
   const boxWeightKg = getBoxWeightKg(totalWeightKg);
   const shipmentWeightKg = totalWeightKg + boxWeightKg;
   const {
     shippingError,
     shippingLoading,
     shippingOptions,
-    selectedShippingModeId,
     selectedShippingOption,
-    setSelectedShippingModeId,
-  } = useShippingOptions(shipmentWeightKg);
+  } = useShippingOptions(shipmentWeightKg, selectedShippingModeId, setSelectedShippingModeId);
 
   return (
     <div

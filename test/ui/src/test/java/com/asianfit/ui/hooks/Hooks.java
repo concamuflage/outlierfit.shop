@@ -21,7 +21,7 @@ public class Hooks {
     DatabaseCleanup.deleteSignupUser();
   }
 
-  @Before("@Cart")
+  @Before("@Cart or @CartAndDrawerSync")
   public void cleanCartBeforeScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }
@@ -50,7 +50,7 @@ public class Hooks {
     DatabaseCleanup.deleteSignupUser();
   }
 
-  @After("@Cart")
+  @After("@Cart or @CartAndDrawerSync")
   public void cleanCartAfterScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }

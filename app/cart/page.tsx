@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
 import { useCart } from "@/components/cart/CartContext";
@@ -426,8 +426,18 @@ function AddressEditor({
 
 export default function CartPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const opensCheckoutFromUrl = searchParams.get("checkout") === "1";
-  const { items, subtotal, totalWeightKg, removeItem, updateQty, clearCart } = useCart();
+  const {
+    items,
+    subtotal,
+    totalWeightKg,
+    selectedShippingModeId,
+    setSelectedShippingModeId,
+    removeItem,
+    updateQty,
+    clearCart,
+  } = useCart();
   const [showCheckoutReview, setShowCheckoutReview] = useState(opensCheckoutFromUrl);
   const [profileData, setProfileData] = useState<ProfilePayload | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -462,10 +472,8 @@ export default function CartPage() {
     shippingError,
     shippingLoading,
     shippingOptions,
-    selectedShippingModeId,
     selectedShippingOption,
-    setSelectedShippingModeId,
-  } = useShippingOptions(shipmentWeightKg);
+  } = useShippingOptions(shipmentWeightKg, selectedShippingModeId, setSelectedShippingModeId);
 
   const shippingAddresses = profileData?.shippingAddresses ?? [];
   const billingAddresses = profileData?.billingAddresses ?? [];
@@ -618,6 +626,7 @@ export default function CartPage() {
       setInvoiceDownloadState(invoiceMeta);
       setMockPaymentResult("success");
       clearCart();
+      router.push(`/checkout/success?orderId=${encodeURIComponent(String(payload.orderId))}`);
     } finally {
       setMockPaymentLoading(false);
     }
@@ -1351,7 +1360,7 @@ export default function CartPage() {
               </section>
             ) : null}
 
-            {showCheckoutReview && profileData ? (
+            {false && showCheckoutReview && profileData ? (
               <section className="mt-6 rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -1365,7 +1374,7 @@ export default function CartPage() {
                       type="button"
                       onClick={handleMockPaymentSuccess}
                       disabled={!canCompleteMockPayment || mockPaymentLoading}
-                      className="rounded-full bg-zinc-900 px-5 py-2 text-sm text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="hidden rounded-full bg-zinc-900 px-5 py-2 text-sm text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {mockPaymentLoading ? "Processing..." : "Mock payment success"}
                     </button>
@@ -1373,7 +1382,7 @@ export default function CartPage() {
                       type="button"
                       onClick={handleMockPaymentFailure}
                       disabled={mockPaymentLoading}
-                      className="rounded-full border border-red-300 px-5 py-2 text-sm text-red-700 hover:border-red-500 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="hidden rounded-full border border-red-300 px-5 py-2 text-sm text-red-700 hover:border-red-500 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Mock payment failure
                     </button>

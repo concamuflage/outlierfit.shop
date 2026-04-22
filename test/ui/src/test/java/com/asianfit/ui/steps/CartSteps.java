@@ -136,6 +136,11 @@ public class CartSteps {
     cartPage().open();
   }
 
+  @When("I open the cart drawer")
+  public void iOpenTheCartDrawer() {
+    cartDrawer().open();
+  }
+
   @Then("the cart drawer should be visible")
   public void theCartDrawerShouldBeVisible() {
     Assert.assertTrue(cartDrawer().isVisible(), "Cart drawer should be visible");
@@ -217,6 +222,66 @@ public class CartSteps {
   @When("I choose the second shipping option")
   public void iChooseTheSecondShippingOption() {
     cartPage().selectSecondShippingOption();
+  }
+
+  @When("I choose the second shipping option in the cart drawer")
+  public void iChooseTheSecondShippingOptionInTheCartDrawer() {
+    cartDrawer().selectSecondShippingOption();
+  }
+
+  @When("I increase the quantity of the first cart drawer item")
+  public void iIncreaseTheQuantityOfTheFirstCartDrawerItem() {
+    rememberedTotalProductPriceUsd += addedProductPricesUsd.get(0);
+    rememberedTotalProductWeightKg += addedProductWeightsKg.get(0);
+    cartDrawer().increaseFirstItemQuantity();
+  }
+
+  @Then("the cart page should show the second shipping option as selected")
+  public void theCartPageShouldShowTheSecondShippingOptionAsSelected() {
+    Assert.assertTrue(
+      cartPage().isSecondShippingOptionSelected(),
+      "Expected the second shipping option to be selected on the cart page"
+    );
+  }
+
+  @Then("the cart drawer should show the second shipping option as selected")
+  public void theCartDrawerShouldShowTheSecondShippingOptionAsSelected() {
+    Assert.assertTrue(
+      cartDrawer().isSecondShippingOptionSelected(),
+      "Expected the second shipping option to be selected in the cart drawer"
+    );
+  }
+
+  @Then("the cart page should display the same items and quantities as the cart drawer")
+  public void theCartPageShouldDisplayTheSameItemsAndQuantitiesAsTheCartDrawer() {
+    cartDrawer().open();
+    Assert.assertEquals(
+      cartPage().itemQuantitiesById(),
+      cartDrawer().itemQuantitiesById(),
+      "Expected the cart page to show the same item ids and quantities as the cart drawer"
+    );
+  }
+
+  @Then("the cart page should display the same shipping cost and total price as the cart drawer")
+  public void theCartPageShouldDisplayTheSameShippingCostAndTotalPriceAsTheCartDrawer() {
+    cartDrawer().open();
+    Assert.assertEquals(cartPage().shippingUsd(), cartDrawer().shippingUsd(), 0.01);
+    Assert.assertEquals(cartPage().orderTotalUsd(), cartDrawer().orderTotalUsd(), 0.01);
+  }
+
+  @Then("the cart drawer should display the same items and quantities as the cart page")
+  public void theCartDrawerShouldDisplayTheSameItemsAndQuantitiesAsTheCartPage() {
+    Assert.assertEquals(
+      cartDrawer().itemQuantitiesById(),
+      cartPage().itemQuantitiesById(),
+      "Expected the cart drawer to show the same item ids and quantities as the cart page"
+    );
+  }
+
+  @Then("the cart drawer should display the same shipping cost and total price as the cart page")
+  public void theCartDrawerShouldDisplayTheSameShippingCostAndTotalPriceAsTheCartCartPage() {
+    Assert.assertEquals(cartDrawer().shippingUsd(), cartPage().shippingUsd(), 0.01);
+    Assert.assertEquals(cartDrawer().orderTotalUsd(), cartPage().orderTotalUsd(), 0.01);
   }
 
   @Then("the first cart item quantity should be {int}")

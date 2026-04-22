@@ -39,7 +39,7 @@ export default function Header() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    await signOut({ callbackUrl: "/products" });
   };
 
   return (

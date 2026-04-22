@@ -20,6 +20,7 @@
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -175,6 +176,11 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
             autoComplete="current-password"
             required
           />
+          <div className="mt-2 text-right">
+            <Link href="/forgot-password" className="text-xs text-zinc-700 underline">
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         {error ? (

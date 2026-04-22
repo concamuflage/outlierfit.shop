@@ -32,13 +32,6 @@ export type InvoicePayload = {
 type PdfCommand = string;
 const BUSINESS_EMAIL = "asianfit.info@gmail.com";
 const BUSINESS_WEBSITE = "www.asianfit.shop";
-const BUSINESS_ADDRESS = {
-  street: "17 Kinross Road",
-  city: "Brighton",
-  state: "MA",
-  zipCode: "02135",
-  country: "United States",
-};
 
 function toPdfSafeText(value: string) {
   return value
@@ -108,12 +101,6 @@ function formatAddress(address: InvoiceAddress) {
     `${address.city}, ${address.state} ${address.zipCode}`,
     address.country,
     address.phone,
-  ];
-}
-
-function formatBusinessHeaderAddress(address: typeof BUSINESS_ADDRESS) {
-  return [
-    `${address.street}, ${address.city}, ${address.state} ${address.zipCode}, ${address.country}`,
   ];
 }
 
@@ -237,7 +224,7 @@ export function buildInvoicePdf(payload: InvoicePayload) {
 
   commands.push(pdfText(margin + 24, headerY + headerHeight - 44, "AsianFit", { size: 24, font: "F2" }));
   let businessY = headerY + headerHeight - 82;
-  const businessLines = [...formatBusinessHeaderAddress(BUSINESS_ADDRESS), BUSINESS_WEBSITE, BUSINESS_EMAIL];
+  const businessLines = ["", BUSINESS_WEBSITE, BUSINESS_EMAIL];
   for (const line of businessLines) {
     businessY = drawWrappedText(commands, margin + 24, businessY, 300, line, {
       size: 10,

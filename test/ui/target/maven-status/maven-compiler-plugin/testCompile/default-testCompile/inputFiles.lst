@@ -1,11 +1,16 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/hooks/OrdersApiHooks.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/orders/OrdersApiTest.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/runner/CartApiRunner.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/runner/CheckoutApiRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/runner/OrdersApiRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/runner/OrdersInvoiceApiRunner.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/runner/ProfileApiRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/steps/OrdersApiSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/support/ApiEndpoints.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/support/OrdersApiContext.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/api/support/OrdersApiSupport.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/hooks/Hooks.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/listeners/FailFastListener.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/BasePage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CartDrawer.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CartPage.java
@@ -14,6 +19,7 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductDetailPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductsPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/SignupPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/CartAndDrawerSyncRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/CartRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/LoginRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/ModalRunner.java

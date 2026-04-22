@@ -5,10 +5,20 @@ import io.restassured.response.Response;
 
 public final class OrdersApiContext {
   private static final ThreadLocal<Cookies> AUTH_COOKIES = new ThreadLocal<>();
+  private static final ThreadLocal<Response> PROFILE_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<Response> CART_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<Response> MOCK_PAYMENT_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<OrdersApiSupport.OrderFixture> FIXTURE = new ThreadLocal<>();
+  private static final ThreadLocal<OrdersApiSupport.CheckoutFixture> CHECKOUT_FIXTURE = new ThreadLocal<>();
+  private static final ThreadLocal<OrdersApiSupport.MeasurementSnapshot> ORIGINAL_MEASUREMENT = new ThreadLocal<>();
+  private static final ThreadLocal<OrdersApiSupport.MeasurementSnapshot> TARGET_MEASUREMENT = new ThreadLocal<>();
+  private static final ThreadLocal<OrdersApiSupport.AddressPayload> TARGET_ADDRESS = new ThreadLocal<>();
+  private static final ThreadLocal<Integer> TARGET_ADDRESS_ID = new ThreadLocal<>();
   private static final ThreadLocal<Response> ALL_ORDERS_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Response> SINGLE_ORDER_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Response> INVOICE_PAYLOAD_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<Response> ORDER_INVOICE_PDF_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<Response> GENERATED_INVOICE_PDF_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Long> RETRIEVED_ORDER_ID = new ThreadLocal<>();
 
   private OrdersApiContext() {}
@@ -21,12 +31,76 @@ public final class OrdersApiContext {
     AUTH_COOKIES.set(cookies);
   }
 
+  public static Response profileResponse() {
+    return PROFILE_RESPONSE.get();
+  }
+
+  public static void setProfileResponse(Response response) {
+    PROFILE_RESPONSE.set(response);
+  }
+
+  public static Response cartResponse() {
+    return CART_RESPONSE.get();
+  }
+
+  public static void setCartResponse(Response response) {
+    CART_RESPONSE.set(response);
+  }
+
+  public static Response mockPaymentResponse() {
+    return MOCK_PAYMENT_RESPONSE.get();
+  }
+
+  public static void setMockPaymentResponse(Response response) {
+    MOCK_PAYMENT_RESPONSE.set(response);
+  }
+
   public static OrdersApiSupport.OrderFixture fixture() {
     return FIXTURE.get();
   }
 
   public static void setFixture(OrdersApiSupport.OrderFixture fixture) {
     FIXTURE.set(fixture);
+  }
+
+  public static OrdersApiSupport.CheckoutFixture checkoutFixture() {
+    return CHECKOUT_FIXTURE.get();
+  }
+
+  public static void setCheckoutFixture(OrdersApiSupport.CheckoutFixture fixture) {
+    CHECKOUT_FIXTURE.set(fixture);
+  }
+
+  public static OrdersApiSupport.MeasurementSnapshot originalMeasurement() {
+    return ORIGINAL_MEASUREMENT.get();
+  }
+
+  public static void setOriginalMeasurement(OrdersApiSupport.MeasurementSnapshot snapshot) {
+    ORIGINAL_MEASUREMENT.set(snapshot);
+  }
+
+  public static OrdersApiSupport.MeasurementSnapshot targetMeasurement() {
+    return TARGET_MEASUREMENT.get();
+  }
+
+  public static void setTargetMeasurement(OrdersApiSupport.MeasurementSnapshot snapshot) {
+    TARGET_MEASUREMENT.set(snapshot);
+  }
+
+  public static OrdersApiSupport.AddressPayload targetAddress() {
+    return TARGET_ADDRESS.get();
+  }
+
+  public static void setTargetAddress(OrdersApiSupport.AddressPayload address) {
+    TARGET_ADDRESS.set(address);
+  }
+
+  public static Integer targetAddressId() {
+    return TARGET_ADDRESS_ID.get();
+  }
+
+  public static void setTargetAddressId(Integer addressId) {
+    TARGET_ADDRESS_ID.set(addressId);
   }
 
   public static Response allOrdersResponse() {
@@ -53,6 +127,22 @@ public final class OrdersApiContext {
     INVOICE_PAYLOAD_RESPONSE.set(response);
   }
 
+  public static Response orderInvoicePdfResponse() {
+    return ORDER_INVOICE_PDF_RESPONSE.get();
+  }
+
+  public static void setOrderInvoicePdfResponse(Response response) {
+    ORDER_INVOICE_PDF_RESPONSE.set(response);
+  }
+
+  public static Response generatedInvoicePdfResponse() {
+    return GENERATED_INVOICE_PDF_RESPONSE.get();
+  }
+
+  public static void setGeneratedInvoicePdfResponse(Response response) {
+    GENERATED_INVOICE_PDF_RESPONSE.set(response);
+  }
+
   public static Long retrievedOrderId() {
     return RETRIEVED_ORDER_ID.get();
   }
@@ -63,10 +153,20 @@ public final class OrdersApiContext {
 
   public static void clear() {
     AUTH_COOKIES.remove();
+    PROFILE_RESPONSE.remove();
+    CART_RESPONSE.remove();
+    MOCK_PAYMENT_RESPONSE.remove();
     FIXTURE.remove();
+    CHECKOUT_FIXTURE.remove();
+    ORIGINAL_MEASUREMENT.remove();
+    TARGET_MEASUREMENT.remove();
+    TARGET_ADDRESS.remove();
+    TARGET_ADDRESS_ID.remove();
     ALL_ORDERS_RESPONSE.remove();
     SINGLE_ORDER_RESPONSE.remove();
     INVOICE_PAYLOAD_RESPONSE.remove();
+    ORDER_INVOICE_PDF_RESPONSE.remove();
+    GENERATED_INVOICE_PDF_RESPONSE.remove();
     RETRIEVED_ORDER_ID.remove();
   }
 }

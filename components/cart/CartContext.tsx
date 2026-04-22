@@ -29,6 +29,7 @@ type CartItem = {
 type CartState = {
   items: CartItem[];
   isOpen: boolean;
+  selectedShippingModeId: number | null;
 };
 
 // Defines the shape of the context value that will be provided to components consuming the cart context
@@ -36,12 +37,14 @@ type CartState = {
 type CartContextValue = {
   items: CartItem[];
   isOpen: boolean;
+  selectedShippingModeId: number | null;
   itemCount: number; // total quantity of all items
   subtotal: number;  // total price of all items
   totalWeightKg: number;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
+  setSelectedShippingModeId: (id: number | null) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -54,10 +57,11 @@ type CartContextValue = {
 type CartAction =
   // in the reducer, if the it says type = "INIT", it knows the items must exist.
 
-  | { type: "INIT"; items: CartItem[] }       // Initialize cart with items (e.g. from localStorage)
+  | { type: "INIT"; items: CartItem[]; selectedShippingModeId: number | null }       // Initialize cart with items and persisted checkout selections
   | { type: "ADD"; item: CartItem }            // Add new item or increase quantity of existing item
   | { type: "REMOVE"; id: string }             // Remove item by id
   | { type: "UPDATE_QTY"; id: string; qty: number } // Update quantity of specific item
+  | { type: "SET_SHIPPING_MODE"; id: number | null }
   | { type: "MERGE_ITEMS"; items: Array<Partial<CartItem> & { id: string }> }
   | { type: "CLEAR" }                           // Clear all items from cart
   | { type: "OPEN" }                            // Open the cart UI
@@ -81,7 +85,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "INIT":
       // Replace current items with those loaded from storage or elsewhere
-      return { ...state, items: action.items };
+      return {
+        ...state,
+        items: action.items,
+        selectedShippingModeId: action.selectedShippingModeId,
+      };
     case "ADD": {
       // If item already exists, merge by increasing quantity instead of duplicating
       // i is just one item in the array items. If the condition is true, that item will be returned.
@@ -121,6 +129,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       });
       return { ...state, items: nextItems };
     }
+    case "SET_SHIPPING_MODE":
+      return { ...state, selectedShippingModeId: action.id };
     case "CLEAR":
       // Remove all items from cart
       return { ...state, items: [] };
@@ -163,7 +173,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // { items: [], isOpen: false } is used for initializing the state. This object has the same shape as our CartState.
   // CartState is just a TS type, not a state in memory.
 
-  const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
+  const [state, dispatch] = useReducer(cartReducer, {
+    items: [],
+    isOpen: false,
+    selectedShippingModeId: null,
+  });
   const cartHydrated = useRef(false);
   const lastSyncedSignature = useRef<string | null>(null);
 
@@ -175,8 +189,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const hydrateCart = async () => {
       if (!session?.user) {
         cartHydrated.current = false;
-        lastSyncedSignature.current = JSON.stringify([]);
-        dispatch({ type: "INIT", items: [] });
+        lastSyncedSignature.current = JSON.stringify({ items: [], shippingId: null });
+        dispatch({ type: "INIT", items: [], selectedShippingModeId: null });
         return;
       }
 
@@ -186,14 +200,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         const items = Array.isArray(payload?.items) ? payload.items : [];
-        dispatch({ type: "INIT", items });
+        const selectedShippingModeId =
+          payload?.shippingId == null ? null : Number(payload.shippingId);
+        dispatch({ type: "INIT", items, selectedShippingModeId });
         lastSyncedSignature.current = JSON.stringify(
-          items.map((item: CartItem) => ({ id: item.id, qty: item.qty }))
+          {
+            items: items.map((item: CartItem) => ({ id: item.id, qty: item.qty })),
+            shippingId: selectedShippingModeId,
+          }
         );
       } catch {
         if (cancelled) return;
-        dispatch({ type: "INIT", items: [] });
-        lastSyncedSignature.current = JSON.stringify([]);
+        dispatch({ type: "INIT", items: [], selectedShippingModeId: null });
+        lastSyncedSignature.current = JSON.stringify({ items: [], shippingId: null });
       } finally {
         if (!cancelled) {
           cartHydrated.current = true;
@@ -214,7 +233,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const payloadItems = state.items.map((item) => ({ id: item.id, qty: item.qty }));
-    const signature = JSON.stringify(payloadItems);
+    const signature = JSON.stringify({
+      items: payloadItems,
+      shippingId: state.selectedShippingModeId,
+    });
     if (signature === lastSyncedSignature.current) {
       return;
     }
@@ -226,7 +248,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/cart", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: payloadItems }),
+          body: JSON.stringify({
+            items: payloadItems,
+            shippingId: state.selectedShippingModeId,
+          }),
         });
 
         if (!response.ok || cancelled) {
@@ -244,7 +269,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [session?.user, state.items, status]);
+  }, [session?.user, state.items, state.selectedShippingModeId, status]);
 
   useEffect(() => {
     if (!API_BASE_URL || state.items.length === 0) return;
@@ -367,6 +392,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return {
       items: state.items,
       isOpen: state.isOpen,
+      selectedShippingModeId: state.selectedShippingModeId,
       itemCount,
       subtotal,
       totalWeightKg,
@@ -376,13 +402,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addItem: (item) => dispatch({ type: "ADD", item }),
       removeItem: (id) => dispatch({ type: "REMOVE", id }),
       updateQty: (id, qty) => dispatch({ type: "UPDATE_QTY", id, qty }),
+      setSelectedShippingModeId: (id) => dispatch({ type: "SET_SHIPPING_MODE", id }),
       clearCart: () => dispatch({ type: "CLEAR" }),
       openCart: () => dispatch({ type: "OPEN" }),
       closeCart: () => dispatch({ type: "CLOSE" }),
       toggleCart: () => dispatch({ type: "TOGGLE" }),
     };
     // only recompute if the the following two changed.
-  }, [state.items, state.isOpen]);
+  }, [state.items, state.isOpen, state.selectedShippingModeId]);
 
   //It wraps all child components with a Cart Context, so they can read and modify the cart state using useCart().
   // value is the value returned my useMemo

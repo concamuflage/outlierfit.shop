@@ -4,7 +4,9 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class CartPage extends BasePage {
@@ -17,7 +19,7 @@ public class CartPage extends BasePage {
   private static final By WEIGHT_DETAILS_TOGGLE = By.xpath("//*[@data-testid='cart-summary-weight-toggle']");
   private static final By CLOTHES_WEIGHT = By.xpath("//*[@data-testid='cart-summary-clothes-weight']");
   private static final By BOX_WEIGHT = By.xpath("//*[@data-testid='cart-summary-box-weight']");
-  private static final By SHIPPING_INPUTS = By.xpath("//input[@name='shipping-mode' and starts-with(@data-testid, 'cart-shipping-option-input-')]");
+  private static final By SHIPPING_INPUTS = By.cssSelector("[data-testid^='cart-shipping-option-input-']");
 
   public CartPage(WebDriver driver) {
     super(driver);
@@ -95,6 +97,14 @@ public class CartPage extends BasePage {
     }
   }
 
+  public boolean isSecondShippingOptionSelected() {
+    List<WebElement> inputs = driver.findElements(SHIPPING_INPUTS);
+    if (inputs.size() < 2) {
+      throw new IllegalStateException("Expected at least 2 shipping options");
+    }
+    return inputs.get(1).isSelected();
+  }
+
   public void increaseFirstItemQuantity() {
     click(By.cssSelector("[data-testid^='cart-item-increase-']"));
   }
@@ -107,6 +117,17 @@ public class CartPage extends BasePage {
     WebElement secondItem = items.get(1);
     WebElement increaseButton = secondItem.findElement(By.cssSelector("[data-testid^='cart-item-increase-']"));
     increaseButton.click();
+  }
+
+  public Map<String, Integer> itemQuantitiesById() {
+    waitForVisible(PAGE_TITLE);
+    Map<String, Integer> quantities = new LinkedHashMap<>();
+    for (WebElement item : driver.findElements(CART_ITEMS)) {
+      String itemId = item.getDomAttribute("data-testid").replace("cart-line-item-", "");
+      WebElement quantity = item.findElement(By.cssSelector("[data-testid='cart-item-qty-" + itemId + "']"));
+      quantities.put(itemId, Integer.parseInt(quantity.getText().trim()));
+    }
+    return quantities;
   }
 
   private void openWeightDetails() {
