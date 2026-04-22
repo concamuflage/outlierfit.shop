@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     );
 
     const ownedAddressIds = new Set(
-      addressOwnershipResult.rows.map((row) => Number(row.address_id))
+      addressOwnershipResult.rows.map((row: AddressOwnershipRow) => Number(row.address_id))
     );
     if (!ownedAddressIds.has(shippingAddressId) || !ownedAddressIds.has(billingAddressId)) {
       await client.query("ROLLBACK");
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     );
 
     const variantIdsInDatabase = new Set(
-      variantExistenceResult.rows.map((row) => Number(row.id))
+      variantExistenceResult.rows.map((row: VariantExistenceRow) => Number(row.id))
     );
 
     if (variantIds.some((variantId) => !variantIdsInDatabase.has(variantId))) {
