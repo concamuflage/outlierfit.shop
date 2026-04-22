@@ -23,6 +23,14 @@ type MockPaymentPayload = {
   items: MockPaymentItem[];
 };
 
+type AddressOwnershipRow = {
+  address_id: unknown;
+};
+
+type VariantExistenceRow = {
+  id: unknown;
+};
+
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
@@ -108,7 +116,7 @@ export async function POST(request: Request) {
   try {
     await client.query("BEGIN");
 
-    const addressOwnershipResult = await client.query(
+    const addressOwnershipResult = await client.query<AddressOwnershipRow>(
       `
         SELECT address_id
         FROM user_addresses
@@ -118,7 +126,9 @@ export async function POST(request: Request) {
       [userId, [shippingAddressId, billingAddressId]]
     );
 
-    const ownedAddressIds = new Set(addressOwnershipResult.rows.map((row) => Number(row.address_id)));
+    const ownedAddressIds = new Set(
+      addressOwnershipResult.rows.map((row) => Number(row.address_id))
+    );
     if (!ownedAddressIds.has(shippingAddressId) || !ownedAddressIds.has(billingAddressId)) {
       await client.query("ROLLBACK");
       return NextResponse.json({ error: "Selected addresses do not belong to the current user." }, { status: 403 });
@@ -143,7 +153,7 @@ export async function POST(request: Request) {
       .map((item) => item.variantId)
       .filter((variantId): variantId is number => variantId != null);
 
-    const variantExistenceResult = await client.query(
+    const variantExistenceResult = await client.query<VariantExistenceRow>(
       `
         SELECT id
         FROM product_variants
