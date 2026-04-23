@@ -36,9 +36,6 @@ type ProductDetail = {
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-if (!API_BASE_URL) {
-  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-}
 
 export default function ProductDetailPage() {
   const params = useParams<{ Slug: string }>();
@@ -69,6 +66,13 @@ export default function ProductDetailPage() {
     const fetchProduct = async () => {
       setLoading(true);
       setError(null);
+      if (!API_BASE_URL) {
+        setError("Missing NEXT_PUBLIC_API_BASE_URL");
+        setProduct(null);
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE_URL}/products/${productId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

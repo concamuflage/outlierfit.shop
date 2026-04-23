@@ -7,10 +7,6 @@ import ProductGrid from "@/components/products/ProductGrid";
 import { type Product } from "@/components/products/ProductCard";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-if (!API_BASE_URL) {
-  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-}
-
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 type ProductsApiItem = {
@@ -53,6 +49,13 @@ function ProductsPageContent() {
     const fetchProducts = async () => {
       setLoading(true);
       setError(null);
+      if (!API_BASE_URL) {
+        setError("Missing NEXT_PUBLIC_API_BASE_URL");
+        setProductsData([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE_URL}/products`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
