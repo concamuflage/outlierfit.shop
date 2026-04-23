@@ -5,6 +5,7 @@
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
+import { getServerApiBaseUrl } from "@/lib/api-base";
 
 // The `authOptions` object defines how NextAuth should handle authentication in this app.
 // It is exported so it can be used by the NextAuth API route handlers in the app.
@@ -47,7 +48,7 @@ export const authOptions: NextAuthOptions = {
 
         // Look up the backend API base URL from environment variables.
         // This URL is where we will send the credentials for verification.
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
+        const apiBase = getServerApiBaseUrl();
         if (!apiBase) return null;
 
         // Send a POST request to the backend login endpoint with the provided email and password.

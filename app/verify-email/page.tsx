@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type VerificationState = "loading" | "success" | "error";
 
@@ -10,17 +11,14 @@ function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const token = searchParams.get("token");
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
   const initialErrorMessage = !email || !token
     ? "This verification link is incomplete."
-    : !apiBase
-      ? "Missing API base URL."
-      : null;
+    : null;
   const [state, setState] = useState<VerificationState>(initialErrorMessage ? "error" : "loading");
   const [message, setMessage] = useState(initialErrorMessage ?? "Verifying your email...");
 
   useEffect(() => {
-    if (!email || !token || !apiBase) {
+    if (!email || !token) {
       return;
     }
 
@@ -33,7 +31,7 @@ function VerifyEmailPageContent() {
         email: verificationEmail,
         token: verificationToken,
       });
-      const response = await fetch(`${apiBase}/auth/verify-email?${params.toString()}`, {
+      const response = await fetch(`${CLIENT_API_BASE_PATH}/auth/verify-email?${params.toString()}`, {
         method: "GET",
         signal: controller.signal,
       });
@@ -59,7 +57,7 @@ function VerifyEmailPageContent() {
     });
 
     return () => controller.abort();
-  }, [apiBase, email, token]);
+  }, [email, token]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">

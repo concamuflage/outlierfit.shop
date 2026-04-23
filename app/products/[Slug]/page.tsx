@@ -9,6 +9,7 @@ import ProductInfoPanel, {
 } from "@/components/products/ProductInfoPanel";
 import { useCart } from "@/components/cart/CartContext";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type ProductMaterial = { material: string; percentage: number | null };
 
@@ -34,8 +35,6 @@ type ProductDetail = {
   materials: ProductMaterial[];
   variants: ProductVariant[];
 };
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function ProductDetailPage() {
   const params = useParams<{ Slug: string }>();
@@ -66,15 +65,9 @@ export default function ProductDetailPage() {
     const fetchProduct = async () => {
       setLoading(true);
       setError(null);
-      if (!API_BASE_URL) {
-        setError("Missing NEXT_PUBLIC_API_BASE_URL");
-        setProduct(null);
-        setLoading(false);
-        return;
-      }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+        const res = await fetch(`${CLIENT_API_BASE_PATH}/products/${productId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (typeof data !== "object" || data === null || !Array.isArray(data.variants)) {

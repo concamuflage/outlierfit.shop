@@ -12,6 +12,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type SignupFormProps = {
   onSuccess?: () => void;
@@ -70,17 +71,9 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
       return;
     }
 
-    // The backend URL must be provided at build/runtime.
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      setError("Missing API base URL.");
-      setLoading(false);
-      return;
-    }
-
     // Create the user in the backend first.
     try {
-      const res = await fetch(`${apiBase}/auth/signup`, {
+      const res = await fetch(`${CLIENT_API_BASE_PATH}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, firstName, lastName }),
@@ -105,17 +98,11 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
   };
 
   const handleResendVerification = async () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      setError("Missing API base URL.");
-      return;
-    }
-
     setResending(true);
     setError(null);
 
     try {
-      const res = await fetch(`${apiBase}/auth/resend-verification`, {
+      const res = await fetch(`${CLIENT_API_BASE_PATH}/auth/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

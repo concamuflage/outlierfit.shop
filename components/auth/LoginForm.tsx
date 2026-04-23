@@ -21,6 +21,7 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -105,16 +106,10 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
   };
 
   const handleResendVerification = async () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      setError("Missing API base URL.");
-      return;
-    }
-
     setResending(true);
     setNotice(null);
 
-    const response = await fetch(`${apiBase}/auth/resend-verification`, {
+    const response = await fetch(`${CLIENT_API_BASE_PATH}/auth/resend-verification`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

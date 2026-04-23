@@ -9,8 +9,8 @@ import React, {
   useRef      // Hook to persist mutable values across renders without triggering re-renders
 } from "react";
 import { useSession } from "next-auth/react";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 // Represents a single item in the shopping cart with all necessary details and quantity
@@ -272,7 +272,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [session?.user, state.items, state.selectedShippingModeId, status]);
 
   useEffect(() => {
-    if (!API_BASE_URL || state.items.length === 0) return;
+    if (state.items.length === 0) return;
 
     const productIds = Array.from(
       new Set(
@@ -293,7 +293,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         const products = await Promise.all(
           productIds.map(async (productId) => {
-            const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+            const res = await fetch(`${CLIENT_API_BASE_PATH}/products/${productId}`);
             if (!res.ok) return null;
             const data = await res.json();
             return {

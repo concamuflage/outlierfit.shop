@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type ResetPasswordFormProps = {
   email: string;
@@ -28,14 +29,7 @@ export default function ResetPasswordForm({ email, token }: ResetPasswordFormPro
 
     setLoading(true);
 
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      setError("Missing API base URL.");
-      setLoading(false);
-      return;
-    }
-
-    const response = await fetch(`${apiBase}/auth/reset-password`, {
+    const response = await fetch(`${CLIENT_API_BASE_PATH}/auth/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, token, password }),

@@ -5,8 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
 import { type Product } from "@/components/products/ProductCard";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 type ProductsApiItem = {
@@ -49,15 +49,9 @@ function ProductsPageContent() {
     const fetchProducts = async () => {
       setLoading(true);
       setError(null);
-      if (!API_BASE_URL) {
-        setError("Missing NEXT_PUBLIC_API_BASE_URL");
-        setProductsData([]);
-        setLoading(false);
-        return;
-      }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/products`);
+        const res = await fetch(`${CLIENT_API_BASE_PATH}/products`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setProductsData(Array.isArray(data) ? data : []);

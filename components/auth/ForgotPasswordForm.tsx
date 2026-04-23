@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -14,14 +15,7 @@ export default function ForgotPasswordForm() {
     setError(null);
     setNotice(null);
 
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      setError("Missing API base URL.");
-      setLoading(false);
-      return;
-    }
-
-    const response = await fetch(`${apiBase}/auth/request-password-reset`, {
+    const response = await fetch(`${CLIENT_API_BASE_PATH}/auth/request-password-reset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

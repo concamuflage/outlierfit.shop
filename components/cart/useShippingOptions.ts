@@ -7,8 +7,8 @@ import {
   type ShippingMode,
   type ShippingOption,
 } from "@/lib/shipping";
+import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 export function useShippingOptions(
@@ -21,16 +21,11 @@ export function useShippingOptions(
   const [shippingLoading, setShippingLoading] = useState(false);
 
   useEffect(() => {
-    if (!API_BASE_URL) {
-      setShippingError("Missing API base URL.");
-      return;
-    }
-
     const fetchShippingModes = async () => {
       setShippingLoading(true);
       setShippingError(null);
       try {
-        const res = await fetch(`${API_BASE_URL}/shipping/costs`);
+        const res = await fetch(`${CLIENT_API_BASE_PATH}/shipping/costs`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const nextModes = Array.isArray(data) ? data : [];
