@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ItemsPanel from "@/components/cart/ItemsPanel";
@@ -424,7 +424,7 @@ function AddressEditor({
   );
 }
 
-export default function CartPage() {
+function CartPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const opensCheckoutFromUrl = searchParams.get("checkout") === "1";
@@ -1389,7 +1389,13 @@ export default function CartPage() {
                     {invoiceDownloadState ? (
                       <button
                         type="button"
-                        onClick={() => void downloadInvoice(invoiceDownloadState)}
+                        onClick={() => {
+                          if (!invoiceDownloadState) {
+                            return;
+                          }
+
+                          void downloadInvoice(invoiceDownloadState);
+                        }}
                         className="rounded-full border border-zinc-300 px-5 py-2 text-sm text-zinc-700 hover:border-zinc-500 hover:text-zinc-900"
                       >
                         Download invoice PDF
@@ -1421,5 +1427,13 @@ export default function CartPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <Suspense fallback={null}>
+      <CartPageContent />
+    </Suspense>
   );
 }

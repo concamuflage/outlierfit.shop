@@ -8,6 +8,22 @@ function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+function toIsoString(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return new Date(value).toISOString();
+  }
+
+  return null;
+}
+
 type OrderItemRow = {
   productId: unknown;
   variantId: unknown;
@@ -126,8 +142,8 @@ export async function GET() {
         subtotalUsd: toNumber(row.subtotal_usd),
         shippingUsd: toNumber(row.shipping_usd),
         totalUsd: toNumber(row.total_usd),
-        paidAt: row.paid_at ? new Date(row.paid_at).toISOString() : null,
-        createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+        paidAt: toIsoString(row.paid_at),
+        createdAt: toIsoString(row.created_at),
         items: Array.isArray(row.items)
           ? row.items.map((item: OrderItemRow) => ({
               productId: toNumber(item.productId),

@@ -11,6 +11,15 @@ const authRateLimitStore = new Map();
 
 const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_RATE_LIMIT_MAX_REQUESTS = 10;
+const AUTH_RATE_LIMIT_CLEANUP_INTERVAL_MS = 60 * 1000;
+
+function pruneExpiredAuthRateLimitEntries(now = Date.now()) {
+  for (const [key, entry] of authRateLimitStore.entries()) {
+    if (!entry || now > entry.resetAt) {
+      authRateLimitStore.delete(key);
+    }
+  }
+}
 
 function getClientIdentifier(req) {
   const forwardedFor = req.headers["x-forwarded-for"];
@@ -24,6 +33,9 @@ function getClientIdentifier(req) {
 function authRateLimiter(req, res, next) {
   const key = `${req.path}:${getClientIdentifier(req)}`;
   const now = Date.now();
+
+  pruneExpiredAuthRateLimitEntries(now);
+
   const existingEntry = authRateLimitStore.get(key);
 
   if (!existingEntry || now > existingEntry.resetAt) {
@@ -49,6 +61,12 @@ function authRateLimiter(req, res, next) {
 // are allowed to read the response in the browser.
 app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json());
+
+const authRateLimitCleanupTimer = setInterval(() => {
+  pruneExpiredAuthRateLimitEntries();
+}, AUTH_RATE_LIMIT_CLEANUP_INTERVAL_MS);
+
+authRateLimitCleanupTimer.unref();
 
 // The paths
 

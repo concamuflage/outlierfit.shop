@@ -31,6 +31,25 @@ type SaveCartSelection = {
   shippingId?: number | null;
 };
 
+type CartRow = {
+  shipping_address_id: unknown;
+  billing_address_id: unknown;
+  shipping_id: unknown;
+  quantity: unknown;
+  variant_id: unknown;
+  cost_rmb: unknown;
+  product_id: unknown;
+  product_name: unknown;
+  color: unknown;
+  size: unknown;
+  weight_kg: unknown;
+  image_link: unknown;
+};
+
+type VariantExistenceRow = {
+  id: unknown;
+};
+
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
@@ -76,7 +95,7 @@ async function ensureCartTables() {
 export async function getCart(userId: number): Promise<PersistedCart> {
   await ensureCartTables();
 
-  const result = await pool.query(
+  const result = await pool.query<CartRow>(
     `
       SELECT
         cts.shipping_address_id,
@@ -118,8 +137,8 @@ export async function getCart(userId: number): Promise<PersistedCart> {
   );
 
   const items = result.rows
-    .filter((row) => row.variant_id != null)
-    .map((row) => ({
+    .filter((row: CartRow) => row.variant_id != null)
+    .map((row: CartRow) => ({
       id: `${toNumber(row.product_id)}-${toNumber(row.variant_id)}`,
       name: String(row.product_name ?? ""),
       price: priceUsdFromRmb(row.cost_rmb),
@@ -184,7 +203,7 @@ export async function saveCart(userId: number, items: SaveCartItem[], selections
     const cartId = toNumber(cartResult.rows[0].id);
 
     if (variantIds.length > 0) {
-      const existingVariants = await client.query(
+      const existingVariants = await client.query<VariantExistenceRow>(
         `
           SELECT id
           FROM product_variants
@@ -193,7 +212,9 @@ export async function saveCart(userId: number, items: SaveCartItem[], selections
         [variantIds]
       );
 
-      const existingVariantIds = new Set(existingVariants.rows.map((row) => toNumber(row.id)));
+      const existingVariantIds = new Set(
+        existingVariants.rows.map((row: VariantExistenceRow) => toNumber(row.id))
+      );
       if (variantIds.some((variantId) => !existingVariantIds.has(variantId))) {
         throw new Error("One or more cart items no longer exist.");
       }

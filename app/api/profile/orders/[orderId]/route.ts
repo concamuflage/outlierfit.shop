@@ -7,6 +7,22 @@ function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+function toIsoString(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return new Date(value).toISOString();
+  }
+
+  return null;
+}
+
 type SingleOrderRow = {
   id: unknown;
   invoice_number: unknown;
@@ -187,8 +203,8 @@ export async function GET(_request: Request, context: RouteContext) {
       clothesWeightKg: row.clothes_weight_kg == null ? null : toNumber(row.clothes_weight_kg),
       boxWeightKg: row.box_weight_kg == null ? null : toNumber(row.box_weight_kg),
       shippingWeightKg: row.shipping_weight_kg == null ? null : toNumber(row.shipping_weight_kg),
-      paidAt: row.paid_at ? new Date(row.paid_at).toISOString() : null,
-      createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+      paidAt: toIsoString(row.paid_at),
+      createdAt: toIsoString(row.created_at),
       shipping: {
         id: toNumber(row.shipping_id),
         mode: String(row.shipping_mode ?? ""),
@@ -220,21 +236,19 @@ export async function GET(_request: Request, context: RouteContext) {
             phone: row.billing_phone ? String(row.billing_phone) : null,
           }
         : null,
-      items: itemsResult.rows.map((itemRow) => {
-        const typedItemRow = itemRow as SingleOrderItemRow;
-
+      items: itemsResult.rows.map((itemRow: SingleOrderItemRow) => {
         return {
-          productId: typedItemRow.product_id == null ? null : toNumber(typedItemRow.product_id),
-          variantId: toNumber(typedItemRow.variant_id),
-          quantity: toNumber(typedItemRow.quantity),
-          unitPriceUsd: toNumber(typedItemRow.snapshot_price),
-          sku: typedItemRow.sku ? String(typedItemRow.sku) : null,
-          productName: String(typedItemRow.product_name ?? ""),
-          color: typedItemRow.color ? String(typedItemRow.color) : null,
-          size: typedItemRow.size ? String(typedItemRow.size) : null,
-          weightKg: typedItemRow.weight_kg == null ? null : toNumber(typedItemRow.weight_kg),
-          imageUrl: typedItemRow.image_link ? String(typedItemRow.image_link) : null,
-          variantExists: Boolean(typedItemRow.variant_exists),
+          productId: itemRow.product_id == null ? null : toNumber(itemRow.product_id),
+          variantId: toNumber(itemRow.variant_id),
+          quantity: toNumber(itemRow.quantity),
+          unitPriceUsd: toNumber(itemRow.snapshot_price),
+          sku: itemRow.sku ? String(itemRow.sku) : null,
+          productName: String(itemRow.product_name ?? ""),
+          color: itemRow.color ? String(itemRow.color) : null,
+          size: itemRow.size ? String(itemRow.size) : null,
+          weightKg: itemRow.weight_kg == null ? null : toNumber(itemRow.weight_kg),
+          imageUrl: itemRow.image_link ? String(itemRow.image_link) : null,
+          variantExists: Boolean(itemRow.variant_exists),
         };
       }),
     });

@@ -204,7 +204,7 @@ function formatUsPhone(phone: string) {
   return trimmedPhone.startsWith("+1") ? trimmedPhone : `+1 ${trimmedPhone}`;
 }
 
-function validateMeasurementForm(): MeasurementFormErrors {
+function validateMeasurementForm(_values: MeasurementForm): MeasurementFormErrors {
   return {};
 }
 
@@ -921,6 +921,10 @@ export default function ProfilePageClient({
                   <button
                     type="button"
                     onClick={() => {
+                      if (!profile.measurement) {
+                        return;
+                      }
+
                       setMeasurementForm(measurementToForm(profile.measurement));
                       setIsEditingMeasurement(true);
                     }}

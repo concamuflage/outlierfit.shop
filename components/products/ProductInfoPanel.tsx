@@ -11,7 +11,7 @@ import { formatUsd } from "@/lib/formatters";
 
 export type ProductMaterial = {
   material: string;
-  percentage: number;
+  percentage: number | null;
 };
 
 // This type matches the product JSON you showed from GET /products/:id.
@@ -80,7 +80,9 @@ export default function ProductInfoPanel({ product, variantControls }: ProductIn
       {Array.isArray(product.materials) && product.materials.length > 0 ? (
         <div className="mt-3 text-sm">
           <span className="text-zinc-500">Materials:</span>{" "}
-          {product.materials.map((m) => `${m.material} ${m.percentage}%`).join(", ")}
+          {product.materials
+            .map((m) => (m.percentage == null ? m.material : `${m.material} ${m.percentage}%`))
+            .join(", ")}
         </div>
       ) : null}
 

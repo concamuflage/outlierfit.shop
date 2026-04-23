@@ -6,8 +6,57 @@ function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+function toIsoString(value: unknown) {
+  if (value == null) {
+    return "";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return new Date(value).toISOString();
+  }
+
+  return "";
+}
+
+type OrderInvoiceRow = {
+  invoice_number: unknown;
+  subtotal_usd: unknown;
+  shipping_usd: unknown;
+  total_usd: unknown;
+  paid_at: unknown;
+  customer_email: unknown;
+  shipping_mode: unknown;
+  shipping_delivery_time: unknown;
+  shipping_name: unknown;
+  shipping_street: unknown;
+  shipping_city: unknown;
+  shipping_state: unknown;
+  shipping_zip_code: unknown;
+  shipping_country: unknown;
+  shipping_phone: unknown;
+  billing_name: unknown;
+  billing_street: unknown;
+  billing_city: unknown;
+  billing_state: unknown;
+  billing_zip_code: unknown;
+  billing_country: unknown;
+  billing_phone: unknown;
+};
+
+type OrderInvoiceItemRow = {
+  quantity: unknown;
+  snapshot_price: unknown;
+  product_name: unknown;
+  color: unknown;
+  size: unknown;
+};
+
 export async function getInvoicePayloadForOrder(userId: number, orderId: number): Promise<InvoicePayload | null> {
-  const orderResult = await pool.query(
+  const orderResult = await pool.query<OrderInvoiceRow>(
     `
       SELECT
         o.id,
@@ -55,7 +104,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
 
   const row = orderResult.rows[0];
 
-  const itemsResult = await pool.query(
+  const itemsResult = await pool.query<OrderInvoiceItemRow>(
     `
       SELECT
         ov.quantity,
@@ -80,13 +129,13 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
 
   return {
     invoiceNumber: String(row.invoice_number ?? ""),
-    paidAt: row.paid_at ? new Date(row.paid_at).toISOString() : "",
+    paidAt: toIsoString(row.paid_at),
     customerEmail: row.customer_email ? String(row.customer_email) : null,
     shippingModeLabel: `${formatShippingMode(String(row.shipping_mode ?? ""))}${row.shipping_delivery_time ? ` ${String(row.shipping_delivery_time)}` : ""}`,
     subtotalUsd: toNumber(row.subtotal_usd),
     shippingUsd: toNumber(row.shipping_usd),
     totalUsd: toNumber(row.total_usd),
-    items: itemsResult.rows.map((itemRow) => ({
+    items: itemsResult.rows.map((itemRow: OrderInvoiceItemRow) => ({
       name: String(itemRow.product_name ?? ""),
       quantity: toNumber(itemRow.quantity),
       unitPriceUsd: toNumber(itemRow.snapshot_price),

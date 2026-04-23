@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
@@ -41,7 +41,7 @@ function getPreferredCoverPhoto(photos: string[] | null | undefined) {
   return preferredPhoto ?? cleanedPhotos[0] ?? "";
 }
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -142,5 +142,13 @@ export default function ProductsPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

@@ -159,7 +159,7 @@ export async function getProfile(userId: number): Promise<ProfileData> {
     [userId]
   );
 
-  const addresses = addressResult.rows.map(mapAddress);
+  const addresses: AddressRecord[] = addressResult.rows.map(mapAddress);
 
   return {
     user: {
@@ -169,8 +169,10 @@ export async function getProfile(userId: number): Promise<ProfileData> {
       lastName: userResult.rows[0].last_name ? trimText(userResult.rows[0].last_name) : null,
     },
     measurement: measurementResult.rows[0] ? mapMeasurement(measurementResult.rows[0]) : null,
-    shippingAddresses: addresses.filter((address) => address.addressType === "shipping").slice(0, 2),
-    billingAddresses: addresses.filter((address) => address.addressType === "billing"),
+    shippingAddresses: addresses
+      .filter((address: AddressRecord) => address.addressType === "shipping")
+      .slice(0, 2),
+    billingAddresses: addresses.filter((address: AddressRecord) => address.addressType === "billing"),
   };
 }
 

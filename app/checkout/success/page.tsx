@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessPageContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const invoiceHref = useMemo(() => {
@@ -52,5 +52,13 @@ export default function CheckoutSuccessPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutSuccessPageContent />
+    </Suspense>
   );
 }

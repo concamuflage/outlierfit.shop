@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type VerificationState = "loading" | "success" | "error";
 
-export default function VerifyEmailPage() {
+function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const token = searchParams.get("token");
@@ -24,10 +24,15 @@ export default function VerifyEmailPage() {
       return;
     }
 
+    const verificationEmail = email;
+    const verificationToken = token;
     const controller = new AbortController();
 
     async function verifyEmail() {
-      const params = new URLSearchParams({ email, token });
+      const params = new URLSearchParams({
+        email: verificationEmail,
+        token: verificationToken,
+      });
       const response = await fetch(`${apiBase}/auth/verify-email?${params.toString()}`, {
         method: "GET",
         signal: controller.signal,
@@ -72,5 +77,13 @@ export default function VerifyEmailPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailPageContent />
+    </Suspense>
   );
 }
