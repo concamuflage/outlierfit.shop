@@ -20,6 +20,9 @@ public class CartPage extends BasePage {
   private static final By CLOTHES_WEIGHT = By.xpath("//*[@data-testid='cart-summary-clothes-weight']");
   private static final By BOX_WEIGHT = By.xpath("//*[@data-testid='cart-summary-box-weight']");
   private static final By SHIPPING_INPUTS = By.cssSelector("[data-testid^='cart-shipping-option-input-']");
+  private static final By CHECKOUT_BUTTON = By.xpath("//button[normalize-space()='Checkout' or normalize-space()='Hide checkout details']");
+  private static final By CHECKOUT_DETAILS_TITLE = By.xpath("//h3[normalize-space()='Essential order details']");
+  private static final By PAY_WITH_CARD_BUTTON = By.xpath("//button[normalize-space()='Pay with card' or normalize-space()='Redirecting...']");
 
   public CartPage(WebDriver driver) {
     super(driver);
@@ -31,6 +34,19 @@ public class CartPage extends BasePage {
 
   public void open() {
     driver.get(com.asianfit.ui.utils.TestConfig.baseUrl() + "/cart");
+  }
+
+  public void clickCheckout() {
+    click(CHECKOUT_BUTTON);
+  }
+
+  public void waitForCheckoutDetails() {
+    waitForVisible(CHECKOUT_DETAILS_TITLE);
+  }
+
+  public void startStripeCheckoutPayment() {
+    waitForVisible(PAY_WITH_CARD_BUTTON);
+    click(PAY_WITH_CARD_BUTTON);
   }
 
   public double clothesWeightKg() {

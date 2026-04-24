@@ -18,10 +18,10 @@ public final class DriverFactory {
     options.addArguments("--window-size=1600,1200");
     options.addArguments("--no-sandbox");
     options.addArguments("--disable-dev-shm-usage");
-    options.addArguments("--headless=new");
+    // options.addArguments("--headless=new");
 
     WebDriver driver = new ChromeDriver(options);
-    driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
+    driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
     DRIVER.set(driver);
   }
 

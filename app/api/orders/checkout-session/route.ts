@@ -21,6 +21,10 @@ type CheckoutSessionRequestPayload = CheckoutOrderPayload & {
   items: CheckoutSessionRequestItem[];
 };
 
+function shouldShareCustomerEmailWithStripe() {
+  return process.env.NODE_ENV === "production";
+}
+
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
@@ -45,6 +49,7 @@ export async function POST(request: Request) {
   try {
     const stripe = getStripeServerClient();
     const origin = new URL(request.url).origin;
+    const customerEmail = shouldShareCustomerEmailWithStripe() ? session.user.email ?? undefined : undefined;
     const lineItems = checkoutPayload.items.map((item) => {
       const checkoutItem = item as CheckoutSessionRequestItem;
       const descriptor = [checkoutItem.color, checkoutItem.size].filter(Boolean).join(" / ");
@@ -78,7 +83,7 @@ export async function POST(request: Request) {
       mode: "payment",
       payment_method_types: ["card"],
       client_reference_id: String(userId),
-      customer_email: session.user.email ?? undefined,
+      customer_email: customerEmail,
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart?checkout=1`,
       line_items: lineItems,

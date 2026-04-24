@@ -1,4 +1,15 @@
 -------------------------------------------------------------------------------
 Test set: com.asianfit.ui.runner.LoginRunner
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.84 s -- in com.asianfit.ui.runner.LoginRunner
+Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 18.10 s <<< FAILURE! -- in com.asianfit.ui.runner.LoginRunner
+com.asianfit.ui.runner.LoginRunner.runScenario["User cannot sign in with an unverified email address", "Login"](2) -- Time elapsed: 6.750 s <<< FAILURE!
+java.lang.AssertionError: expected [Please verify your email before signing in.] but found [Invalid credentials]
+	at org.testng.Assert.fail(Assert.java:111)
+	at org.testng.Assert.failNotEquals(Assert.java:1578)
+	at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+	at org.testng.Assert.assertEquals(Assert.java:132)
+	at org.testng.Assert.assertEquals(Assert.java:656)
+	at org.testng.Assert.assertEquals(Assert.java:666)
+	at com.asianfit.ui.steps.CartSteps.theLoginPageShouldShowTheEmailVerificationError(CartSteps.java:386)
+	at ✽.the login page should show the email verification error(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/login.feature:15)
+

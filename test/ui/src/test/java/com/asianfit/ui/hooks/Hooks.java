@@ -21,7 +21,7 @@ public class Hooks {
     DatabaseCleanup.deleteSignupUser();
   }
 
-  @Before("@Cart or @CartAndDrawerSync")
+  @Before("@Cart or @CartAndDrawerSync or @Payment")
   public void cleanCartBeforeScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }
@@ -38,19 +38,19 @@ public class Hooks {
     }
   }
 
-  // Runs after each scenario finishes, whether it passed or failed.
-  @After
-  public void tearDown() {
-    // Always close the driver so parallel scenarios do not leak browser processes.
-    DriverFactory.quitDriver();
-  }
+  // // Runs after each scenario finishes, whether it passed or failed.
+  // @After
+  // public void tearDown() {
+  //   // Always close the driver so parallel scenarios do not leak browser processes.
+  //   DriverFactory.quitDriver();
+  // }
 
   @After("@Signup")
   public void cleanSignupUserAfterScenario() {
     DatabaseCleanup.deleteSignupUser();
   }
 
-  @After("@Cart or @CartAndDrawerSync")
+  @After("@Cart or @CartAndDrawerSync or @Payment")
   public void cleanCartAfterScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }
