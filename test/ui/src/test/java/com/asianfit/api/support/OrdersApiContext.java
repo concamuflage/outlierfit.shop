@@ -20,6 +20,12 @@ public final class OrdersApiContext {
   private static final ThreadLocal<Response> ORDER_INVOICE_PDF_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Response> GENERATED_INVOICE_PDF_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Long> RETRIEVED_ORDER_ID = new ThreadLocal<>();
+  private static final ThreadLocal<Response> STRIPE_WEBHOOK_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<Response> STRIPE_SECOND_WEBHOOK_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<String> STRIPE_CHECKOUT_SESSION_ID = new ThreadLocal<>();
+  private static final ThreadLocal<String> STRIPE_PAYMENT_INTENT_ID = new ThreadLocal<>();
+  private static final ThreadLocal<String> STRIPE_WEBHOOK_EVENT_ID = new ThreadLocal<>();
+  private static final ThreadLocal<String> STRIPE_DUPLICATE_WEBHOOK_EVENT_ID = new ThreadLocal<>();
 
   private OrdersApiContext() {}
 
@@ -151,6 +157,54 @@ public final class OrdersApiContext {
     RETRIEVED_ORDER_ID.set(orderId);
   }
 
+  public static Response stripeWebhookResponse() {
+    return STRIPE_WEBHOOK_RESPONSE.get();
+  }
+
+  public static void setStripeWebhookResponse(Response response) {
+    STRIPE_WEBHOOK_RESPONSE.set(response);
+  }
+
+  public static Response stripeSecondWebhookResponse() {
+    return STRIPE_SECOND_WEBHOOK_RESPONSE.get();
+  }
+
+  public static void setStripeSecondWebhookResponse(Response response) {
+    STRIPE_SECOND_WEBHOOK_RESPONSE.set(response);
+  }
+
+  public static String stripeCheckoutSessionId() {
+    return STRIPE_CHECKOUT_SESSION_ID.get();
+  }
+
+  public static void setStripeCheckoutSessionId(String sessionId) {
+    STRIPE_CHECKOUT_SESSION_ID.set(sessionId);
+  }
+
+  public static String stripePaymentIntentId() {
+    return STRIPE_PAYMENT_INTENT_ID.get();
+  }
+
+  public static void setStripePaymentIntentId(String paymentIntentId) {
+    STRIPE_PAYMENT_INTENT_ID.set(paymentIntentId);
+  }
+
+  public static String stripeWebhookEventId() {
+    return STRIPE_WEBHOOK_EVENT_ID.get();
+  }
+
+  public static void setStripeWebhookEventId(String eventId) {
+    STRIPE_WEBHOOK_EVENT_ID.set(eventId);
+  }
+
+  public static String stripeDuplicateWebhookEventId() {
+    return STRIPE_DUPLICATE_WEBHOOK_EVENT_ID.get();
+  }
+
+  public static void setStripeDuplicateWebhookEventId(String eventId) {
+    STRIPE_DUPLICATE_WEBHOOK_EVENT_ID.set(eventId);
+  }
+
   public static void clear() {
     AUTH_COOKIES.remove();
     PROFILE_RESPONSE.remove();
@@ -168,5 +222,11 @@ public final class OrdersApiContext {
     ORDER_INVOICE_PDF_RESPONSE.remove();
     GENERATED_INVOICE_PDF_RESPONSE.remove();
     RETRIEVED_ORDER_ID.remove();
+    STRIPE_WEBHOOK_RESPONSE.remove();
+    STRIPE_SECOND_WEBHOOK_RESPONSE.remove();
+    STRIPE_CHECKOUT_SESSION_ID.remove();
+    STRIPE_PAYMENT_INTENT_ID.remove();
+    STRIPE_WEBHOOK_EVENT_ID.remove();
+    STRIPE_DUPLICATE_WEBHOOK_EVENT_ID.remove();
   }
 }

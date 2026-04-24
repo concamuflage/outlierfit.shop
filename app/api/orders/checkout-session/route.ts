@@ -1,0 +1,110 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getStripeServerClient } from "@/lib/server/stripe";
+import {
+  isValidCheckoutOrderPayload,
+  saveStripeCheckoutSession,
+  type CheckoutOrderPayload,
+} from "@/lib/server/orderPayments";
+
+type CheckoutSessionRequestItem = {
+  cartItemId: string;
+  quantity: number;
+  unitPriceUsd: number;
+  name?: string;
+  color?: string | null;
+  size?: string | null;
+};
+
+type CheckoutSessionRequestPayload = CheckoutOrderPayload & {
+  items: CheckoutSessionRequestItem[];
+};
+
+function badRequest(message: string) {
+  return NextResponse.json({ error: message }, { status: 400 });
+}
+
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const payload = (await request.json().catch(() => null)) as CheckoutSessionRequestPayload | null;
+  if (!isValidCheckoutOrderPayload(payload)) {
+    return badRequest("Invalid checkout payload.");
+  }
+  const checkoutPayload = payload as CheckoutSessionRequestPayload;
+
+  const userId = Number(session.user.id);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const stripe = getStripeServerClient();
+    const origin = new URL(request.url).origin;
+    const lineItems = checkoutPayload.items.map((item) => {
+      const checkoutItem = item as CheckoutSessionRequestItem;
+      const descriptor = [checkoutItem.color, checkoutItem.size].filter(Boolean).join(" / ");
+      return {
+        quantity: Number(checkoutItem.quantity),
+        price_data: {
+          currency: "usd",
+          unit_amount: Math.round(Number(checkoutItem.unitPriceUsd) * 100),
+          product_data: {
+            name: checkoutItem.name?.trim() || `Item ${checkoutItem.cartItemId}`,
+            ...(descriptor ? { description: descriptor } : {}),
+          },
+        },
+      };
+    });
+
+    if (Number(checkoutPayload.shippingUsd) > 0) {
+      lineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: Math.round(Number(checkoutPayload.shippingUsd) * 100),
+          product_data: {
+            name: "Shipping",
+          },
+        },
+      });
+    }
+
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      client_reference_id: String(userId),
+      customer_email: session.user.email ?? undefined,
+      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cart?checkout=1`,
+      line_items: lineItems,
+      metadata: {
+        userId: String(userId),
+      },
+    });
+
+    if (typeof checkoutSession.payment_intent === "string" && checkoutSession.payment_intent) {
+      await stripe.paymentIntents.update(checkoutSession.payment_intent, {
+        metadata: {
+          userId: String(userId),
+          checkout_session_id: checkoutSession.id,
+        },
+      });
+    }
+
+    await saveStripeCheckoutSession(userId, checkoutSession.id, checkoutPayload);
+
+    return NextResponse.json({
+      sessionId: checkoutSession.id,
+      url: checkoutSession.url,
+    });
+  } catch (error) {
+    console.error("stripe checkout session create error:", error);
+    const message = error instanceof Error ? error.message : "Unable to start Stripe checkout.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

@@ -5,8 +5,10 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Cookies;
 import io.restassured.response.Response;
+import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -14,8 +16,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.testng.Assert;
 
 public final class OrdersApiSupport {
@@ -242,6 +246,18 @@ public final class OrdersApiSupport {
       .accept("*/*")
       .body(invoicePayloadResponse.asString())
       .post(ApiEndpoints.path("invoice.generatePdf"));
+  }
+
+  public static Response postSignedStripeWebhook(String payload) {
+    long timestamp = Instant.now().getEpochSecond();
+    String signature = signStripeWebhookPayload(timestamp, payload);
+    return RestAssured
+      .given()
+      .contentType(ContentType.JSON)
+      .accept(ContentType.JSON)
+      .header("stripe-signature", "t=" + timestamp + ",v1=" + signature)
+      .body(payload)
+      .post(ApiEndpoints.path("stripe.webhook"));
   }
 
   public static CheckoutFixture loadCheckoutFixture() throws SQLException {
@@ -600,6 +616,181 @@ public final class OrdersApiSupport {
     );
   }
 
+  public static void createStripeCheckoutSessionFixture(String stripeSessionId, CheckoutFixture fixture) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement deleteExisting = connection.prepareStatement(
+          "DELETE FROM stripe_checkout_sessions WHERE stripe_session_id = ?"
+        );
+        PreparedStatement insertSession = connection.prepareStatement(
+          """
+            INSERT INTO stripe_checkout_sessions (
+              stripe_session_id,
+              user_id,
+              payload,
+              created_at,
+              updated_at
+            )
+            VALUES (?, ?, ?::jsonb, NOW(), NOW())
+          """
+        )
+      ) {
+        deleteExisting.setString(1, stripeSessionId);
+        deleteExisting.executeUpdate();
+        insertSession.setString(1, stripeSessionId);
+        insertSession.setInt(2, fixture.userId());
+        insertSession.setString(3, checkoutPayloadJson(fixture));
+        insertSession.executeUpdate();
+      }
+    }
+  }
+
+  public static Long findOrderIdForStripeCheckoutSession(String stripeSessionId) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement statement = connection.prepareStatement(
+          "SELECT order_id FROM stripe_checkout_sessions WHERE stripe_session_id = ? LIMIT 1"
+        )
+      ) {
+        statement.setString(1, stripeSessionId);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          if (!resultSet.next()) {
+            return null;
+          }
+          long orderId = resultSet.getLong(1);
+          return resultSet.wasNull() ? null : orderId;
+        }
+      }
+    }
+  }
+
+  public static int countOrdersForStripeCheckoutSession(String stripeSessionId) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement statement = connection.prepareStatement(
+          "SELECT COUNT(*) FROM orders WHERE payment_provider = 'stripe' AND payment_reference = ?"
+        )
+      ) {
+        statement.setString(1, stripeSessionId);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          resultSet.next();
+          return resultSet.getInt(1);
+        }
+      }
+    }
+  }
+
+  public static String getStripePaymentStatus(String stripePaymentIntentId) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement statement = connection.prepareStatement(
+          "SELECT status FROM payments WHERE stripe_payment_intent_id = ? LIMIT 1"
+        )
+      ) {
+        statement.setString(1, stripePaymentIntentId);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          if (!resultSet.next()) {
+            return null;
+          }
+          return resultSet.getString(1);
+        }
+      }
+    }
+  }
+
+  public static int countStripeWebhookEvents(String stripeEventId) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement statement = connection.prepareStatement(
+          "SELECT COUNT(*) FROM stripe_webhook_events WHERE stripe_event_id = ?"
+        )
+      ) {
+        statement.setString(1, stripeEventId);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          resultSet.next();
+          return resultSet.getInt(1);
+        }
+      }
+    }
+  }
+
+  public static String getOrderInvoiceNumber(long orderId) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement statement = connection.prepareStatement(
+          "SELECT invoice_number FROM orders WHERE id = ? LIMIT 1"
+        )
+      ) {
+        statement.setLong(1, orderId);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          if (!resultSet.next()) {
+            return null;
+          }
+          return resultSet.getString(1);
+        }
+      }
+    }
+  }
+
+  public static boolean stripeWebhookEventProcessed(String stripeEventId) throws SQLException {
+    try (Connection connection = openConnection()) {
+      try (PreparedStatement statement = connection.prepareStatement(
+          "SELECT processed_at IS NOT NULL FROM stripe_webhook_events WHERE stripe_event_id = ? LIMIT 1"
+        )
+      ) {
+        statement.setString(1, stripeEventId);
+        try (ResultSet resultSet = statement.executeQuery()) {
+          if (!resultSet.next()) {
+            return false;
+          }
+          return resultSet.getBoolean(1);
+        }
+      }
+    }
+  }
+
+  public static void deleteStripeWebhookFixture(
+    String stripeSessionId,
+    String stripePaymentIntentId,
+    String... stripeEventIds
+  ) throws SQLException {
+    try (Connection connection = openConnection()) {
+      if (stripeEventIds != null) {
+        for (String stripeEventId : stripeEventIds) {
+          if (stripeEventId == null || stripeEventId.isBlank()) {
+            continue;
+          }
+          try (PreparedStatement deleteEvent = connection.prepareStatement(
+              "DELETE FROM stripe_webhook_events WHERE stripe_event_id = ?"
+            )
+          ) {
+            deleteEvent.setString(1, stripeEventId);
+            deleteEvent.executeUpdate();
+          }
+        }
+      }
+
+      if (stripePaymentIntentId != null && !stripePaymentIntentId.isBlank()) {
+        try (PreparedStatement deletePayment = connection.prepareStatement(
+            "DELETE FROM payments WHERE stripe_payment_intent_id = ?"
+          )
+        ) {
+          deletePayment.setString(1, stripePaymentIntentId);
+          deletePayment.executeUpdate();
+        }
+      }
+
+      if (stripeSessionId != null && !stripeSessionId.isBlank()) {
+        try (PreparedStatement clearOrderLink = connection.prepareStatement(
+            "UPDATE stripe_checkout_sessions SET order_id = NULL, completed_at = NULL, updated_at = NOW() WHERE stripe_session_id = ?"
+          );
+          PreparedStatement deleteSession = connection.prepareStatement(
+            "DELETE FROM stripe_checkout_sessions WHERE stripe_session_id = ?"
+          )
+        ) {
+          clearOrderLink.setString(1, stripeSessionId);
+          clearOrderLink.executeUpdate();
+          deleteSession.setString(1, stripeSessionId);
+          deleteSession.executeUpdate();
+        }
+      }
+    }
+  }
+
   private static Connection openConnection() throws SQLException {
     return DriverManager.getConnection(
       TestConfig.databaseUrl(),
@@ -729,6 +920,60 @@ public final class OrdersApiSupport {
 
   private static BigDecimal toUsd(BigDecimal rmb) {
     return rmb.multiply(RMB_TO_USD).setScale(2, RoundingMode.HALF_UP);
+  }
+
+  private static String signStripeWebhookPayload(long timestamp, String payload) {
+    try {
+      Mac mac = Mac.getInstance("HmacSHA256");
+      mac.init(new SecretKeySpec(TestConfig.stripeWebhookSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+      byte[] digest = mac.doFinal((timestamp + "." + payload).getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(digest);
+    } catch (Exception error) {
+      throw new IllegalStateException("Unable to sign Stripe webhook payload.", error);
+    }
+  }
+
+  private static String checkoutPayloadJson(CheckoutFixture fixture) {
+    BigDecimal shippingUsd = fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg());
+    BigDecimal totalUsd = fixture.variant().subtotalUsd().add(shippingUsd);
+    return """
+      {
+        "subtotalUsd": %s,
+        "shippingUsd": %s,
+        "totalUsd": %s,
+        "clothesWeightKg": %s,
+        "boxWeightKg": %s,
+        "shippingWeightKg": %s,
+        "shippingId": %d,
+        "shippingAddressId": %d,
+        "billingAddressId": %d,
+        "items": [
+          {
+            "cartItemId": "%s",
+            "quantity": %d,
+            "unitPriceUsd": %s
+          }
+        ]
+      }
+      """
+      .formatted(
+        fixture.variant().subtotalUsd().toPlainString(),
+        shippingUsd.toPlainString(),
+        totalUsd.toPlainString(),
+        fixture.variant().clothesWeightKg().toPlainString(),
+        fixture.shipping().boxWeightKg(fixture.variant().clothesWeightKg()).toPlainString(),
+        fixture.shipping().shippingWeightKg(fixture.variant().clothesWeightKg()).toPlainString(),
+        fixture.shipping().id(),
+        fixture.shippingAddressId(),
+        fixture.billingAddressId(),
+        jsonEscape(fixture.variant().cartItemId()),
+        fixture.variant().quantity(),
+        fixture.variant().unitPriceUsd().toPlainString()
+      );
+  }
+
+  private static String jsonEscape(String value) {
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   private static BigDecimal getBoxWeightKg(BigDecimal clothesWeightKg) {

@@ -25,7 +25,7 @@
       <span class="top-banner-title-font">Test results</span>
       <button id="button" class="button">Switch Retro Theme</button> <!-- button -->
       <br/>
-      <span class="top-banner-font-1">1 suite</span>
+      <span class="top-banner-font-1">1 suite, 1 failed test</span>
     </div> <!-- top-banner-root -->
     <div class="navigator-root">
       <div class="navigator-suite-header">
@@ -39,7 +39,7 @@
         <div class="rounded-window">
           <div class="suite-header light-rounded-window-top">
             <a href="#" panel-name="suite-Surefire_suite" class="navigator-link">
-              <span class="suite-name border-passed">Surefire suite</span>
+              <span class="suite-name border-failed">Surefire suite</span>
             </a> <!-- navigator-link -->
           </div> <!-- suite-header light-rounded-window-top -->
           <div class="navigator-suite-content">
@@ -92,41 +92,40 @@
               <div class="suite-section-content">
                 <ul>
                   <li>
-                    <span class="method-stats">5 methods,   5 passed</span>
+                    <span class="method-stats">3 methods, 1 failed,  2 skipped,  </span>
                   </li>
                   <li>
-                    <span class="method-list-title passed">Passed methods</span>
-                    <span class="show-or-hide-methods passed">
-                      <a href="#" panel-name="suite-Surefire_suite" class="hide-methods passed suite-Surefire_suite"> (hide)</a> <!-- hide-methods passed suite-Surefire_suite -->
-                      <a href="#" panel-name="suite-Surefire_suite" class="show-methods passed suite-Surefire_suite"> (show)</a> <!-- show-methods passed suite-Surefire_suite -->
+                    <span class="method-list-title failed">Failed methods</span>
+                    <span class="show-or-hide-methods failed">
+                      <a href="#" panel-name="suite-Surefire_suite" class="hide-methods failed suite-Surefire_suite"> (hide)</a> <!-- hide-methods failed suite-Surefire_suite -->
+                      <a href="#" panel-name="suite-Surefire_suite" class="show-methods failed suite-Surefire_suite"> (show)</a> <!-- show-methods failed suite-Surefire_suite -->
                     </span>
-                    <div class="method-list-content passed suite-Surefire_suite">
+                    <div class="method-list-content failed suite-Surefire_suite">
                       <span>
-                        <img src="passed.png" width="3%"/>
-                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.ProfileApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;Authenticated user can retrieve and update profile information&quot;, &quot;Profile API&quot;)">runScenario("Authenticated user can retrieve and update profile information", "Profile API")</a> <!-- method navigator-link -->
+                        <img src="failed.png" width="3%"/>
+                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.StripeWebhookApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready&quot;, &quot;Stripe webhook ...)">runScenario("A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready", "Stripe webhook ...)</a> <!-- method navigator-link -->
+                      </span>
+                      <br/>
+                    </div> <!-- method-list-content failed suite-Surefire_suite -->
+                  </li>
+                  <li>
+                    <span class="method-list-title skipped">Skipped methods</span>
+                    <span class="show-or-hide-methods skipped">
+                      <a href="#" panel-name="suite-Surefire_suite" class="hide-methods skipped suite-Surefire_suite"> (hide)</a> <!-- hide-methods skipped suite-Surefire_suite -->
+                      <a href="#" panel-name="suite-Surefire_suite" class="show-methods skipped suite-Surefire_suite"> (show)</a> <!-- show-methods skipped suite-Surefire_suite -->
+                    </span>
+                    <div class="method-list-content skipped suite-Surefire_suite">
+                      <span>
+                        <img src="skipped.png" width="3%"/>
+                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.StripeWebhookApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;Duplicate Stripe webhook delivery does not create duplicate orders&quot;, &quot;Stripe webhook API&quot;)">runScenario("Duplicate Stripe webhook delivery does not create duplicate orders", "Stripe webhook API")</a> <!-- method navigator-link -->
                       </span>
                       <br/>
                       <span>
-                        <img src="passed.png" width="3%"/>
-                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.OrdersApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;Authenticated user can retrieve all orders and a single order&quot;, &quot;Orders API&quot;)">runScenario("Authenticated user can retrieve all orders and a single order", "Orders API")</a> <!-- method navigator-link -->
+                        <img src="skipped.png" width="3%"/>
+                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.StripeWebhookApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;A failed Stripe payment is recorded without creating an order&quot;, &quot;Stripe webhook API&quot;)">runScenario("A failed Stripe payment is recorded without creating an order", "Stripe webhook API")</a> <!-- method navigator-link -->
                       </span>
                       <br/>
-                      <span>
-                        <img src="passed.png" width="3%"/>
-                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.CheckoutApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;Authenticated user can submit mock payment and retrieve invoice PDFs&quot;, &quot;Checkout API&quot;)">runScenario("Authenticated user can submit mock payment and retrieve invoice PDFs", "Checkout API")</a> <!-- method navigator-link -->
-                      </span>
-                      <br/>
-                      <span>
-                        <img src="passed.png" width="3%"/>
-                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.OrdersInvoiceApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;Authenticated user can retrieve invoice-ready data for an order&quot;, &quot;Orders invoice API&quot;)">runScenario("Authenticated user can retrieve invoice-ready data for an order", "Orders invoice API")</a> <!-- method navigator-link -->
-                      </span>
-                      <br/>
-                      <span>
-                        <img src="passed.png" width="3%"/>
-                        <a href="#" panel-name="suite-Surefire_suite" title="com.asianfit.api.runner.CartApiRunner" class="method navigator-link" hash-for-method="runScenario(&quot;Authenticated user can persist and retrieve the current cart&quot;, &quot;Cart API&quot;)">runScenario("Authenticated user can persist and retrieve the current cart", "Cart API")</a> <!-- method navigator-link -->
-                      </span>
-                      <br/>
-                    </div> <!-- method-list-content passed suite-Surefire_suite -->
+                    </div> <!-- method-list-content skipped suite-Surefire_suite -->
                   </li>
                 </ul>
               </div> <!-- suite-section-content -->
@@ -138,96 +137,68 @@
     <div class="wrapper">
       <div class="main-panel-root">
         <div panel-name="suite-Surefire_suite" class="panel Surefire_suite">
-          <div class="suite-Surefire_suite-class-passed">
+          <div class="suite-Surefire_suite-class-failed">
             <div class="main-panel-header rounded-window-top">
-              <img src="passed.png"/>
-              <span class="class-name">com.asianfit.api.runner.OrdersInvoiceApiRunner</span>
+              <img src="failed.png"/>
+              <span class="class-name">com.asianfit.api.runner.StripeWebhookApiRunner</span>
             </div> <!-- main-panel-header rounded-window-top -->
             <div class="main-panel-content rounded-window-bottom">
               <div class="method">
                 <div class="method-content">
-                  <a name="runScenario(&quot;Authenticated user can retrieve invoice-ready data for an order&quot;, &quot;Orders invoice API&quot;)">
-                  </a> <!-- runScenario("Authenticated user can retrieve invoice-ready data for an order", "Orders invoice API") -->
+                  <a name="runScenario(&quot;A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready&quot;, &quot;Stripe webhook ...)">
+                  </a> <!-- runScenario("A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready", "Stripe webhook ...) -->
                   <span class="method-name">runScenario</span>
-                  <span class="parameters">("Authenticated user can retrieve invoice-ready data for an order","Orders invoice API")</span>
+                  <span class="parameters">("A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready","Stripe webhook API")</span>
+                  <div class="stack-trace">java.lang.AssertionError: Expected NextAuth login to succeed, but got status 401 expected [true] but found [false]
+	at com.asianfit.api.support.OrdersApiSupport.authenticate(OrdersApiSupport.java:62)
+	at com.asianfit.api.steps.OrdersApiSteps.iAmAuthenticatedForTheOrdersApi(OrdersApiSteps.java:95)
+	at ✽.I am authenticated for the orders API(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/stripe-webhook-api.feature:5)
+... Removed 3 stack frames
+</div> <!-- stack-trace -->
                   <em>
 (Runs Cucumber Scenarios)                  </em>
                 </div> <!-- method-content -->
               </div> <!-- method -->
             </div> <!-- main-panel-content rounded-window-bottom -->
-          </div> <!-- suite-Surefire_suite-class-passed -->
-          <div class="suite-Surefire_suite-class-passed">
+          </div> <!-- suite-Surefire_suite-class-failed -->
+          <div class="suite-Surefire_suite-class-skipped">
             <div class="main-panel-header rounded-window-top">
-              <img src="passed.png"/>
-              <span class="class-name">com.asianfit.api.runner.ProfileApiRunner</span>
+              <img src="skipped.png"/>
+              <span class="class-name">com.asianfit.api.runner.StripeWebhookApiRunner</span>
             </div> <!-- main-panel-header rounded-window-top -->
             <div class="main-panel-content rounded-window-bottom">
               <div class="method">
                 <div class="method-content">
-                  <a name="runScenario(&quot;Authenticated user can retrieve and update profile information&quot;, &quot;Profile API&quot;)">
-                  </a> <!-- runScenario("Authenticated user can retrieve and update profile information", "Profile API") -->
+                  <a name="runScenario(&quot;Duplicate Stripe webhook delivery does not create duplicate orders&quot;, &quot;Stripe webhook API&quot;)">
+                  </a> <!-- runScenario("Duplicate Stripe webhook delivery does not create duplicate orders", "Stripe webhook API") -->
                   <span class="method-name">runScenario</span>
-                  <span class="parameters">("Authenticated user can retrieve and update profile information","Profile API")</span>
+                  <span class="parameters">("Duplicate Stripe webhook delivery does not create duplicate orders","Stripe webhook API")</span>
+                  <div class="stack-trace">org.testng.SkipException: Skipping because a previous test already failed.
+	at com.asianfit.ui.listeners.FailFastListener.beforeInvocation(FailFastListener.java:31)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+... Removed 29 stack frames
+</div> <!-- stack-trace -->
+                  <em>
+(Runs Cucumber Scenarios)                  </em>
+                </div> <!-- method-content -->
+              </div> <!-- method -->
+              <div class="method">
+                <div class="method-content">
+                  <a name="runScenario(&quot;A failed Stripe payment is recorded without creating an order&quot;, &quot;Stripe webhook API&quot;)">
+                  </a> <!-- runScenario("A failed Stripe payment is recorded without creating an order", "Stripe webhook API") -->
+                  <span class="method-name">runScenario</span>
+                  <span class="parameters">("A failed Stripe payment is recorded without creating an order","Stripe webhook API")</span>
+                  <div class="stack-trace">org.testng.SkipException: Skipping because a previous test already failed.
+	at com.asianfit.ui.listeners.FailFastListener.beforeInvocation(FailFastListener.java:31)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+... Removed 29 stack frames
+</div> <!-- stack-trace -->
                   <em>
 (Runs Cucumber Scenarios)                  </em>
                 </div> <!-- method-content -->
               </div> <!-- method -->
             </div> <!-- main-panel-content rounded-window-bottom -->
-          </div> <!-- suite-Surefire_suite-class-passed -->
-          <div class="suite-Surefire_suite-class-passed">
-            <div class="main-panel-header rounded-window-top">
-              <img src="passed.png"/>
-              <span class="class-name">com.asianfit.api.runner.CartApiRunner</span>
-            </div> <!-- main-panel-header rounded-window-top -->
-            <div class="main-panel-content rounded-window-bottom">
-              <div class="method">
-                <div class="method-content">
-                  <a name="runScenario(&quot;Authenticated user can persist and retrieve the current cart&quot;, &quot;Cart API&quot;)">
-                  </a> <!-- runScenario("Authenticated user can persist and retrieve the current cart", "Cart API") -->
-                  <span class="method-name">runScenario</span>
-                  <span class="parameters">("Authenticated user can persist and retrieve the current cart","Cart API")</span>
-                  <em>
-(Runs Cucumber Scenarios)                  </em>
-                </div> <!-- method-content -->
-              </div> <!-- method -->
-            </div> <!-- main-panel-content rounded-window-bottom -->
-          </div> <!-- suite-Surefire_suite-class-passed -->
-          <div class="suite-Surefire_suite-class-passed">
-            <div class="main-panel-header rounded-window-top">
-              <img src="passed.png"/>
-              <span class="class-name">com.asianfit.api.runner.CheckoutApiRunner</span>
-            </div> <!-- main-panel-header rounded-window-top -->
-            <div class="main-panel-content rounded-window-bottom">
-              <div class="method">
-                <div class="method-content">
-                  <a name="runScenario(&quot;Authenticated user can submit mock payment and retrieve invoice PDFs&quot;, &quot;Checkout API&quot;)">
-                  </a> <!-- runScenario("Authenticated user can submit mock payment and retrieve invoice PDFs", "Checkout API") -->
-                  <span class="method-name">runScenario</span>
-                  <span class="parameters">("Authenticated user can submit mock payment and retrieve invoice PDFs","Checkout API")</span>
-                  <em>
-(Runs Cucumber Scenarios)                  </em>
-                </div> <!-- method-content -->
-              </div> <!-- method -->
-            </div> <!-- main-panel-content rounded-window-bottom -->
-          </div> <!-- suite-Surefire_suite-class-passed -->
-          <div class="suite-Surefire_suite-class-passed">
-            <div class="main-panel-header rounded-window-top">
-              <img src="passed.png"/>
-              <span class="class-name">com.asianfit.api.runner.OrdersApiRunner</span>
-            </div> <!-- main-panel-header rounded-window-top -->
-            <div class="main-panel-content rounded-window-bottom">
-              <div class="method">
-                <div class="method-content">
-                  <a name="runScenario(&quot;Authenticated user can retrieve all orders and a single order&quot;, &quot;Orders API&quot;)">
-                  </a> <!-- runScenario("Authenticated user can retrieve all orders and a single order", "Orders API") -->
-                  <span class="method-name">runScenario</span>
-                  <span class="parameters">("Authenticated user can retrieve all orders and a single order","Orders API")</span>
-                  <em>
-(Runs Cucumber Scenarios)                  </em>
-                </div> <!-- method-content -->
-              </div> <!-- method -->
-            </div> <!-- main-panel-content rounded-window-bottom -->
-          </div> <!-- suite-Surefire_suite-class-passed -->
+          </div> <!-- suite-Surefire_suite-class-skipped -->
         </div> <!-- panel Surefire_suite -->
         <div panel-name="test-xml-Surefire_suite" class="panel">
           <div class="main-panel-header rounded-window-top">
@@ -239,11 +210,7 @@
 &lt;suite data-provider-thread-count=&quot;1&quot; name=&quot;Surefire suite&quot; verbose=&quot;0&quot;&gt;
   &lt;test thread-count=&quot;5&quot; name=&quot;Surefire test&quot; verbose=&quot;0&quot;&gt;
     &lt;classes&gt;
-      &lt;class name=&quot;com.asianfit.api.runner.ProfileApiRunner&quot;/&gt;
-      &lt;class name=&quot;com.asianfit.api.runner.CartApiRunner&quot;/&gt;
-      &lt;class name=&quot;com.asianfit.api.runner.OrdersApiRunner&quot;/&gt;
-      &lt;class name=&quot;com.asianfit.api.runner.CheckoutApiRunner&quot;/&gt;
-      &lt;class name=&quot;com.asianfit.api.runner.OrdersInvoiceApiRunner&quot;/&gt;
+      &lt;class name=&quot;com.asianfit.api.runner.StripeWebhookApiRunner&quot;/&gt;
     &lt;/classes&gt;
   &lt;/test&gt; &lt;!-- Surefire test --&gt;
 &lt;/suite&gt; &lt;!-- Surefire suite --&gt;
@@ -257,7 +224,7 @@
           <div class="main-panel-content rounded-window-bottom">
             <ul>
               <li>
-                <span class="test-name">Surefire test (5 classes)</span>
+                <span class="test-name">Surefire test (1 class)</span>
               </li>
             </ul>
           </div> <!-- main-panel-content rounded-window-bottom -->
@@ -291,32 +258,24 @@ data.addColumn('number', 'Number');
 data.addColumn('string', 'Method');
 data.addColumn('string', 'Class');
 data.addColumn('number', 'Time (ms)');
-data.addRows(5);
+data.addRows(3);
 data.setCell(0, 0, 0)
 data.setCell(0, 1, 'runScenario')
-data.setCell(0, 2, 'com.asianfit.api.runner.ProfileApiRunner')
-data.setCell(0, 3, 3198);
+data.setCell(0, 2, 'com.asianfit.api.runner.StripeWebhookApiRunner')
+data.setCell(0, 3, 1278);
 data.setCell(1, 0, 1)
 data.setCell(1, 1, 'runScenario')
-data.setCell(1, 2, 'com.asianfit.api.runner.CheckoutApiRunner')
-data.setCell(1, 3, 1594);
+data.setCell(1, 2, 'com.asianfit.api.runner.StripeWebhookApiRunner')
+data.setCell(1, 3, 1);
 data.setCell(2, 0, 2)
 data.setCell(2, 1, 'runScenario')
-data.setCell(2, 2, 'com.asianfit.api.runner.CartApiRunner')
-data.setCell(2, 3, 584);
-data.setCell(3, 0, 3)
-data.setCell(3, 1, 'runScenario')
-data.setCell(3, 2, 'com.asianfit.api.runner.OrdersApiRunner')
-data.setCell(3, 3, 520);
-data.setCell(4, 0, 4)
-data.setCell(4, 1, 'runScenario')
-data.setCell(4, 2, 'com.asianfit.api.runner.OrdersInvoiceApiRunner')
-data.setCell(4, 3, 519);
+data.setCell(2, 2, 'com.asianfit.api.runner.StripeWebhookApiRunner')
+data.setCell(2, 3, 0);
 window.suiteTableData['Surefire_suite']= { tableData: data, tableDiv: 'times-div-Surefire_suite'}
 return data;
 }
               </script>
-              <span class="suite-total-time">Total running time: 6 seconds</span>
+              <span class="suite-total-time">Total running time: 1 seconds</span>
               <div id="times-div-Surefire_suite">
               </div> <!-- times-div-Surefire_suite -->
             </div> <!-- times-div -->
@@ -342,78 +301,28 @@ return data;
           </div> <!-- main-panel-header rounded-window-top -->
           <div class="main-panel-content rounded-window-bottom">
             <div class="chronological-class">
-              <div class="chronological-class-name">com.asianfit.api.runner.ProfileApiRunner</div> <!-- chronological-class-name -->
+              <div class="chronological-class-name">com.asianfit.api.runner.StripeWebhookApiRunner</div> <!-- chronological-class-name -->
               <div class="configuration-class before">
-                <span class="method-name">setUpClass(org.testng.TestRunner@763b0996)</span>
+                <span class="method-name">setUpClass(org.testng.TestRunner@1785d194)</span>
                 <span class="method-start">0 ms</span>
               </div> <!-- configuration-class before -->
               <div class="test-method">
-                <span class="method-name">runScenario("Authenticated user can retrieve and update profile information", "Profile API")</span>
-                <span class="method-start">279 ms</span>
+                <img src="failed.png">
+                </img>
+                <span class="method-name">runScenario("A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready", "Stripe webhook ...)</span>
+                <span class="method-start">280 ms</span>
               </div> <!-- test-method -->
-              <div class="configuration-class after">
-                <span class="method-name">tearDownClass</span>
-                <span class="method-start">3479 ms</span>
-              </div> <!-- configuration-class after -->
-            </div> <!-- chronological-class -->
-            <div class="chronological-class">
-              <div class="chronological-class-name">com.asianfit.api.runner.CartApiRunner</div> <!-- chronological-class-name -->
-              <div class="configuration-class before">
-                <span class="method-name">setUpClass(org.testng.TestRunner@763b0996)</span>
-                <span class="method-start">3491 ms</span>
-              </div> <!-- configuration-class before -->
               <div class="test-method">
-                <span class="method-name">runScenario("Authenticated user can persist and retrieve the current cart", "Cart API")</span>
-                <span class="method-start">3517 ms</span>
+                <span class="method-name">runScenario("Duplicate Stripe webhook delivery does not create duplicate orders", "Stripe webhook API")</span>
+                <span class="method-start">1560 ms</span>
               </div> <!-- test-method -->
-              <div class="configuration-class after">
-                <span class="method-name">tearDownClass</span>
-                <span class="method-start">4101 ms</span>
-              </div> <!-- configuration-class after -->
-            </div> <!-- chronological-class -->
-            <div class="chronological-class">
-              <div class="chronological-class-name">com.asianfit.api.runner.OrdersApiRunner</div> <!-- chronological-class-name -->
-              <div class="configuration-class before">
-                <span class="method-name">setUpClass(org.testng.TestRunner@763b0996)</span>
-                <span class="method-start">4109 ms</span>
-              </div> <!-- configuration-class before -->
               <div class="test-method">
-                <span class="method-name">runScenario("Authenticated user can retrieve all orders and a single order", "Orders API")</span>
-                <span class="method-start">4131 ms</span>
+                <span class="method-name">runScenario("A failed Stripe payment is recorded without creating an order", "Stripe webhook API")</span>
+                <span class="method-start">1560 ms</span>
               </div> <!-- test-method -->
               <div class="configuration-class after">
                 <span class="method-name">tearDownClass</span>
-                <span class="method-start">4652 ms</span>
-              </div> <!-- configuration-class after -->
-            </div> <!-- chronological-class -->
-            <div class="chronological-class">
-              <div class="chronological-class-name">com.asianfit.api.runner.CheckoutApiRunner</div> <!-- chronological-class-name -->
-              <div class="configuration-class before">
-                <span class="method-name">setUpClass(org.testng.TestRunner@763b0996)</span>
-                <span class="method-start">4658 ms</span>
-              </div> <!-- configuration-class before -->
-              <div class="test-method">
-                <span class="method-name">runScenario("Authenticated user can submit mock payment and retrieve invoice PDFs", "Checkout API")</span>
-                <span class="method-start">4670 ms</span>
-              </div> <!-- test-method -->
-              <div class="configuration-class after">
-                <span class="method-name">tearDownClass</span>
-                <span class="method-start">6264 ms</span>
-              </div> <!-- configuration-class after -->
-            </div> <!-- chronological-class -->
-            <div class="chronological-class">
-              <div class="chronological-class-name">com.asianfit.api.runner.OrdersInvoiceApiRunner</div> <!-- chronological-class-name -->
-              <div class="configuration-class before">
-                <span class="method-name">setUpClass(org.testng.TestRunner@763b0996)</span>
-                <span class="method-start">6269 ms</span>
-              </div> <!-- configuration-class before -->
-              <div class="test-method">
-                <span class="method-name">runScenario("Authenticated user can retrieve invoice-ready data for an order", "Orders invoice API")</span>
-                <span class="method-start">6293 ms</span>
-              </div> <!-- test-method -->
-              <div class="configuration-class after">
-                <span class="method-name">tearDownClass</span>
-                <span class="method-start">6812 ms</span>
+                <span class="method-start">1561 ms</span>
               </div> <!-- configuration-class after -->
           </div> <!-- main-panel-content rounded-window-bottom -->
         </div> <!-- panel -->

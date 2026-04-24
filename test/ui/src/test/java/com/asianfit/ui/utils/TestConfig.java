@@ -169,6 +169,20 @@ public final class TestConfig {
     return value;
   }
 
+  public static String stripeWebhookSecret() {
+    String value = firstNonBlank(
+      System.getProperty("stripeWebhookSecret"),
+      System.getenv("STRIPE_WEBHOOK_SECRET"),
+      LOCAL_ENV.get("STRIPE_WEBHOOK_SECRET")
+    );
+    if (value == null) {
+      throw new IllegalStateException(
+        "Missing Stripe webhook secret. Set -DstripeWebhookSecret, STRIPE_WEBHOOK_SECRET, or .env.local"
+      );
+    }
+    return value;
+  }
+
   public static String unverifiedTestUserEmail() {
     String value = System.getProperty("unverifiedTestUserEmail");
     if (value == null || value.isBlank()) {

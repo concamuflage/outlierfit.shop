@@ -8,8 +8,7 @@ import OrderSummary from "@/components/cart/OrderSummary";
 import { useCart } from "@/components/cart/CartContext";
 import { useShippingOptions } from "@/components/cart/useShippingOptions";
 import { formatUsd } from "@/lib/formatters";
-import type { InvoicePayload } from "@/lib/invoice";
-import { formatShippingMode, getBoxWeightKg } from "@/lib/shipping";
+import { getBoxWeightKg } from "@/lib/shipping";
 const US_STATES = [
   { value: "AL", label: "Alabama" },
   { value: "AK", label: "Alaska" },
@@ -86,13 +85,6 @@ type CartSelectionsPayload = {
   billingAddressId: number | null;
   shippingId: number | null;
 };
-
-type InvoiceDownloadState = {
-  invoiceNumber: string;
-  paidAt: string;
-};
-
-type MockPaymentResult = "success" | "failure" | null;
 
 type AddressForm = {
   name: string;
@@ -460,11 +452,8 @@ function CartPageContent() {
   const [showNewShippingAddressForm, setShowNewShippingAddressForm] = useState(false);
   const [showNewBillingAddressForm, setShowNewBillingAddressForm] = useState(false);
   const [highlightCheckoutReview, setHighlightCheckoutReview] = useState(opensCheckoutFromUrl);
-  const [mockPaymentLoading, setMockPaymentLoading] = useState(false);
-  const [mockPaymentError, setMockPaymentError] = useState<string | null>(null);
-  const [mockPaymentResult, setMockPaymentResult] = useState<MockPaymentResult>(null);
-  const [invoiceDownloadState, setInvoiceDownloadState] = useState<InvoiceDownloadState | null>(null);
-  const [invoicePayloadSnapshot, setInvoicePayloadSnapshot] = useState<InvoicePayload | null>(null);
+  const [stripeCheckoutLoading, setStripeCheckoutLoading] = useState(false);
+  const [stripeCheckoutError, setStripeCheckoutError] = useState<string | null>(null);
   const checkoutReviewRef = useRef<HTMLElement | null>(null);
   const boxWeightKg = useMemo(() => getBoxWeightKg(totalWeightKg), [totalWeightKg]);
   const shipmentWeightKg = useMemo(() => totalWeightKg + boxWeightKg, [boxWeightKg, totalWeightKg]);
@@ -488,155 +477,62 @@ function CartPageContent() {
   const alternativeBillingAddresses = billingAddresses.filter((address) => address.id !== selectedBillingAddressId);
   const checkoutOrderTotal = subtotal + (selectedShippingOption?.shippingCostUsd ?? 0);
   const effectiveBillingAddress = billingSameAsShipping ? selectedShippingAddress : selectedBillingAddress;
-  const canCompleteMockPayment = Boolean(
+  const canStartStripeCheckout = Boolean(
     selectedShippingAddress &&
       effectiveBillingAddress &&
       selectedShippingOption &&
       items.length > 0
   );
-
-  function buildInvoicePayload(invoiceMeta: InvoiceDownloadState): InvoicePayload | null {
-    if (!selectedShippingAddress || !effectiveBillingAddress || !selectedShippingOption) {
-      return null;
-    }
-
-    return {
-      invoiceNumber: invoiceMeta.invoiceNumber,
-      paidAt: invoiceMeta.paidAt,
-      shippingModeLabel: `${formatShippingMode(selectedShippingOption.mode)}${selectedShippingOption.delivery_time ? ` ${selectedShippingOption.delivery_time}` : ""}`,
-      subtotalUsd: subtotal,
-      shippingUsd: selectedShippingOption.shippingCostUsd,
-      totalUsd: checkoutOrderTotal,
-      items: items.map((item) => ({
-        name: item.name,
-        quantity: item.qty,
-        unitPriceUsd: item.price,
-        color: item.color,
-        size: item.size,
-      })),
-      shippingAddress: {
-        name: selectedShippingAddress.name,
-        street: selectedShippingAddress.street,
-        city: selectedShippingAddress.city,
-        state: selectedShippingAddress.state,
-        zipCode: selectedShippingAddress.zipCode,
-        country: selectedShippingAddress.country,
-        phone: formatUsPhone(selectedShippingAddress.phone),
-      },
-      billingAddress: {
-        name: effectiveBillingAddress.name,
-        street: effectiveBillingAddress.street,
-        city: effectiveBillingAddress.city,
-        state: effectiveBillingAddress.state,
-        zipCode: effectiveBillingAddress.zipCode,
-        country: effectiveBillingAddress.country,
-        phone: formatUsPhone(effectiveBillingAddress.phone),
-      },
-    };
-  }
-
-  async function downloadInvoice(invoiceMeta: InvoiceDownloadState) {
-    const payload = invoicePayloadSnapshot ?? buildInvoicePayload(invoiceMeta);
-    if (!payload) {
-      setMockPaymentError("Shipping, billing, and shipping mode are required before downloading an invoice.");
+  
+  async function handleStripeCheckout() {
+    if (!canStartStripeCheckout || !selectedShippingAddress || !effectiveBillingAddress || !selectedShippingOption) {
+      setStripeCheckoutError("Select shipping and billing details before completing payment.");
       return;
     }
 
-    const response = await fetch("/api/invoice", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorPayload = await response.json().catch(() => null);
-      setMockPaymentError(errorPayload?.error ?? "Unable to generate invoice.");
-      return;
-    }
-
-    const blob = await response.blob();
-    const objectUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = `invoice-${invoiceMeta.invoiceNumber}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(objectUrl);
-  }
-
-  async function handleMockPaymentSuccess() {
-    if (!canCompleteMockPayment) {
-      setMockPaymentError("Select shipping and billing details before completing payment.");
-      return;
-    }
-
-    setMockPaymentLoading(true);
-    setMockPaymentError(null);
-    setMockPaymentResult(null);
+    setStripeCheckoutLoading(true);
+    setStripeCheckoutError(null);
 
     try {
-      const invoicePayload = buildInvoicePayload({
-        invoiceNumber: "pending",
-        paidAt: new Date().toISOString(),
-      });
-
-      if (!invoicePayload) {
-        setMockPaymentError("Shipping, billing, and shipping mode are required before completing payment.");
-        return;
-      }
-
-      const response = await fetch("/api/orders/mock-payment", {
+      const response = await fetch("/api/orders/checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subtotalUsd: subtotal,
-          shippingUsd: selectedShippingOption?.shippingCostUsd ?? 0,
+          shippingUsd: selectedShippingOption.shippingCostUsd ?? 0,
           totalUsd: checkoutOrderTotal,
           clothesWeightKg: totalWeightKg,
           boxWeightKg,
           shippingWeightKg: shipmentWeightKg,
-          shippingId: selectedShippingOption?.id,
+          shippingId: selectedShippingOption.id,
           shippingAddressId: selectedShippingAddressId,
           billingAddressId: effectiveBillingAddress?.id,
           items: items.map((item) => ({
             cartItemId: item.id,
             quantity: item.qty,
             unitPriceUsd: item.price,
+            name: item.name,
+            color: item.color,
+            size: item.size,
           })),
         }),
       });
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        setMockPaymentError(payload?.error ?? "Unable to save order.");
+        setStripeCheckoutError(payload?.error ?? "Unable to start checkout.");
         return;
       }
 
-      const invoiceMeta = {
-        invoiceNumber: String(payload.invoiceNumber),
-        paidAt: String(payload.paidAt),
-      };
+      if (typeof payload?.url !== "string" || !payload.url.trim()) {
+        setStripeCheckoutError("Stripe did not return a checkout URL.");
+        return;
+      }
 
-      setInvoicePayloadSnapshot({
-        ...invoicePayload,
-        invoiceNumber: invoiceMeta.invoiceNumber,
-        paidAt: invoiceMeta.paidAt,
-      });
-      setInvoiceDownloadState(invoiceMeta);
-      setMockPaymentResult("success");
-      clearCart();
-      router.push(`/checkout/success?orderId=${encodeURIComponent(String(payload.orderId))}`);
+      window.location.assign(payload.url);
     } finally {
-      setMockPaymentLoading(false);
+      setStripeCheckoutLoading(false);
     }
-  }
-
-  function handleMockPaymentFailure() {
-    setMockPaymentResult("failure");
-    setMockPaymentError("Mock payment failed. No order was created.");
-    setInvoiceDownloadState(null);
-    setInvoicePayloadSnapshot(null);
   }
 
   const loadCheckoutProfile = useCallback(async () => {
@@ -1360,65 +1256,36 @@ function CartPageContent() {
               </section>
             ) : null}
 
-            {false && showCheckoutReview && profileData ? (
+            {showCheckoutReview && profileData ? (
               <section className="mt-6 rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-zinc-900">Payment</h3>
                     <p className="mt-1 text-sm text-zinc-600">
-                      Mock the payment success flow, then download the invoice PDF.
+                      Pay securely with Stripe Checkout.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      onClick={handleMockPaymentSuccess}
-                      disabled={!canCompleteMockPayment || mockPaymentLoading}
-                      className="hidden rounded-full bg-zinc-900 px-5 py-2 text-sm text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={handleStripeCheckout}
+                      disabled={!canStartStripeCheckout || stripeCheckoutLoading}
+                      className="rounded-full bg-zinc-900 px-5 py-2 text-sm text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {mockPaymentLoading ? "Processing..." : "Mock payment success"}
+                      {stripeCheckoutLoading ? "Redirecting..." : "Pay with card"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleMockPaymentFailure}
-                      disabled={mockPaymentLoading}
-                      className="hidden rounded-full border border-red-300 px-5 py-2 text-sm text-red-700 hover:border-red-500 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Mock payment failure
-                    </button>
-                    {invoiceDownloadState ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!invoiceDownloadState) {
-                            return;
-                          }
-
-                          void downloadInvoice(invoiceDownloadState);
-                        }}
-                        className="rounded-full border border-zinc-300 px-5 py-2 text-sm text-zinc-700 hover:border-zinc-500 hover:text-zinc-900"
-                      >
-                        Download invoice PDF
-                      </button>
-                    ) : null}
                   </div>
                 </div>
 
-                {!canCompleteMockPayment ? (
+                {!canStartStripeCheckout ? (
                   <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                     Add/select a shipping address, set billing details, and choose a shipping option before completing payment.
                   </div>
                 ) : null}
 
-                {mockPaymentResult === "success" && invoiceDownloadState ? (
-                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                    Mock payment completed successfully. The order was saved, the cart was cleared, and your invoice is ready to download as PDF.
-                  </div>
-                ) : null}
-
-                {mockPaymentError ? (
+                {stripeCheckoutError ? (
                   <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {mockPaymentError}
+                    {stripeCheckoutError}
                   </div>
                 ) : null}
               </section>

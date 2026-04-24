@@ -9,3 +9,4 @@ orders.single: /api/profile/orders/{orderId}
 orders.invoicePayload: /api/profile/orders/{orderId}/invoice
 orders.invoicePdf: /api/profile/orders/{orderId}/invoice/pdf
 invoice.generatePdf: /api/invoice
+stripe.webhook: /api/stripe/webhook
