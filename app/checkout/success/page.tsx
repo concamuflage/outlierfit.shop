@@ -24,9 +24,16 @@ function CheckoutSuccessPageContent() {
     }
     return window.sessionStorage.getItem(storageKey);
   });
-  const [loading, setLoading] = useState(Boolean(stripeSessionId && !orderIdFromUrl));
+  const [loading, setLoading] = useState(
+    Boolean(stripeSessionId && !orderIdFromUrl),
+  );
   const [error, setError] = useState<string | null>(null);
   const finalizedSessionIdRef = useRef<string | null>(null);
+  const clearCartRef = useRef(clearCart);
+
+  useEffect(() => {
+    clearCartRef.current = clearCart;
+  }, [clearCart]);
 
   useEffect(() => {
     if (orderIdFromUrl) {
@@ -67,9 +74,16 @@ function CheckoutSuccessPageContent() {
 
       while (!cancelled && attempt < FINALIZE_RETRY_LIMIT) {
         const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), FINALIZE_REQUEST_TIMEOUT_MS);
+        const timeoutId = window.setTimeout(
+          () => controller.abort(),
+          FINALIZE_REQUEST_TIMEOUT_MS,
+        );
         let response: Response | null = null;
-        let payload: { orderId?: unknown; error?: string; status?: string } | null = null;
+        let payload: {
+          orderId?: unknown;
+          error?: string;
+          status?: string;
+        } | null = null;
 
         try {
           response = await fetch("/api/orders/checkout-complete", {
@@ -100,8 +114,15 @@ function CheckoutSuccessPageContent() {
           if (storageKey) {
             window.sessionStorage.setItem(storageKey, nextOrderId);
           }
-          clearCart();
-          window.location.replace(`/checkout/success?orderId=${encodeURIComponent(nextOrderId)}`);
+          setOrderId(nextOrderId);
+          setLoading(false);
+          setError(null);
+          clearCartRef.current();
+          window.history.replaceState(
+            null,
+            "",
+            `/checkout/success?orderId=${encodeURIComponent(nextOrderId)}`,
+          );
           return;
         }
 
@@ -112,19 +133,25 @@ function CheckoutSuccessPageContent() {
         }
 
         if (response && response.status !== 409 && response.status < 500) {
-          setError(payload?.error ?? "Unable to finalize your order after payment.");
+          setError(
+            payload?.error ?? "Unable to finalize your order after payment.",
+          );
           setLoading(false);
           return;
         }
 
         attempt += 1;
         if (attempt < FINALIZE_RETRY_LIMIT) {
-          await new Promise((resolve) => window.setTimeout(resolve, FINALIZE_RETRY_DELAY_MS));
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, FINALIZE_RETRY_DELAY_MS),
+          );
         }
       }
 
       if (!cancelled) {
-        setError("Payment is still being confirmed. Refresh this page in a moment if your invoice does not appear.");
+        setError(
+          "Payment is still being confirmed. Refresh this page in a moment if your invoice does not appear.",
+        );
         setLoading(false);
       }
     }
@@ -133,8 +160,11 @@ function CheckoutSuccessPageContent() {
 
     return () => {
       cancelled = true;
+      if (finalizedSessionIdRef.current === stripeSessionId) {
+        finalizedSessionIdRef.current = null;
+      }
     };
-  }, [clearCart, orderId, orderIdFromUrl, storageKey, stripeSessionId]);
+  }, [orderId, orderIdFromUrl, storageKey, stripeSessionId]);
 
   const invoiceHref = useMemo(() => {
     if (!orderId) {
@@ -153,7 +183,9 @@ function CheckoutSuccessPageContent() {
             </div>
           ) : null}
 
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight">Thank you for your order.</h1>
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight">
+            Thank you for your order.
+          </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
             {loading
               ? "Your payment succeeded. We are waiting for Stripe to confirm the order and prepare your invoice."

@@ -1,7 +1,73 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import type Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
-import { getStripeCheckoutOrderStatus } from "@/lib/server/orderPayments";
+import {
+  finalizePaidOrder,
+  getStripeCheckoutOrderStatus,
+  getStripeCheckoutSession,
+  isValidCheckoutOrderPayload,
+  readStripeChargeId,
+  readStripeCustomerId,
+  readStripePaymentIntentId,
+  upsertStripePaymentRecord,
+} from "@/lib/server/orderPayments";
+import { getStripeServerClient } from "@/lib/server/stripe";
+
+function toDateOrNull(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? new Date(value * 1000) : null;
+}
+
+function getExpandedPaymentIntent(session: Stripe.Checkout.Session) {
+  return session.payment_intent && typeof session.payment_intent !== "string" ? session.payment_intent : null;
+}
+
+async function reconcilePaidStripeCheckoutSession(userId: number, stripeSessionId: string) {
+  const persistedCheckout = await getStripeCheckoutSession(stripeSessionId, userId);
+  if (!persistedCheckout) {
+    return null;
+  }
+
+  if (!isValidCheckoutOrderPayload(persistedCheckout.payload)) {
+    throw new Error("Saved Stripe checkout payload is invalid.");
+  }
+
+  const stripe = getStripeServerClient();
+  const checkoutSession = await stripe.checkout.sessions.retrieve(stripeSessionId, {
+    expand: ["payment_intent", "payment_intent.latest_charge"],
+  });
+
+  if (checkoutSession.payment_status !== "paid") {
+    return null;
+  }
+
+  const paymentIntent = getExpandedPaymentIntent(checkoutSession);
+  const result = await finalizePaidOrder({
+    userId,
+    payload: persistedCheckout.payload,
+    paymentProvider: "stripe",
+    paymentReference: checkoutSession.id,
+    paidAt: toDateOrNull(paymentIntent?.created ?? null) ?? new Date(),
+  });
+
+  const paymentIntentId = paymentIntent?.id ?? readStripePaymentIntentId(checkoutSession.payment_intent);
+  if (paymentIntentId) {
+    await upsertStripePaymentRecord({
+      stripePaymentIntentId: paymentIntentId,
+      stripeCheckoutSessionId: checkoutSession.id,
+      stripeCustomerId: readStripeCustomerId(checkoutSession.customer),
+      stripeChargeId: readStripeChargeId(paymentIntent?.latest_charge ?? null),
+      status: "paid",
+      amount: paymentIntent?.amount_received ?? checkoutSession.amount_total ?? 0,
+      currency: String(paymentIntent?.currency ?? checkoutSession.currency ?? "usd"),
+      customerEmail: checkoutSession.customer_details?.email ?? checkoutSession.customer_email ?? null,
+      paidAt: toDateOrNull(paymentIntent?.created ?? null) ?? new Date(result.paidAt),
+      orderId: result.orderId,
+    });
+  }
+
+  return result;
+}
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -23,11 +89,10 @@ export async function POST(request: Request) {
     if (status.state === "not_found") {
       return NextResponse.json(
         {
-          status: "pending",
-          paymentStatus: null,
-          checkoutStatus: null,
+          status: "not_found",
+          error: "Stripe checkout session was not found for this account.",
         },
-        { status: 409 }
+        { status: 404 }
       );
     }
 
@@ -42,6 +107,16 @@ export async function POST(request: Request) {
     }
 
     if (status.state === "pending") {
+      const completedOrder = await reconcilePaidStripeCheckoutSession(userId, sessionId);
+      if (completedOrder) {
+        return NextResponse.json({
+          status: "completed",
+          orderId: completedOrder.orderId,
+          invoiceNumber: completedOrder.invoiceNumber,
+          paidAt: completedOrder.paidAt,
+        });
+      }
+
       return NextResponse.json(
         {
           status: "pending",
