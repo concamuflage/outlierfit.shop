@@ -57,9 +57,9 @@ function toggleAllBoxes() {
 <tr>
 <td>Tests passed/Failed/Skipped:</td><td>0/1/0</td>
 </tr><tr>
-<td>Started on:</td><td>Fri Apr 24 19:16:15 EDT 2026</td>
+<td>Started on:</td><td>Fri Apr 24 20:45:21 EDT 2026</td>
 </tr>
-<tr><td>Total time:</td><td>69 seconds (69805 ms)</td>
+<tr><td>Total time:</td><td>70 seconds (70609 ms)</td>
 </tr><tr>
 <td>Included groups:</td><td></td>
 </tr><tr>
@@ -77,31 +77,31 @@ function toggleAllBoxes() {
 </tr>
 <tr>
 <td title='com.asianfit.ui.runner.PaymentRunner.runScenario()'><b>runScenario</b><br>Test class: com.asianfit.ui.runner.PaymentRunner<br>Test method: Runs Cucumber Scenarios<br>Parameters: "A returning user can complete a successful card payment through Stripe Checkout", "Stripe payment"</td>
-<td><div><pre>org.openqa.selenium.TimeoutException: Expected condition failed: waiting for com.asianfit.ui.pages.CheckoutSuccessPage$$Lambda/0x000000e0013695b8@67e25252 (tried for 15 second(s) with 500 milliseconds interval)
+<td><div><pre>org.openqa.selenium.TimeoutException: Expected condition failed: waiting for com.asianfit.ui.pages.CheckoutSuccessPage$$Lambda/0x00003fc0013d15b8@467b0f6e (tried for 15 second(s) with 500 milliseconds interval)
 Build info: version: &apos;4.29.0&apos;, revision: &apos;5fc1ec94cb&apos;
 System info: os.name: &apos;Mac OS X&apos;, os.arch: &apos;aarch64&apos;, os.version: &apos;14.6.1&apos;, java.version: &apos;25.0.2&apos;
 Driver info: org.openqa.selenium.chrome.ChromeDriver
-Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 147.0.7727.102, chrome: {chromedriverVersion: 147.0.7727.117 (474cc805edd..., userDataDir: /var/folders/xk/zytgm9y96hq...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:55472}, goog:processID: 12222, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: mac, proxy: Proxy(), se:cdp: ws://localhost:55472/devtoo..., se:cdpVersion: 147.0.7727.102, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
-Session ID: 9381d9a3d732f5f7079f044f0f530357
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 147.0.7727.102, chrome: {chromedriverVersion: 147.0.7727.117 (474cc805edd..., userDataDir: /var/folders/xk/zytgm9y96hq...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:53509}, goog:processID: 24202, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: mac, proxy: Proxy(), se:cdp: ws://localhost:53509/devtoo..., se:cdpVersion: 147.0.7727.102, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 45233abf081f38f5d04d127df1338f50
 	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
 	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:228)
 	at com.asianfit.ui.pages.CheckoutSuccessPage.waitForConfirmationStateToDisappear(CheckoutSuccessPage.java:29)
 	at com.asianfit.ui.steps.PaymentSteps.iShouldSeeTheInvoiceDownloadLink(PaymentSteps.java:98)
 	at ✽.I should see the invoice download link(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/payment.feature:29)
-</pre></div><a href='#' onClick='toggleBox("stack-trace1907228381", this, "Click to show all stack frames", "Click to hide stack frames")'>Click to show all stack frames</a>
-<div class='stack-trace' id='stack-trace1907228381'><pre>org.openqa.selenium.TimeoutException: Expected condition failed: waiting for com.asianfit.ui.pages.CheckoutSuccessPage$$Lambda/0x000000e0013695b8@67e25252 (tried for 15 second(s) with 500 milliseconds interval)
+</pre></div><a href='#' onClick='toggleBox("stack-trace1945886568", this, "Click to show all stack frames", "Click to hide stack frames")'>Click to show all stack frames</a>
+<div class='stack-trace' id='stack-trace1945886568'><pre>org.openqa.selenium.TimeoutException: Expected condition failed: waiting for com.asianfit.ui.pages.CheckoutSuccessPage$$Lambda/0x00003fc0013d15b8@467b0f6e (tried for 15 second(s) with 500 milliseconds interval)
 Build info: version: &apos;4.29.0&apos;, revision: &apos;5fc1ec94cb&apos;
 System info: os.name: &apos;Mac OS X&apos;, os.arch: &apos;aarch64&apos;, os.version: &apos;14.6.1&apos;, java.version: &apos;25.0.2&apos;
 Driver info: org.openqa.selenium.chrome.ChromeDriver
-Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 147.0.7727.102, chrome: {chromedriverVersion: 147.0.7727.117 (474cc805edd..., userDataDir: /var/folders/xk/zytgm9y96hq...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:55472}, goog:processID: 12222, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: mac, proxy: Proxy(), se:cdp: ws://localhost:55472/devtoo..., se:cdpVersion: 147.0.7727.102, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
-Session ID: 9381d9a3d732f5f7079f044f0f530357
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 147.0.7727.102, chrome: {chromedriverVersion: 147.0.7727.117 (474cc805edd..., userDataDir: /var/folders/xk/zytgm9y96hq...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:53509}, goog:processID: 24202, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: mac, proxy: Proxy(), se:cdp: ws://localhost:53509/devtoo..., se:cdpVersion: 147.0.7727.102, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 45233abf081f38f5d04d127df1338f50
 	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
 	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:228)
 	at com.asianfit.ui.pages.CheckoutSuccessPage.waitForConfirmationStateToDisappear(CheckoutSuccessPage.java:29)
 	at com.asianfit.ui.steps.PaymentSteps.iShouldSeeTheInvoiceDownloadLink(PaymentSteps.java:98)
 	at ✽.I should see the invoice download link(file:///Users/Mark_1/project888/test/ui/src/test/resources/features/payment.feature:29)
 </pre></div></td>
-<td>69</td>
+<td>70</td>
 <td>com.asianfit.ui.runner.PaymentRunner@184cf7cf</td></tr>
 </table><p>
 </body>

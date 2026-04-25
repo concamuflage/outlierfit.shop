@@ -45,6 +45,8 @@ type StripeCheckoutSessionRow = {
 
 type StripeWebhookEventRow = {
   id: unknown;
+  processed_at: unknown;
+  order_id: unknown;
 };
 
 type StripePaymentRow = {
@@ -294,10 +296,41 @@ export async function createStripeWebhookEvent(
   );
 
   if (result.rows.length === 0) {
-    return { inserted: false, eventRowId: null };
+    const existingResult = await pool.query<StripeWebhookEventRow>(
+      `
+        SELECT id, processed_at, order_id
+        FROM stripe_webhook_events
+        WHERE stripe_event_id = $1
+        LIMIT 1
+      `,
+      [stripeEventId]
+    );
+
+    if (existingResult.rows.length === 0) {
+      return {
+        inserted: false,
+        eventRowId: null,
+        processedAt: null,
+        orderId: null,
+      };
+    }
+
+    const existingRow = existingResult.rows[0];
+    return {
+      inserted: false,
+      eventRowId: Number(existingRow.id),
+      processedAt:
+        existingRow.processed_at == null ? null : new Date(String(existingRow.processed_at)),
+      orderId: existingRow.order_id == null ? null : Number(existingRow.order_id),
+    };
   }
 
-  return { inserted: true, eventRowId: Number(result.rows[0].id) };
+  return {
+    inserted: true,
+    eventRowId: Number(result.rows[0].id),
+    processedAt: null,
+    orderId: null,
+  };
 }
 
 export async function markStripeWebhookEventProcessed(
@@ -564,7 +597,7 @@ export async function finalizePaidOrder({
 
     if (existingOrderResult.rows.length > 0) {
       const existingOrder = existingOrderResult.rows[0];
-      await client.query(
+      const sessionUpdateResult = await client.query(
         `
           UPDATE stripe_checkout_sessions
           SET order_id = $2,
@@ -574,6 +607,12 @@ export async function finalizePaidOrder({
         `,
         [paymentReference, Number(existingOrder.id)]
       );
+
+      if (sessionUpdateResult.rowCount === 0) {
+        throw new Error(
+          `Missing persisted Stripe checkout session for ${paymentReference}.`
+        );
+      }
       await client.query("COMMIT");
 
       return {
@@ -746,7 +785,7 @@ export async function finalizePaidOrder({
       [userId]
     );
 
-    await client.query(
+    const sessionUpdateResult = await client.query(
       `
         UPDATE stripe_checkout_sessions
         SET order_id = $2,
@@ -756,6 +795,12 @@ export async function finalizePaidOrder({
       `,
       [paymentReference, orderId]
     );
+
+    if (sessionUpdateResult.rowCount === 0) {
+      throw new Error(
+        `Missing persisted Stripe checkout session for ${paymentReference}.`
+      );
+    }
 
     await client.query("COMMIT");
 

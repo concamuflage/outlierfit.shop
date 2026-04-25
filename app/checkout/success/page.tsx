@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/components/cart/CartContext";
 
-const FINALIZE_RETRY_LIMIT = 6;
+const FINALIZE_RETRY_LIMIT = 20;
 const FINALIZE_RETRY_DELAY_MS = 1500;
+const FINALIZE_REQUEST_TIMEOUT_MS = 5000;
 
 function CheckoutSuccessPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { clearCart } = useCart();
   const orderIdFromUrl = searchParams.get("orderId");
   const stripeSessionId = searchParams.get("session_id");
@@ -66,26 +66,42 @@ function CheckoutSuccessPageContent() {
       let attempt = 0;
 
       while (!cancelled && attempt < FINALIZE_RETRY_LIMIT) {
-        const response = await fetch("/api/orders/checkout-complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: stripeSessionId }),
-        });
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), FINALIZE_REQUEST_TIMEOUT_MS);
+        let response: Response | null = null;
+        let payload: { orderId?: unknown; error?: string; status?: string } | null = null;
 
-        const payload = await response.json().catch(() => null);
+        try {
+          response = await fetch("/api/orders/checkout-complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: stripeSessionId }),
+            cache: "no-store",
+            signal: controller.signal,
+          });
+
+          payload = await response.json().catch(() => null);
+        } catch (error) {
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            setError("Unable to finalize your order after payment.");
+            setLoading(false);
+            return;
+          }
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+
         if (cancelled) {
           return;
         }
 
-        if (response.ok && payload?.orderId != null) {
+        if (response?.ok && payload?.orderId != null) {
           const nextOrderId = String(payload.orderId);
-          setOrderId(nextOrderId);
           if (storageKey) {
             window.sessionStorage.setItem(storageKey, nextOrderId);
           }
           clearCart();
-          setLoading(false);
-          router.replace(`/checkout/success?orderId=${encodeURIComponent(nextOrderId)}`);
+          window.location.replace(`/checkout/success?orderId=${encodeURIComponent(nextOrderId)}`);
           return;
         }
 
@@ -95,7 +111,7 @@ function CheckoutSuccessPageContent() {
           return;
         }
 
-        if (response.status !== 409) {
+        if (response && response.status !== 409 && response.status < 500) {
           setError(payload?.error ?? "Unable to finalize your order after payment.");
           setLoading(false);
           return;
@@ -118,7 +134,7 @@ function CheckoutSuccessPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [clearCart, orderId, orderIdFromUrl, router, storageKey, stripeSessionId]);
+  }, [clearCart, orderId, orderIdFromUrl, storageKey, stripeSessionId]);
 
   const invoiceHref = useMemo(() => {
     if (!orderId) {

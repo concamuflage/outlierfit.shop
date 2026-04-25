@@ -53,9 +53,16 @@ async function recordSuccessfulCheckoutSession(
   checkoutSession: Stripe.Checkout.Session
 ) {
   const persistedCheckout = await getStripeCheckoutSessionById(checkoutSession.id);
-  if (!persistedCheckout || !persistedCheckout.userId || !isValidCheckoutOrderPayload(persistedCheckout.payload)) {
-    await markStripeWebhookEventProcessed(stripeEventId);
-    return;
+  if (!persistedCheckout || !persistedCheckout.userId) {
+    throw new Error(
+      `Stripe checkout session ${checkoutSession.id} has not been persisted locally yet.`
+    );
+  }
+
+  if (!isValidCheckoutOrderPayload(persistedCheckout.payload)) {
+    throw new Error(
+      `Stripe checkout session ${checkoutSession.id} has an invalid saved payload.`
+    );
   }
 
   const paymentIntent = await retrievePaymentIntentForSession(checkoutSession);
@@ -204,8 +211,13 @@ export async function POST(request: Request) {
       paymentIntentId
     );
 
-    if (!insertResult.inserted) {
-      return NextResponse.json({ received: true, duplicate: true });
+    if (!insertResult.inserted && insertResult.processedAt) {
+      return NextResponse.json({
+        received: true,
+        duplicate: true,
+        processed: true,
+        orderId: insertResult.orderId,
+      });
     }
 
     switch (event.type) {

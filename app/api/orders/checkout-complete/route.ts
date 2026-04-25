@@ -21,7 +21,14 @@ export async function POST(request: Request) {
     const status = await getStripeCheckoutOrderStatus(userId, sessionId);
 
     if (status.state === "not_found") {
-      return NextResponse.json({ error: "Checkout session not found." }, { status: 404 });
+      return NextResponse.json(
+        {
+          status: "pending",
+          paymentStatus: null,
+          checkoutStatus: null,
+        },
+        { status: 409 }
+      );
     }
 
     if (status.state === "failed") {

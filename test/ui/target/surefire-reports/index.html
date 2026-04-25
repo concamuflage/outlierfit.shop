@@ -130,12 +130,12 @@
                   </a> <!-- runScenario("A returning user can complete a successful card payment through Stripe Checkout", "Stripe payment") -->
                   <span class="method-name">runScenario</span>
                   <span class="parameters">("A returning user can complete a successful card payment through Stripe Checkout","Stripe payment")</span>
-                  <div class="stack-trace">org.openqa.selenium.TimeoutException: Expected condition failed: waiting for com.asianfit.ui.pages.CheckoutSuccessPage$$Lambda/0x000000e0013695b8@67e25252 (tried for 15 second(s) with 500 milliseconds interval)
+                  <div class="stack-trace">org.openqa.selenium.TimeoutException: Expected condition failed: waiting for com.asianfit.ui.pages.CheckoutSuccessPage$$Lambda/0x00003fc0013d15b8@467b0f6e (tried for 15 second(s) with 500 milliseconds interval)
 Build info: version: &apos;4.29.0&apos;, revision: &apos;5fc1ec94cb&apos;
 System info: os.name: &apos;Mac OS X&apos;, os.arch: &apos;aarch64&apos;, os.version: &apos;14.6.1&apos;, java.version: &apos;25.0.2&apos;
 Driver info: org.openqa.selenium.chrome.ChromeDriver
-Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 147.0.7727.102, chrome: {chromedriverVersion: 147.0.7727.117 (474cc805edd..., userDataDir: /var/folders/xk/zytgm9y96hq...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:55472}, goog:processID: 12222, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: mac, proxy: Proxy(), se:cdp: ws://localhost:55472/devtoo..., se:cdpVersion: 147.0.7727.102, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
-Session ID: 9381d9a3d732f5f7079f044f0f530357
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 147.0.7727.102, chrome: {chromedriverVersion: 147.0.7727.117 (474cc805edd..., userDataDir: /var/folders/xk/zytgm9y96hq...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:53509}, goog:processID: 24202, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: mac, proxy: Proxy(), se:cdp: ws://localhost:53509/devtoo..., se:cdpVersion: 147.0.7727.102, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 45233abf081f38f5d04d127df1338f50
 	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
 	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:228)
 	at com.asianfit.ui.pages.CheckoutSuccessPage.waitForConfirmationStateToDisappear(CheckoutSuccessPage.java:29)
@@ -212,7 +212,7 @@ data.addRows(1);
 data.setCell(0, 0, 0)
 data.setCell(0, 1, 'runScenario')
 data.setCell(0, 2, 'com.asianfit.ui.runner.PaymentRunner')
-data.setCell(0, 3, 69469);
+data.setCell(0, 3, 70278);
 window.suiteTableData['Surefire_suite']= { tableData: data, tableDiv: 'times-div-Surefire_suite'}
 return data;
 }
@@ -245,18 +245,18 @@ return data;
             <div class="chronological-class">
               <div class="chronological-class-name">com.asianfit.ui.runner.PaymentRunner</div> <!-- chronological-class-name -->
               <div class="configuration-class before">
-                <span class="method-name">setUpClass(org.testng.TestRunner@e784320)</span>
+                <span class="method-name">setUpClass(org.testng.TestRunner@34414ffc)</span>
                 <span class="method-start">0 ms</span>
               </div> <!-- configuration-class before -->
               <div class="test-method">
                 <img src="failed.png">
                 </img>
                 <span class="method-name">runScenario("A returning user can complete a successful card payment through Stripe Checkout", "Stripe payment")</span>
-                <span class="method-start">294 ms</span>
+                <span class="method-start">292 ms</span>
               </div> <!-- test-method -->
               <div class="configuration-class after">
                 <span class="method-name">tearDownClass</span>
-                <span class="method-start">69769 ms</span>
+                <span class="method-start">70578 ms</span>
               </div> <!-- configuration-class after -->
           </div> <!-- main-panel-content rounded-window-bottom -->
         </div> <!-- panel -->
