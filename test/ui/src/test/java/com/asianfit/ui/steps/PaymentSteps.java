@@ -87,15 +87,46 @@ public class PaymentSteps {
     stripeCheckoutPage().submitPayment();
   }
 
+  @When("I cancel Stripe Checkout through Browser's back button")
+  public void iCancelStripeCheckout() {
+    stripeCheckoutPage().cancelCheckout();
+  }
+
+  @When("I cancel Stripe Checkout through Back button on the Stripe Checkout page")
+  public void iCancelStripeCheckoutThroughBackButtonOnTheStripeCheckoutPage() {
+    stripeCheckoutPage().cancelCheckoutThroughBusinessBackLink();
+  }
+
   @Then("I should be redirected back to the checkout success page")
   public void iShouldBeRedirectedBackToTheCheckoutSuccessPage() {
     checkoutSuccessPage().waitForSuccessPage();
     Assert.assertTrue(checkoutSuccessPage().isVisible(), "Expected checkout success page to be visible");
   }
 
+  @Then("I should be returned to the cart page")
+  public void iShouldBeReturnedToTheCartPage() {
+    Assert.assertTrue(
+      cartPage().isAtCartUrl(),
+      "Expected to return to /cart?checkout=1"
+    );
+  }
+
   @Then("I should see the invoice download link")
   public void iShouldSeeTheInvoiceDownloadLink() {
     checkoutSuccessPage().waitForConfirmationStateToDisappear();
     checkoutSuccessPage().waitForInvoiceLink();
+  }
+
+  @Then("Stripe Checkout should show a declined card error")
+  public void stripeCheckoutShouldShowADeclinedCardError() {
+    Assert.assertTrue(
+      stripeCheckoutPage().showsDeclinedCardError(),
+      "Expected Stripe Checkout to show a declined card error"
+    );
+  }
+
+  @Then("I should remain on the Stripe Checkout page")
+  public void iShouldRemainOnTheStripeCheckoutPage() {
+    Assert.assertTrue(stripeCheckoutPage().isVisible(), "Expected to remain on the Stripe Checkout page");
   }
 }

@@ -26,6 +26,12 @@ public class StripeCheckoutPage extends BasePage {
   private static final By PHONE_INPUT = By.xpath("//input[@id='phoneNumber']");
   private static final By CARD_RADIO = By.xpath("//input[@id='payment-method-accordion-item-title-card']");
   private static final By PAY_BUTTON = By.xpath("//button[@type='submit']");
+  private static final By BUSINESS_BACK_LINK = By.xpath("//a[@data-testid='business-link']");
+  private static final By DECLINED_CARD_ERROR = By.xpath(
+    "//*[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'card was declined') " +
+    "or contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'your card has been declined') " +
+    "or contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'declined')]"
+  );
 
   public StripeCheckoutPage(WebDriver driver) {
     super(driver);
@@ -90,6 +96,26 @@ public class StripeCheckoutPage extends BasePage {
       payButton
     );
     payButton.click();
+  }
+
+  public void cancelCheckout() {
+    driver.switchTo().defaultContent();
+    driver.navigate().back();
+  }
+
+  public void cancelCheckoutThroughBusinessBackLink() {
+    driver.switchTo().defaultContent();
+    WebElement backLink = wait.until(ExpectedConditions.elementToBeClickable(BUSINESS_BACK_LINK));
+    ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", backLink);
+    backLink.click();
+  }
+
+  public boolean showsDeclinedCardError() {
+    try {
+      return wait.until(ExpectedConditions.visibilityOfElementLocated(DECLINED_CARD_ERROR)).isDisplayed();
+    } catch (Exception ignored) {
+      return false;
+    }
   }
 
   private void typeIntoField(By locator, String value) {

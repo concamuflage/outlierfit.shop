@@ -177,6 +177,16 @@ public class CartSteps {
     );
   }
 
+  @Then("the cart should still show the correct total price with shipping cost")
+  public void theCartShouldStillShowTheCorrectTotalPriceWithShippingCost() {
+    theCartShouldShowTheCorrectTotalPriceWithShippingCost();
+  }
+
+  @Then("I should see the essential order details")
+  public void iShouldSeeTheEssentialOrderDetails() {
+    Assert.assertTrue(cartPage().hasCheckoutDetails(), "Expected essential order details to be visible");
+  }
+
   @Then("the login modal should be visible")
   public void theLoginModalShouldBeVisible() {
     Assert.assertTrue(homePage().isLoginModalVisible(), "Expected login modal to be visible");

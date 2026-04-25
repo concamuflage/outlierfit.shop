@@ -38,12 +38,12 @@ public class Hooks {
     }
   }
 
-  // // Runs after each scenario finishes, whether it passed or failed.
-  // @After
-  // public void tearDown() {
-  //   // Always close the driver so parallel scenarios do not leak browser processes.
-  //   DriverFactory.quitDriver();
-  // }
+  // Runs after each scenario finishes, whether it passed or failed.
+  @After
+  public void tearDown() {
+    // Always close the driver so parallel scenarios do not leak browser processes.
+    DriverFactory.quitDriver();
+  }
 
   @After("@Signup")
   public void cleanSignupUserAfterScenario() {

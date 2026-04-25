@@ -32,6 +32,14 @@ public class CartPage extends BasePage {
     return waitForVisible(PAGE_TITLE).isDisplayed() && currentUrl().contains("/cart");
   }
 
+  public boolean isVisibleWithCheckoutDetails() {
+    return isVisible() && hasCheckoutDetails();
+  }
+
+  public boolean isAtCartUrl() {
+    return wait.until(ExpectedConditions.urlMatches(".*/cart\\?checkout=1$"));
+  }
+
   public void open() {
     driver.get(com.asianfit.ui.utils.TestConfig.baseUrl() + "/cart");
   }
@@ -42,6 +50,14 @@ public class CartPage extends BasePage {
 
   public void waitForCheckoutDetails() {
     waitForVisible(CHECKOUT_DETAILS_TITLE);
+  }
+
+  public boolean hasCheckoutDetails() {
+    try {
+      return waitForVisible(CHECKOUT_DETAILS_TITLE).isDisplayed();
+    } catch (Exception ignored) {
+      return false;
+    }
   }
 
   public void startStripeCheckoutPayment() {
