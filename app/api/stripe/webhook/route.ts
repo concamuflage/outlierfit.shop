@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import {
+  assertStripePaymentMatchesCheckoutPayload,
   createStripeWebhookEvent,
   finalizePaidOrder,
   getStripeCheckoutSessionById,
@@ -66,6 +67,11 @@ async function recordSuccessfulCheckoutSession(
   }
 
   const paymentIntent = await retrievePaymentIntentForSession(checkoutSession);
+  assertStripePaymentMatchesCheckoutPayload({
+    payload: persistedCheckout.payload,
+    checkoutSession,
+    paymentIntent,
+  });
 
   const result = await finalizePaidOrder({
     userId: persistedCheckout.userId,

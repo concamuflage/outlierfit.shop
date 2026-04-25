@@ -55,11 +55,11 @@ function toggleAllBoxes() {
 <body>
 <h2 align='center'>Surefire test</h2><table border='1' align="center">
 <tr>
-<td>Tests passed/Failed/Skipped:</td><td>1/0/0</td>
+<td>Tests passed/Failed/Skipped:</td><td>3/0/0</td>
 </tr><tr>
-<td>Started on:</td><td>Sat Apr 25 09:06:45 EDT 2026</td>
+<td>Started on:</td><td>Sat Apr 25 10:51:58 EDT 2026</td>
 </tr>
-<tr><td>Total time:</td><td>37 seconds (37167 ms)</td>
+<tr><td>Total time:</td><td>2 seconds (2666 ms)</td>
 </tr><tr>
 <td>Included groups:</td><td></td>
 </tr><tr>
@@ -76,10 +76,20 @@ function toggleAllBoxes() {
 <td><b>Instance</b></td>
 </tr>
 <tr>
-<td title='com.asianfit.ui.runner.PaymentRunner.runScenario()'><b>runScenario</b><br>Test class: com.asianfit.ui.runner.PaymentRunner<br>Test method: Runs Cucumber Scenarios<br>Parameters: "A user can cancel Stripe Checkout through Back button on the Stripe Checkout page and return to the cart review", "Stripe payment"</td>
+<td title='com.asianfit.api.runner.StripeWebhookApiRunner.runScenario()'><b>runScenario</b><br>Test class: com.asianfit.api.runner.StripeWebhookApiRunner<br>Test method: Runs Cucumber Scenarios<br>Parameters: "A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready", "Stripe webhook API"</td>
 <td></td>
-<td>36</td>
-<td>com.asianfit.ui.runner.PaymentRunner@184cf7cf</td></tr>
+<td>1</td>
+<td>com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf</td></tr>
+<tr>
+<td title='com.asianfit.api.runner.StripeWebhookApiRunner.runScenario()'><b>runScenario</b><br>Test class: com.asianfit.api.runner.StripeWebhookApiRunner<br>Test method: Runs Cucumber Scenarios<br>Parameters: "Duplicate Stripe webhook delivery does not create duplicate orders", "Stripe webhook API"</td>
+<td></td>
+<td>0</td>
+<td>com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf</td></tr>
+<tr>
+<td title='com.asianfit.api.runner.StripeWebhookApiRunner.runScenario()'><b>runScenario</b><br>Test class: com.asianfit.api.runner.StripeWebhookApiRunner<br>Test method: Runs Cucumber Scenarios<br>Parameters: "A failed Stripe payment is recorded without creating an order", "Stripe webhook API"</td>
+<td></td>
+<td>0</td>
+<td>com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf</td></tr>
 </table><p>
 </body>
 </html>

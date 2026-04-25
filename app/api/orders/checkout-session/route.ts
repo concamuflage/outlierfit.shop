@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getStripeServerClient } from "@/lib/server/stripe";
 import {
-  isValidCheckoutOrderPayload,
+  assertStripeCheckoutSessionRateLimit,
+  buildAuthoritativeCheckoutOrderPayload,
   saveStripeCheckoutSession,
   type CheckoutOrderPayload,
 } from "@/lib/server/orderPayments";
@@ -21,8 +22,32 @@ type CheckoutSessionRequestPayload = CheckoutOrderPayload & {
   items: CheckoutSessionRequestItem[];
 };
 
+type CheckoutSessionSelectionPayload = {
+  shippingAddressId?: unknown;
+  billingAddressId?: unknown;
+  shippingId?: unknown;
+};
+
 function shouldShareCustomerEmailWithStripe() {
   return process.env.NODE_ENV === "production";
+}
+
+function getAppOrigin(request: Request) {
+  const configuredOrigin = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+  if (!configuredOrigin?.trim() && process.env.NODE_ENV === "production") {
+    throw new Error("Missing APP_URL for Stripe checkout redirects.");
+  }
+  const origin = configuredOrigin?.trim() || new URL(request.url).origin;
+  const parsedOrigin = new URL(origin);
+  if (parsedOrigin.protocol !== "https:" && parsedOrigin.hostname !== "localhost") {
+    throw new Error("APP_URL must use HTTPS outside localhost.");
+  }
+  return parsedOrigin.origin;
+}
+
+function readSelectionId(value: unknown) {
+  const selectedId = Number(value);
+  return Number.isInteger(selectedId) && selectedId > 0 ? selectedId : null;
 }
 
 function badRequest(message: string) {
@@ -35,11 +60,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const payload = (await request.json().catch(() => null)) as CheckoutSessionRequestPayload | null;
-  if (!isValidCheckoutOrderPayload(payload)) {
-    return badRequest("Invalid checkout payload.");
-  }
-  const checkoutPayload = payload as CheckoutSessionRequestPayload;
+  const payload = (await request.json().catch(() => null)) as CheckoutSessionSelectionPayload | null;
 
   const userId = Number(session.user.id);
   if (!Number.isInteger(userId) || userId <= 0) {
@@ -48,7 +69,14 @@ export async function POST(request: Request) {
 
   try {
     const stripe = getStripeServerClient();
-    const origin = new URL(request.url).origin;
+    await assertStripeCheckoutSessionRateLimit(userId);
+    const checkoutPayload = (await buildAuthoritativeCheckoutOrderPayload({
+      userId,
+      shippingAddressId: readSelectionId(payload?.shippingAddressId),
+      billingAddressId: readSelectionId(payload?.billingAddressId),
+      shippingId: readSelectionId(payload?.shippingId),
+    })) as CheckoutSessionRequestPayload;
+    const origin = getAppOrigin(request);
     const customerEmail = shouldShareCustomerEmailWithStripe() ? session.user.email ?? undefined : undefined;
     const lineItems = checkoutPayload.items.map((item) => {
       const checkoutItem = item as CheckoutSessionRequestItem;
@@ -110,6 +138,13 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("stripe checkout session create error:", error);
     const message = error instanceof Error ? error.message : "Unable to start Stripe checkout.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Too many Stripe checkout attempts") ? 429 :
+      message.includes("cart is empty") ||
+      message.includes("Select shipping") ||
+      message.includes("Selected shipping option") ? 400 :
+      message.includes("do not belong") ? 403 :
+      500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

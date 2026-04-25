@@ -13,6 +13,10 @@ const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_RATE_LIMIT_MAX_REQUESTS = 10;
 const AUTH_RATE_LIMIT_CLEANUP_INTERVAL_MS = 60 * 1000;
 
+function normalizeRateLimitEmail(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 function pruneExpiredAuthRateLimitEntries(now = Date.now()) {
   for (const [key, entry] of authRateLimitStore.entries()) {
     if (!entry || now > entry.resetAt) {
@@ -31,7 +35,8 @@ function getClientIdentifier(req) {
 }
 
 function authRateLimiter(req, res, next) {
-  const key = `${req.path}:${getClientIdentifier(req)}`;
+  const email = req.path === "/login" ? normalizeRateLimitEmail(req.body?.email) : "";
+  const key = [req.path, email || "no-email", getClientIdentifier(req)].join(":");
   const now = Date.now();
 
   pruneExpiredAuthRateLimitEntries(now);
@@ -57,10 +62,20 @@ function authRateLimiter(req, res, next) {
   return next();
 }
 
+function clearAuthRateLimit(req) {
+  const email = req.path === "/login" ? normalizeRateLimitEmail(req.body?.email) : "";
+  const key = [req.path, email || "no-email", getClientIdentifier(req)].join(":");
+  authRateLimitStore.delete(key);
+}
+
 // Only requests coming from a page loaded at CLIENT_ORIGIN(the frontend)
 // are allowed to read the response in the browser.
 app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json());
+app.use((req, res, next) => {
+  req.clearAuthRateLimit = () => clearAuthRateLimit(req);
+  next();
+});
 
 const authRateLimitCleanupTimer = setInterval(() => {
   pruneExpiredAuthRateLimitEntries();

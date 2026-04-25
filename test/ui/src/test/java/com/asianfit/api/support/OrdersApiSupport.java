@@ -22,30 +22,48 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.testng.Assert;
 
+/**
+ * Shared API and database helpers for order-related UI/API integration tests.
+ *
+ * <p>This class centralizes authentication, profile/cart/order API calls, Stripe webhook fixtures,
+ * and direct database fixture setup/cleanup used by RestAssured tests.
+ */
 public final class OrdersApiSupport {
   private static final BigDecimal RMB_TO_USD = BigDecimal.valueOf(0.14);
 
   private OrdersApiSupport() {}
 
+  /** Configures RestAssured to target the application under test. */
   public static void configureBaseUri() {
     RestAssured.baseURI = TestConfig.baseUrl();
   }
 
+  /**
+   * Logs in the configured test user through NextAuth and returns the session cookies needed for
+   * authenticated API requests.
+   */
   public static Cookies authenticate() {
+    // Ask NextAuth for a CSRF token before submitting credentials.
     Response csrfResponse = RestAssured
       .given()
+      // Do not automatically follow HTTP redirects. Why?
       .redirects()
       .follow(false)
       .accept(ContentType.JSON)
       .get(ApiEndpoints.path("auth.csrf"));
 
+    // The CSRF endpoint must be reachable before login can proceed.
     csrfResponse.then().statusCode(200);
 
+    // Extract and validate the token that must be echoed back in the credentials request.
     String csrfToken = csrfResponse.jsonPath().getString("csrfToken");
     Assert.assertTrue(csrfToken != null && !csrfToken.isBlank(), "Expected a CSRF token from NextAuth");
 
+    // Preserve cookies from the CSRF response because NextAuth expects them on the login request.
+    // NextAuth needs both the CSRF token in the request body and the matching CSRF cookie to validate the login attempt,
     Cookies cookies = csrfResponse.getDetailedCookies();
 
+    // Submit the configured test user's email/password to the credentials provider.
     Response loginResponse = RestAssured
       .given()
       .cookies(cookies)
@@ -58,14 +76,17 @@ public final class OrdersApiSupport {
       .formParam("json", "true")
       .post(ApiEndpoints.path("auth.credentials"));
 
+    // NextAuth can respond with either JSON success or a redirect depending on configuration.
     int loginStatus = loginResponse.statusCode();
     Assert.assertTrue(
       loginStatus == 200 || loginStatus == 302,
       "Expected NextAuth login to succeed, but got status " + loginStatus
     );
 
+    // Capture the authenticated session cookies returned by the login response.
     Cookies sessionCookies = loginResponse.getDetailedCookies();
 
+    // Verify the returned cookies really represent a logged-in session for the expected test user.
     Response sessionResponse = RestAssured
       .given()
       .cookies(sessionCookies)
@@ -74,9 +95,11 @@ public final class OrdersApiSupport {
 
     sessionResponse.then().statusCode(200);
     Assert.assertEquals(sessionResponse.jsonPath().getString("user.email"), TestConfig.testUserEmail());
+    // Return only the authenticated cookies so callers can reuse them for protected API calls.
     return sessionCookies;
   }
 
+  /** Retrieves the current authenticated user's profile payload. */
   public static Response retrieveProfile(Cookies cookies) {
     return RestAssured
       .given()
@@ -85,6 +108,7 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("profile.current"));
   }
 
+  /** Saves the measurement section of the current user's profile. */
   public static Response saveMeasurement(Cookies cookies, MeasurementSnapshot measurement) {
     return RestAssured
       .given()
@@ -102,6 +126,7 @@ public final class OrdersApiSupport {
       .post(ApiEndpoints.path("profile.current"));
   }
 
+  /** Copies the user's default shipping address into the billing address section. */
   public static Response copyDefaultShippingAddressToBilling(Cookies cookies) {
     return RestAssured
       .given()
@@ -112,6 +137,7 @@ public final class OrdersApiSupport {
       .post(ApiEndpoints.path("profile.current"));
   }
 
+  /** Creates or updates a profile address for the supplied address type. */
   public static Response saveAddress(Cookies cookies, String addressType, AddressPayload address) {
     return RestAssured
       .given()
@@ -134,6 +160,7 @@ public final class OrdersApiSupport {
       .post(ApiEndpoints.path("profile.current"));
   }
 
+  /** Deletes an address from the current user's profile. */
   public static Response deleteAddress(Cookies cookies, int addressId) {
     return RestAssured
       .given()
@@ -144,6 +171,7 @@ public final class OrdersApiSupport {
       .delete(ApiEndpoints.path("profile.current"));
   }
 
+  /** Retrieves the current user's cart. */
   public static Response retrieveCart(Cookies cookies) {
     return RestAssured
       .given()
@@ -152,6 +180,7 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("cart.current"));
   }
 
+  /** Replaces the current user's cart with the product, shipping, and address data from the fixture. */
   public static Response saveCart(Cookies cookies, CheckoutFixture fixture) {
     return RestAssured
       .given()
@@ -169,6 +198,7 @@ public final class OrdersApiSupport {
       .put(ApiEndpoints.path("cart.current"));
   }
 
+  /** Clears all cart items for the current user through the cart API. */
   public static Response clearCart(Cookies cookies) {
     return RestAssured
       .given()
@@ -179,6 +209,7 @@ public final class OrdersApiSupport {
       .put(ApiEndpoints.path("cart.current"));
   }
 
+  /** Submits the mock-payment checkout endpoint using the supplied checkout fixture. */
   public static Response submitMockPayment(Cookies cookies, CheckoutFixture fixture) {
     return RestAssured
       .given()
@@ -206,6 +237,7 @@ public final class OrdersApiSupport {
       .post(ApiEndpoints.path("orders.mockPayment"));
   }
 
+  /** Retrieves all orders visible to the current user. */
   public static Response retrieveAllOrders(Cookies cookies) {
     return RestAssured
       .given()
@@ -214,6 +246,7 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("orders.list"));
   }
 
+  /** Retrieves a single order by id for the current user. */
   public static Response retrieveSingleOrder(Cookies cookies, long orderId) {
     return RestAssured
       .given()
@@ -222,6 +255,7 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("orders.single", Map.of("orderId", String.valueOf(orderId))));
   }
 
+  /** Retrieves the JSON payload used to generate an invoice for an order. */
   public static Response retrieveInvoicePayload(Cookies cookies, long orderId) {
     return RestAssured
       .given()
@@ -230,6 +264,7 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("orders.invoicePayload", Map.of("orderId", String.valueOf(orderId))));
   }
 
+  /** Retrieves a previously generated invoice PDF for an order. */
   public static Response retrieveInvoicePdf(Cookies cookies, long orderId) {
     return RestAssured
       .given()
@@ -238,6 +273,7 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("orders.invoicePdf", Map.of("orderId", String.valueOf(orderId))));
   }
 
+  /** Generates an invoice PDF from the invoice payload response body. */
   public static Response generateInvoicePdf(Cookies cookies, Response invoicePayloadResponse) {
     return RestAssured
       .given()
@@ -248,6 +284,7 @@ public final class OrdersApiSupport {
       .post(ApiEndpoints.path("invoice.generatePdf"));
   }
 
+  /** Posts a Stripe webhook payload signed with the configured test webhook secret. */
   public static Response postSignedStripeWebhook(String payload) {
     long timestamp = Instant.now().getEpochSecond();
     String signature = signStripeWebhookPayload(timestamp, payload);
@@ -260,13 +297,22 @@ public final class OrdersApiSupport {
       .post(ApiEndpoints.path("stripe.webhook"));
   }
 
+  /**
+   * Loads the database-backed checkout fixture used by order and payment tests.
+   *
+   * <p>The fixture contains the test user, default addresses, first shipping row, and first
+   * invoice-ready product variant.
+   */
   public static CheckoutFixture loadCheckoutFixture() throws SQLException {
+    // Open one database connection for all fixture lookups so the returned data is internally consistent.
     try (Connection connection = openConnection()) {
+      // Resolve the configured test user's database id from their email address.
       int userId = getRequiredInt(
         connection,
         "SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1",
         TestConfig.testUserEmail()
       );
+      // Use the user's default shipping address, falling back to the lowest address id when needed.
       int shippingAddressId = getRequiredInt(
         connection,
         """
@@ -279,6 +325,7 @@ public final class OrdersApiSupport {
         """,
         userId
       );
+      // Billing address is optional for some test profiles, so load it only when present.
       Integer billingAddressId = getOptionalInt(
         connection,
         """
@@ -292,6 +339,7 @@ public final class OrdersApiSupport {
         userId
       );
 
+      // Build a complete checkout fixture; when billing is missing, reuse shipping as the billing address.
       return new CheckoutFixture(
         userId,
         TestConfig.testUserEmail(),
@@ -303,6 +351,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Inserts a paid order fixture directly into the database and returns its expected values. */
   public static OrderFixture insertOrderFixture() throws SQLException {
     CheckoutFixture checkoutFixture = loadCheckoutFixture();
     try (Connection connection = openConnection()) {
@@ -390,12 +439,14 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Deletes an order fixture when one was created. */
   public static void deleteOrderFixture(OrderFixture fixture) throws SQLException {
     if (fixture != null) {
       deleteOrderById(fixture.orderId());
     }
   }
 
+  /** Deletes an order by id from the database. */
   public static void deleteOrderById(long orderId) throws SQLException {
     try (
       Connection connection = openConnection();
@@ -406,6 +457,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Captures the current user's measurement state so tests can restore it later. */
   public static MeasurementSnapshot loadMeasurementSnapshot() throws SQLException {
     try (Connection connection = openConnection()) {
       int userId = getRequiredInt(
@@ -444,6 +496,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Restores the current user's measurement state from a previously captured snapshot. */
   public static void restoreMeasurementSnapshot(MeasurementSnapshot snapshot) throws SQLException {
     if (snapshot == null) {
       return;
@@ -540,6 +593,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Deletes an address fixture and its user-address link when an address id is available. */
   public static void deleteAddressFixture(Integer addressId) throws SQLException {
     if (addressId == null) {
       return;
@@ -569,6 +623,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Clears the current test user's cart directly in the database. */
   public static void clearCartForCurrentUser() throws SQLException {
     try (Connection connection = openConnection()) {
       int userId = getRequiredInt(
@@ -583,6 +638,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Builds an expected order fixture from a successful mock-payment response. */
   public static OrderFixture createOrderFixtureFromMockPayment(
     CheckoutFixture checkoutFixture,
     long orderId,
@@ -591,6 +647,7 @@ public final class OrdersApiSupport {
     return createOrderFixture(orderId, invoiceNumber, checkoutFixture);
   }
 
+  /** Creates the expected order values shared by direct DB and mock-payment fixtures. */
   private static OrderFixture createOrderFixture(long orderId, String invoiceNumber, CheckoutFixture fixture) {
     BigDecimal shippingUsd = fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg());
     BigDecimal totalUsd = fixture.variant().subtotalUsd().add(shippingUsd);
@@ -616,6 +673,7 @@ public final class OrdersApiSupport {
     );
   }
 
+  /** Inserts a Stripe Checkout Session fixture with the checkout payload your webhook handler expects. */
   public static void createStripeCheckoutSessionFixture(String stripeSessionId, CheckoutFixture fixture) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement deleteExisting = connection.prepareStatement(
@@ -644,6 +702,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Finds the order id linked to a Stripe Checkout Session fixture, if one exists. */
   public static Long findOrderIdForStripeCheckoutSession(String stripeSessionId) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement statement = connection.prepareStatement(
@@ -662,6 +721,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Counts orders created for a Stripe Checkout Session payment reference. */
   public static int countOrdersForStripeCheckoutSession(String stripeSessionId) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement statement = connection.prepareStatement(
@@ -677,6 +737,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Retrieves the stored payment status for a Stripe PaymentIntent id. */
   public static String getStripePaymentStatus(String stripePaymentIntentId) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement statement = connection.prepareStatement(
@@ -694,6 +755,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Counts stored Stripe webhook event rows for idempotency assertions. */
   public static int countStripeWebhookEvents(String stripeEventId) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement statement = connection.prepareStatement(
@@ -709,6 +771,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Retrieves an order's invoice number from the database. */
   public static String getOrderInvoiceNumber(long orderId) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement statement = connection.prepareStatement(
@@ -726,6 +789,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Returns whether a stored Stripe webhook event has been marked as processed. */
   public static boolean stripeWebhookEventProcessed(String stripeEventId) throws SQLException {
     try (Connection connection = openConnection()) {
       try (PreparedStatement statement = connection.prepareStatement(
@@ -743,6 +807,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Cleans up Stripe webhook, payment, and checkout-session fixture data from the database. */
   public static void deleteStripeWebhookFixture(
     String stripeSessionId,
     String stripePaymentIntentId,
@@ -791,6 +856,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Opens a JDBC connection using the configured test database credentials. */
   private static Connection openConnection() throws SQLException {
     return DriverManager.getConnection(
       TestConfig.databaseUrl(),
@@ -799,6 +865,7 @@ public final class OrdersApiSupport {
     );
   }
 
+  /** Runs a scalar query that must return a long-compatible value. */
   private static long getRequiredLong(Connection connection, String sql, Object... params) throws SQLException {
     try (PreparedStatement statement = connection.prepareStatement(sql)) {
       bindParams(statement, params);
@@ -811,10 +878,12 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Runs a scalar query that must return an int-compatible value. */
   private static int getRequiredInt(Connection connection, String sql, Object... params) throws SQLException {
     return Math.toIntExact(getRequiredLong(connection, sql, params));
   }
 
+  /** Runs a scalar query that may return an int-compatible value. */
   private static Integer getOptionalInt(Connection connection, String sql, Object... params) throws SQLException {
     try (PreparedStatement statement = connection.prepareStatement(sql)) {
       bindParams(statement, params);
@@ -827,6 +896,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Loads the first available shipping-cost row for checkout fixture calculations. */
   private static ShippingRow getShippingRow(Connection connection) throws SQLException {
     try (
       PreparedStatement statement = connection.prepareStatement(
@@ -852,6 +922,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Loads the first product variant that has enough data for order and invoice tests. */
   private static VariantFixture getVariantRow(Connection connection) throws SQLException {
     try (
       PreparedStatement statement = connection.prepareStatement(
@@ -912,16 +983,19 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Binds positional parameters to a prepared statement. */
   private static void bindParams(PreparedStatement statement, Object... params) throws SQLException {
     for (int index = 0; index < params.length; index++) {
       statement.setObject(index + 1, params[index]);
     }
   }
 
+  /** Converts RMB fixture costs to USD using the fixed test exchange rate. */
   private static BigDecimal toUsd(BigDecimal rmb) {
     return rmb.multiply(RMB_TO_USD).setScale(2, RoundingMode.HALF_UP);
   }
 
+  /** Creates the HMAC-SHA256 signature Stripe expects in test webhook requests. */
   private static String signStripeWebhookPayload(long timestamp, String payload) {
     try {
       Mac mac = Mac.getInstance("HmacSHA256");
@@ -933,6 +1007,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Serializes the checkout fixture into the JSON payload stored with a Stripe Checkout Session. */
   private static String checkoutPayloadJson(CheckoutFixture fixture) {
     BigDecimal shippingUsd = fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg());
     BigDecimal totalUsd = fixture.variant().subtotalUsd().add(shippingUsd);
@@ -972,10 +1047,12 @@ public final class OrdersApiSupport {
       );
   }
 
+  /** Escapes a Java string for safe insertion into the small hand-built JSON fixture. */
   private static String jsonEscape(String value) {
     return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
+  /** Calculates package box weight from clothes weight using the application's tiered test rules. */
   private static BigDecimal getBoxWeightKg(BigDecimal clothesWeightKg) {
     if (clothesWeightKg.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     if (clothesWeightKg.compareTo(BigDecimal.ONE) <= 0) return BigDecimal.valueOf(0.25).setScale(2, RoundingMode.HALF_UP);
@@ -988,6 +1065,7 @@ public final class OrdersApiSupport {
     return BigDecimal.valueOf(0.45 + extraKgSteps * 0.05).setScale(2, RoundingMode.HALF_UP);
   }
 
+  /** Calculates RMB shipping cost using first-kg and additional-kg rates from the shipping row. */
   private static BigDecimal calculateShippingCostRmb(BigDecimal totalWeightKg, ShippingRow mode) {
     if (totalWeightKg.compareTo(BigDecimal.ZERO) <= 0) {
       return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -1007,6 +1085,7 @@ public final class OrdersApiSupport {
     return firstKgCost.add(additionalKgCost.multiply(BigDecimal.valueOf(billedAdditionalKg))).setScale(2, RoundingMode.HALF_UP);
   }
 
+  /** Shipping-cost fixture row plus helper methods for derived weights and USD shipping cost. */
   public record ShippingRow(
     int id,
     String mode,
@@ -1027,6 +1106,7 @@ public final class OrdersApiSupport {
     }
   }
 
+  /** Product variant fixture data used to populate carts, orders, and invoice expectations. */
   public record VariantFixture(
     int productId,
     int variantId,
@@ -1041,6 +1121,7 @@ public final class OrdersApiSupport {
     String imageUrl
   ) {}
 
+  /** Complete checkout fixture combining user, address, shipping, and product variant data. */
   public record CheckoutFixture(
     int userId,
     String customerEmail,
@@ -1050,6 +1131,7 @@ public final class OrdersApiSupport {
     VariantFixture variant
   ) {}
 
+  /** Expected persisted order values used by order and invoice assertions. */
   public record OrderFixture(
     long orderId,
     String invoiceNumber,
@@ -1071,6 +1153,7 @@ public final class OrdersApiSupport {
     String customerEmail
   ) {}
 
+  /** Address request payload used by profile-address API helpers. */
   public record AddressPayload(
     String name,
     String street,
@@ -1081,6 +1164,7 @@ public final class OrdersApiSupport {
     String phone
   ) {}
 
+  /** Snapshot of measurement data so tests can restore pre-existing user state. */
   public record MeasurementSnapshot(
     Integer measurementId,
     BigDecimal heightCm,

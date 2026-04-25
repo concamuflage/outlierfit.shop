@@ -1,47 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
+<testng-results ignored="0" total="3" passed="3" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2026-04-25T09:06:45 EDT" name="Surefire suite" finished-at="2026-04-25T09:07:22 EDT" duration-ms="37167">
+  <suite started-at="2026-04-25T10:51:58 EDT" name="Surefire suite" finished-at="2026-04-25T10:52:01 EDT" duration-ms="2666">
     <groups>
       <group name="cucumber">
-        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.PaymentRunner@184cf7cf]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
       </group> <!-- cucumber -->
     </groups>
-    <test started-at="2026-04-25T09:06:45 EDT" name="Surefire test" finished-at="2026-04-25T09:07:22 EDT" duration-ms="37167">
-      <class name="com.asianfit.ui.runner.PaymentRunner">
-        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.ui.runner.PaymentRunner@184cf7cf]" started-at="2026-04-25T09:06:45 EDT" name="setUpClass" finished-at="2026-04-25T09:06:45 EDT" duration-ms="252" status="PASS">
+    <test started-at="2026-04-25T10:51:58 EDT" name="Surefire test" finished-at="2026-04-25T10:52:01 EDT" duration-ms="2666">
+      <class name="com.asianfit.api.runner.StripeWebhookApiRunner">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf]" started-at="2026-04-25T10:51:58 EDT" name="setUpClass" finished-at="2026-04-25T10:51:59 EDT" duration-ms="271" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA[org.testng.TestRunner@2a367e93]]>
+                <![CDATA[org.testng.TestRunner@69ba3f4e]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- setUpClass -->
-        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.PaymentRunner@184cf7cf]" started-at="2026-04-25T09:06:45 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-25T09:07:22 EDT" duration-ms="36887" status="PASS">
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf]" started-at="2026-04-25T10:51:59 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-25T10:52:00 EDT" duration-ms="1866" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA["A user can cancel Stripe Checkout through Back button on the Stripe Checkout page and return to the cart review"]]>
+                <![CDATA["A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready"]]>
               </value>
             </param>
             <param index="1">
               <value>
-                <![CDATA["Stripe payment"]]>
+                <![CDATA["Stripe webhook API"]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- runScenario -->
-        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.ui.runner.PaymentRunner@184cf7cf]" started-at="2026-04-25T09:07:22 EDT" name="tearDownClass" finished-at="2026-04-25T09:07:22 EDT" duration-ms="12" status="PASS">
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf]" started-at="2026-04-25T10:52:00 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-25T10:52:01 EDT" duration-ms="280" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA["A failed Stripe payment is recorded without creating an order"]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA["Stripe webhook API"]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- runScenario -->
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf]" started-at="2026-04-25T10:52:01 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-25T10:52:01 EDT" duration-ms="225" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA["Duplicate Stripe webhook delivery does not create duplicate orders"]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA["Stripe webhook API"]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- runScenario -->
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.api.runner.StripeWebhookApiRunner@184cf7cf]" started-at="2026-04-25T10:52:01 EDT" name="tearDownClass" finished-at="2026-04-25T10:52:01 EDT" duration-ms="9" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- tearDownClass -->
-      </class> <!-- com.asianfit.ui.runner.PaymentRunner -->
+      </class> <!-- com.asianfit.api.runner.StripeWebhookApiRunner -->
     </test> <!-- Surefire test -->
   </suite> <!-- Surefire suite -->
 </testng-results>

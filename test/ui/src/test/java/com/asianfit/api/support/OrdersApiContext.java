@@ -4,6 +4,9 @@ import io.restassured.http.Cookies;
 import io.restassured.response.Response;
 
 public final class OrdersApiContext {
+  // static is shared across all instances/threads, so we use ThreadLocal to ensure thread safety for test data
+  // this is necessary because tests may run in parallel and we want to avoid interference between them when they access shared data
+
   private static final ThreadLocal<Cookies> AUTH_COOKIES = new ThreadLocal<>();
   private static final ThreadLocal<Response> PROFILE_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Response> CART_RESPONSE = new ThreadLocal<>();

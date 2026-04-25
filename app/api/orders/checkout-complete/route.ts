@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import type Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
 import {
+  assertStripePaymentMatchesCheckoutPayload,
   finalizePaidOrder,
   getStripeCheckoutOrderStatus,
   getStripeCheckoutSession,
@@ -42,6 +43,12 @@ async function reconcilePaidStripeCheckoutSession(userId: number, stripeSessionI
   }
 
   const paymentIntent = getExpandedPaymentIntent(checkoutSession);
+  assertStripePaymentMatchesCheckoutPayload({
+    payload: persistedCheckout.payload,
+    checkoutSession,
+    paymentIntent,
+  });
+
   const result = await finalizePaidOrder({
     userId,
     payload: persistedCheckout.payload,

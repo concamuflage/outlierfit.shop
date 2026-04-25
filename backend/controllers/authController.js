@@ -234,6 +234,8 @@ exports.login = async (req, res) => {
       });
     }
 
+    req.clearAuthRateLimit?.();
+
     return res.json({
       id: user.id,
       email: user.email,

@@ -1,11 +1,17 @@
 import pool from "@/backend/database/pool";
 import { createInvoiceNumber } from "@/lib/invoice";
+import { calculateShippingCostRmb, getBoxWeightKg } from "@/lib/shipping";
 import type Stripe from "stripe";
+
+const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 export type CheckoutOrderItem = {
   cartItemId: string;
   quantity: number;
   unitPriceUsd: number;
+  name?: string;
+  color?: string | null;
+  size?: string | null;
 };
 
 export type CheckoutOrderPayload = {
@@ -57,6 +63,28 @@ type StripePaymentRow = {
   failed_at: unknown;
 };
 
+type CartCheckoutRow = {
+  shipping_address_id: unknown;
+  billing_address_id: unknown;
+  shipping_id: unknown;
+  quantity: unknown;
+  variant_id: unknown;
+  cost_rmb: unknown;
+  product_id: unknown;
+  product_name: unknown;
+  color: unknown;
+  size: unknown;
+  weight_kg: unknown;
+};
+
+type ShippingCostRow = {
+  id: unknown;
+  mode: unknown;
+  delivery_time: unknown;
+  first_kg_cost_rmb: unknown;
+  additional_kg_cost_rmb: unknown;
+};
+
 export type StripeCheckoutOrderStatus =
   | {
       state: "completed";
@@ -80,6 +108,52 @@ export type StripeCheckoutOrderStatus =
 
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function priceUsdFromRmb(costRmb: unknown) {
+  if (costRmb == null) {
+    return 0;
+  }
+  return Math.round(toNumber(costRmb) * RMB_TO_USD);
+}
+
+export function expectedStripeAmountCents(payload: CheckoutOrderPayload) {
+  const itemsCents = payload.items.reduce(
+    (total, item) => total + Math.round(Number(item.unitPriceUsd) * 100) * Number(item.quantity),
+    0
+  );
+  return itemsCents + Math.round(Number(payload.shippingUsd) * 100);
+}
+
+export function assertStripePaymentMatchesCheckoutPayload({
+  payload,
+  checkoutSession,
+  paymentIntent,
+}: {
+  payload: CheckoutOrderPayload;
+  checkoutSession: Stripe.Checkout.Session;
+  paymentIntent?: Stripe.PaymentIntent | null;
+}) {
+  const expectedAmount = expectedStripeAmountCents(payload);
+  const sessionAmount = checkoutSession.amount_total;
+  const receivedAmount = paymentIntent?.amount_received;
+  const currency = String(paymentIntent?.currency ?? checkoutSession.currency ?? "").toLowerCase();
+
+  if (currency !== "usd") {
+    throw new Error("Stripe payment currency does not match the expected order currency.");
+  }
+
+  if (sessionAmount !== expectedAmount) {
+    throw new Error("Stripe checkout amount does not match the expected order total.");
+  }
+
+  if (receivedAmount != null && receivedAmount !== expectedAmount) {
+    throw new Error("Stripe received amount does not match the expected order total.");
+  }
 }
 
 export function parseVariantId(cartItemId: string) {
@@ -205,6 +279,165 @@ export async function saveStripeCheckoutSession(
     `,
     [stripeSessionId, userId, JSON.stringify(payload)]
   );
+}
+
+export async function assertStripeCheckoutSessionRateLimit(userId: number) {
+  await ensureStripeCheckoutSessionTable();
+  const result = await pool.query(
+    `
+      SELECT COUNT(*)::int AS session_count
+      FROM stripe_checkout_sessions
+      WHERE user_id = $1
+        AND created_at > NOW() - INTERVAL '5 minutes'
+    `,
+    [userId]
+  );
+
+  const sessionCount = Number(result.rows[0]?.session_count ?? 0);
+  if (sessionCount >= 10) {
+    throw new Error("Too many Stripe checkout attempts. Please wait a few minutes and try again.");
+  }
+}
+
+export async function buildAuthoritativeCheckoutOrderPayload({
+  userId,
+  shippingAddressId,
+  billingAddressId,
+  shippingId,
+}: {
+  userId: number;
+  shippingAddressId?: number | null;
+  billingAddressId?: number | null;
+  shippingId?: number | null;
+}): Promise<CheckoutOrderPayload> {
+  await ensureStripeCheckoutSessionTable();
+
+  const cartResult = await pool.query<CartCheckoutRow>(
+    `
+      SELECT
+        cts.shipping_address_id,
+        cts.billing_address_id,
+        cts.shipping_id,
+        ci.quantity,
+        pv.id AS variant_id,
+        pv.cost_rmb,
+        p.id AS product_id,
+        p.name AS product_name,
+        c.color,
+        s.size,
+        st.weight_kg
+      FROM carts cts
+      LEFT JOIN cart_items ci
+        ON ci.cart_id = cts.id
+      LEFT JOIN product_variants pv
+        ON pv.id = ci.variant_id
+      LEFT JOIN products p
+        ON p.id = pv.product_id
+      LEFT JOIN colors c
+        ON c.id = pv.color_id
+      LEFT JOIN sizes s
+        ON s.id = pv.size_id
+      LEFT JOIN styles st
+        ON st.id = p.style_id
+      WHERE cts.user_id = $1
+      ORDER BY ci.created_at ASC NULLS LAST, pv.id ASC NULLS LAST
+    `,
+    [userId]
+  );
+
+  const cartItems = cartResult.rows.filter((row: CartCheckoutRow) => row.variant_id != null);
+  if (cartItems.length === 0) {
+    throw new Error("Your cart is empty.");
+  }
+
+  const cartMetadata = cartResult.rows[0];
+  const selectedShippingAddressId =
+    shippingAddressId == null ? toNumber(cartMetadata?.shipping_address_id) : Number(shippingAddressId);
+  const selectedBillingAddressId =
+    billingAddressId == null ? toNumber(cartMetadata?.billing_address_id) : Number(billingAddressId);
+  const selectedShippingId =
+    shippingId == null ? toNumber(cartMetadata?.shipping_id) : Number(shippingId);
+
+  if (
+    !Number.isInteger(selectedShippingAddressId) ||
+    !Number.isInteger(selectedBillingAddressId) ||
+    !Number.isInteger(selectedShippingId)
+  ) {
+    throw new Error("Select shipping, billing, and delivery details before checkout.");
+  }
+
+  const addressOwnershipResult = await pool.query<AddressOwnershipRow>(
+    `
+      SELECT address_id
+      FROM user_addresses
+      WHERE user_id = $1
+        AND address_id = ANY($2::int[])
+    `,
+    [userId, [selectedShippingAddressId, selectedBillingAddressId]]
+  );
+  const ownedAddressIds = new Set(
+    addressOwnershipResult.rows.map((row: AddressOwnershipRow) => Number(row.address_id))
+  );
+  if (!ownedAddressIds.has(selectedShippingAddressId) || !ownedAddressIds.has(selectedBillingAddressId)) {
+    throw new Error("Selected addresses do not belong to the current user.");
+  }
+
+  const shippingResult = await pool.query<ShippingCostRow>(
+    `
+      SELECT id, mode, delivery_time, first_kg_cost_rmb, additional_kg_cost_rmb
+      FROM shipping_cost
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [selectedShippingId]
+  );
+  if (shippingResult.rows.length === 0) {
+    throw new Error("Selected shipping option no longer exists.");
+  }
+
+  const items = cartItems.map((row: CartCheckoutRow) => ({
+    cartItemId: `${toNumber(row.product_id)}-${toNumber(row.variant_id)}`,
+    quantity: toNumber(row.quantity),
+    unitPriceUsd: priceUsdFromRmb(row.cost_rmb),
+    name: String(row.product_name ?? ""),
+    color: row.color == null ? null : String(row.color),
+    size: row.size == null ? null : String(row.size),
+  }));
+
+  const subtotalUsd = roundMoney(
+    items.reduce((total: number, item: CheckoutOrderItem) => total + item.unitPriceUsd * item.quantity, 0)
+  );
+  const clothesWeightKg = cartItems.reduce(
+    (total: number, row: CartCheckoutRow) =>
+      total + (row.weight_kg == null ? 0 : toNumber(row.weight_kg)) * toNumber(row.quantity),
+    0
+  );
+  const boxWeightKg = getBoxWeightKg(clothesWeightKg);
+  const shippingWeightKg = clothesWeightKg + boxWeightKg;
+  const shippingRow = shippingResult.rows[0];
+  const shippingUsd = roundMoney(
+    calculateShippingCostRmb(shippingWeightKg, {
+      id: Number(shippingRow.id),
+      mode: String(shippingRow.mode ?? ""),
+      delivery_time: shippingRow.delivery_time == null ? null : String(shippingRow.delivery_time),
+      first_kg_cost_rmb: shippingRow.first_kg_cost_rmb == null ? null : toNumber(shippingRow.first_kg_cost_rmb),
+      additional_kg_cost_rmb:
+        shippingRow.additional_kg_cost_rmb == null ? null : toNumber(shippingRow.additional_kg_cost_rmb),
+    }) * RMB_TO_USD
+  );
+
+  return {
+    subtotalUsd,
+    shippingUsd,
+    totalUsd: roundMoney(subtotalUsd + shippingUsd),
+    clothesWeightKg,
+    boxWeightKg,
+    shippingWeightKg,
+    shippingId: selectedShippingId,
+    shippingAddressId: selectedShippingAddressId,
+    billingAddressId: selectedBillingAddressId,
+    items,
+  };
 }
 
 export async function getStripeCheckoutSession(stripeSessionId: string, userId: number) {
