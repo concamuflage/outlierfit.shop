@@ -25,18 +25,19 @@ pipeline {
                 checkout scm
             }
         }
-    // copy the env files from the folder project888 to the workspace, 
-    // while preserving the directory structure and excluding all other files
-        steps {
-            sh '''
-                rsync -av \
-                --include="*/" \
-                --include=".env*" \
-                --exclude="*" \
-                /home/concamuflage/project888/ .
-            '''
+        stage('Copy Environment Files') {
+            steps {
+                // Copy env files from /home/concamuflage/project888 to the Jenkins workspace,
+                // preserving directory structure and excluding all other files.
+                sh '''
+                    rsync -av \
+                    --include="*/" \
+                    --include=".env*" \
+                    --exclude="*" \
+                    /home/concamuflage/project888/ .
+                '''
+            }
         }
-    }
 
         stage('Install Frontend Dependencies') {
             steps {
