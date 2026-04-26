@@ -7,6 +7,10 @@
     "dev:full": "concurrently \"npm run dev --prefix backend\" \"npm run dev\"",
     "build": "next build",
     "start": "next start",
+    "migrate": "node-pg-migrate -m migrations",
+    "migrate:up": "node-pg-migrate -m migrations up",
+    "migrate:down": "node-pg-migrate -m migrations down",
+    "migrate:create": "node-pg-migrate -m migrations create",
     "lint": "eslint"
   },
   "dependencies": {
@@ -24,6 +28,7 @@
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.2",
+    "node-pg-migrate": "^8.0.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
