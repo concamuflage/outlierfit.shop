@@ -25,10 +25,30 @@ pipeline {
                 checkout scm
             }
         }
+    // copy the env files from the folder project888 to the workspace, 
+    // while preserving the directory structure and excluding all other files
+        steps {
+            sh '''
+                rsync -av \
+                --include="*/" \
+                --include=".env*" \
+                --exclude="*" \
+                /home/concamuflage/project888/ .
+            '''
+        }
+    }
 
         stage('Install Frontend Dependencies') {
             steps {
                 sh 'npm ci'
+            }
+        }
+
+        stage('Install Backend Dependencies') {
+            steps {
+                dir("${WORKSPACE}/backend") {
+                    sh 'npm ci'
+                }
             }
         }
 
@@ -47,14 +67,6 @@ pipeline {
             }
         }
 
-
-        stage('Install Backend Dependencies') {
-            steps {
-                dir("${WORKSPACE}/backend") {
-                    sh 'npm ci'
-                }
-            }
-        }
 
         stage('Deploy Express.js') {
             steps {
