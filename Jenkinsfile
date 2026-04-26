@@ -1,9 +1,21 @@
+// Jenkins CI/CD pipeline for project888
+// This pipeline:
+// 1. Checks out code from GitHub
+// 2. Copies environment (.env) files from the VM
+// 3. Installs dependencies for frontend and backend
+// 4. Builds the frontend (Next.js)
+// 5. Deploys both frontend and backend using PM2
 pipeline {
     agent any
 
     environment {
+        // Database connection string stored securely in Jenkins credentials
         DATABASE_URL = credentials('database-url')
+
+        // Set HOME for Jenkins user (important for tools like pm2)
         HOME = '/var/lib/jenkins'
+
+        // PM2 process manager home directory
         PM2_HOME = '/var/lib/jenkins/.pm2'
     }
 
@@ -20,6 +32,7 @@ pipeline {
     //     }
 
     stages {
+        // Pull latest code from the configured Git repository
         stage('Checkout') {
             steps {
                 checkout scm
@@ -39,12 +52,14 @@ pipeline {
             }
         }
 
+        // Install frontend dependencies from package.json
         stage('Install Frontend Dependencies') {
             steps {
                 sh 'npm ci'
             }
         }
 
+        // Install backend dependencies inside the backend folder
         stage('Install Backend Dependencies') {
             steps {
                 dir("${WORKSPACE}/backend") {
@@ -53,12 +68,14 @@ pipeline {
             }
         }
 
+        // Build the Next.js frontend for production
         stage('Build Frontend') {
             steps {
                 sh 'npm run build'
             }
         }
 
+        // Deploy or restart the frontend app using PM2
         stage('Deploy Next.js App') {
             steps {
                 sh '''
@@ -69,6 +86,7 @@ pipeline {
         }
 
 
+        // Deploy or restart the backend API using PM2
         stage('Deploy Express.js') {
             steps {
                 dir("${WORKSPACE}/backend") {
