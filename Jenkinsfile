@@ -4,7 +4,7 @@
 // 2. Copies environment (.env) files from the VM
 // 3. Installs dependencies for frontend and backend
 // 4. Builds the frontend (Next.js)
-// 5. Deploys both frontend and backend using PM2
+// 5. Deploys both frontend and backend using PM2 
 pipeline {
     agent any
 
