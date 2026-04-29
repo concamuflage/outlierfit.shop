@@ -18,12 +18,12 @@ import org.testng.Assert;
 
 public class CartSteps {
   private static final String PASSWORD_REQUIREMENTS_MESSAGE =
-    "Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.";
+    "Password must be at least 12 characters and include uppercase, lowercase, a number, and no spaces.";
   private static final String SIGNUP_SUCCESS_MESSAGE =
     "Check your email to verify your account before signing in.";
   private static final String EMAIL_NOT_VERIFIED_MESSAGE =
     "Please verify your email before signing in.";
-  private static final String GENERATED_SIGNUP_PASSWORD = "StrongPass123A!";
+  private static final String GENERATED_SIGNUP_PASSWORD = "StrongPass123A";
 
   private String rememberedSubtotal;
   private String generatedSignupEmail;

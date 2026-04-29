@@ -1,5 +1,5 @@
 
-@Login
+@Login@Regression
 Feature: Login
 
   Scenario: Authorized user can sign in from the login page and see the products page

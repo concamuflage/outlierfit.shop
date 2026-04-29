@@ -1,4 +1,4 @@
-@Modal
+@Modal@Regression
 Feature: Auth modals
 
   Scenario: User can open the login modal, switch to signup, and close it

@@ -1,4 +1,4 @@
-@Payment
+@Payment@Regression
 Feature: Stripe payment
   # Scenario: A returning user can complete a successful card payment through Stripe Checkout
   #   Given I open the login page

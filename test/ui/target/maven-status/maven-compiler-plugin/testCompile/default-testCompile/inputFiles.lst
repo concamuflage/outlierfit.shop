@@ -28,6 +28,7 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/LoginRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/ModalRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/PaymentRunner.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/RegressionRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/SignupRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/CartSteps.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/PaymentSteps.java

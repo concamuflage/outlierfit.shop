@@ -13,25 +13,12 @@
 
 import React, { useState } from "react";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import { PASSWORD_REQUIREMENTS_MESSAGE, isStrongPassword } from "@/shared/passwordPolicy";
 
 type SignupFormProps = {
   onSuccess?: () => void;
   compact?: boolean;
 };
-
-const PASSWORD_REQUIREMENTS_MESSAGE =
-  "Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.";
-
-function isStrongPassword(password: string) {
-  return (
-    password.length >= 12 &&
-    /[a-z]/.test(password) &&
-    /[A-Z]/.test(password) &&
-    /\d/.test(password) &&
-    /[^A-Za-z0-9]/.test(password) &&
-    !/\s/.test(password)
-  );
-}
 
 /**
  * Signup form UI and client-side submission handler.
@@ -203,10 +190,7 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
             autoComplete="new-password"
             required
           />
-          <p className="mt-2 text-xs text-zinc-500">
-            Use at least 12 characters with uppercase, lowercase, a number, a special character,
-            and no spaces.
-          </p>
+          <p className="mt-2 text-xs text-zinc-500">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
         </div>
 
         <div>

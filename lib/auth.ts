@@ -3,9 +3,19 @@
 // This configuration sets up credential-based login by verifying user credentials against a backend API.
 
 import type { NextAuthOptions } from "next-auth"; // Type definitions for NextAuth configuration options.
-import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials"; // Provider for username/password authentication.
 import { getServerApiBaseUrl } from "@/lib/api-base";
+import { isUserEmailVerified } from "@/lib/server/authUserStore";
+
+const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
+
+type BackendLoginUser = {
+  id: number | string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  emailVerified?: boolean;
+};
 
 // The `authOptions` object defines how NextAuth should handle authentication in this app.
 // It is exported so it can be used by the NextAuth API route handlers in the app.
@@ -72,9 +82,13 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Parse the response JSON to get the user data returned by the backend.
-        const user = await res.json();
+        const user = (await res.json()) as BackendLoginUser;
         // Ensure the user object contains required fields; otherwise, treat it as invalid.
         if (!user?.id || !user?.email) return null;
+
+        if (user.emailVerified === false) {
+          throw new Error(EMAIL_NOT_VERIFIED_MESSAGE);
+        }
 
         // Build a display name by combining first and last names if available,
         // or fallback to using the email as the display name.
@@ -87,6 +101,7 @@ export const authOptions: NextAuthOptions = {
           id: String(user.id),
           name: displayName,
           email: user.email,
+          verifiedEmail: true,
         };
       },
     }),
@@ -95,13 +110,31 @@ export const authOptions: NextAuthOptions = {
   // This means user sessions are encoded in tokens passed between client and server.
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: { id?: string } }) {
+    async jwt({ token, user }) {
       if (user?.id) {
         token.userId = user.id;
+        token.verifiedEmail = user.verifiedEmail === true;
       }
+
+      if (typeof token.userId === "string") {
+        try {
+          token.verifiedEmail = await isUserEmailVerified(token.userId);
+        } catch (error) {
+          console.error("email verification session check error:", error);
+          token.verifiedEmail = false;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
+      if (token.verifiedEmail === false) {
+        return {
+          ...session,
+          user: undefined,
+        };
+      }
+
       if (session.user && typeof token.userId === "string") {
         session.user.id = token.userId;
       }

@@ -1,4 +1,4 @@
-@StripeWebhookApi
+@StripeWebhookApi@Regression
 Feature: Stripe webhook API
 
   Scenario: A paid Stripe Checkout session is fulfilled by webhook and becomes invoice-ready

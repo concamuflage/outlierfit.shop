@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
+import { PASSWORD_REQUIREMENTS_MESSAGE } from "@/shared/passwordPolicy";
 
 type ResetPasswordFormProps = {
   email: string;
@@ -89,9 +90,7 @@ export default function ResetPasswordForm({ email, token }: ResetPasswordFormPro
           />
         </div>
 
-        <p className="text-xs text-zinc-500">
-          Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.
-        </p>
+        <p className="text-xs text-zinc-500">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
 
         {error ? <div className="text-xs text-red-600">{error}</div> : null}
         {notice ? <div className="text-xs text-emerald-700">{notice}</div> : null}

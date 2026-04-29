@@ -1,4 +1,4 @@
-@CartApi
+@CartApi@Regression
 Feature: Cart API
 
   Scenario: Authenticated user can persist and retrieve the current cart

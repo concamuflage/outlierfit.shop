@@ -1,4 +1,4 @@
-@CheckoutApi
+@CheckoutApi@Regression
 Feature: Checkout API
 
   Scenario: Authenticated user can submit mock payment and retrieve invoice PDFs

@@ -1,4 +1,4 @@
-@OrdersApi
+@OrdersApi@Regression
 Feature: Orders API
 
   Scenario: Authenticated user can retrieve all orders and a single order

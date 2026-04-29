@@ -1,4 +1,4 @@
-@Cart
+@Cart@Regression
 Feature: Cart
 
   

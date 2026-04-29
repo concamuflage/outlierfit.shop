@@ -70,12 +70,20 @@
             <include>**/*Runner.java</include>
             <include>**/*Test.java</include>
           </includes>
+
+          <!-- Enable parallel execution for TestNG methods (Cucumber scenarios) -->
+          <parallel>methods</parallel>
+
+          <!-- Maximum number of parallel threads -->
+          <threadCount>5</threadCount>
+
+          <!-- Thread count specifically for Cucumber DataProvider (scenarios) -->
+          <dataproviderthreadcount>5</dataproviderthreadcount>
+
+
           <properties>
             <property>
-              <name>dataproviderthreadcount</name>
-              <value>1</value>
-            </property>
-            <property>
+              
               <name>listener</name>
               <value>com.asianfit.ui.listeners.FailFastListener</value>
             </property>

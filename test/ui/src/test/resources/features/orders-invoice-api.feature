@@ -1,4 +1,4 @@
-@OrdersInvoiceApi
+@OrdersInvoiceApi@Regression
 Feature: Orders invoice API
 
   Scenario: Authenticated user can retrieve invoice-ready data for an order

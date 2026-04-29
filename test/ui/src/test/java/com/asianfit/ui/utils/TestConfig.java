@@ -148,7 +148,7 @@ public final class TestConfig {
       value = LOCAL_ENV.get("TEST_SIGNUP_PASSWORD");
     }
     if (value == null || value.isBlank()) {
-      value = "StrongPass123A!";
+      value = "StrongPass123A";
     }
     return value;
   }

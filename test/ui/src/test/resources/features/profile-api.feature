@@ -1,4 +1,4 @@
-@ProfileApi
+@ProfileApi@Regression
 Feature: Profile API
 
   Scenario: Authenticated user can retrieve and update profile information

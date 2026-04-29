@@ -12,9 +12,7 @@ const {
   hashPasswordResetToken,
   sendPasswordResetEmail,
 } = require("../services/passwordReset");
-const MIN_PASSWORD_LENGTH = 12;
-const PASSWORD_REQUIREMENTS_MESSAGE =
-  "Password must be at least 12 characters and include uppercase, lowercase, a number, a special character, and no spaces.";
+const { PASSWORD_REQUIREMENTS_MESSAGE, isStrongPassword } = require("../../shared/passwordPolicy");
 const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in.";
 const SIGNUP_SUCCESS_MESSAGE = "Check your email to verify your account before signing in.";
 const PASSWORD_RESET_REQUEST_MESSAGE =
@@ -26,16 +24,6 @@ function normalizeName(value) {
 
 function normalizeEmail(email) {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
-}
-
-function isStrongPassword(password) {
-  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) return false;
-  const hasLower = /[a-z]/.test(password);
-  const hasUpper = /[A-Z]/.test(password);
-  const hasDigit = /\d/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
-  const hasWhitespace = /\s/.test(password);
-  return hasLower && hasUpper && hasDigit && hasSpecial && !hasWhitespace;
 }
 
 const ensureUsersTable = async () => {
@@ -241,6 +229,7 @@ exports.login = async (req, res) => {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
+      emailVerified: user.email_verified,
     });
   } catch (err) {
     console.error("login error:", err);

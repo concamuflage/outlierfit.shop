@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 24;
+const PRODUCTION_APP_BASE_URL = "https://asianfit.shop";
 
 function getVerificationTtlHours() {
   const rawValue = Number(process.env.EMAIL_VERIFICATION_TTL_HOURS || DEFAULT_VERIFICATION_TTL_HOURS);
@@ -22,13 +23,33 @@ function hashVerificationToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
+function normalizeAppBaseUrl(value) {
+  return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
+}
+
+function isLocalhostUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
 function getVerificationAppBaseUrl() {
-  return (
-    process.env.EMAIL_VERIFICATION_APP_URL ||
-    process.env.CLIENT_ORIGIN ||
-    process.env.NEXTAUTH_URL ||
-    "http://localhost:3000"
-  ).replace(/\/+$/, "");
+  const explicitEmailUrl = normalizeAppBaseUrl(process.env.EMAIL_VERIFICATION_APP_URL);
+  if (explicitEmailUrl) return explicitEmailUrl;
+
+  const fallbackUrls = [
+    normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
+    normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
+  ].filter(Boolean);
+
+  if (process.env.NODE_ENV === "production") {
+    return fallbackUrls.find((url) => !isLocalhostUrl(url)) || PRODUCTION_APP_BASE_URL;
+  }
+
+  return fallbackUrls[0] || "http://localhost:3000";
 }
 
 function buildVerificationLink(email, rawToken) {

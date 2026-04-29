@@ -1,4 +1,4 @@
-@Signup
+@Signup@Regression
 Feature: Signup
 
   Scenario: User can create an account and is prompted to verify the email address
@@ -8,16 +8,25 @@ Feature: Signup
     Then the signup should be successful and ask the user to verify their email address
 
   Scenario: User cannot sign up twice with the same email address
+    # register for the first time
     Given I open the signup page
     Then I should be on the signup page
     When I sign up with a specified email address and password
     Then the signup should be successful and ask the user to verify their email address
+    # register for the second time with the same email
     Given I open the signup page
     Then I should be on the signup page
     When I sign up with the configured existing account email
     Then the signup page should show a validation error
 
   Scenario Outline: User cannot sign up with a password that violates the password policy
+    # Minimum length: 12
+    # Must include lowercase: [a-z]
+    # Must include uppercase: [A-Z]
+    # Must include a digit: \d
+    # Must not contain whitespace: \s
+    # Special characters are allowed but not required
+    
     Given I open the signup page
     Then I should be on the signup page
     When I sign up with a generated account using password "<password>"
@@ -29,5 +38,4 @@ Feature: Signup
       | lowercase123!   |
       | UPPERCASE123!   |
       | NoDigitsHere!   |
-      | NoSpecial123    |
       | Has Space123!   |

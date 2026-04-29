@@ -1,4 +1,4 @@
-@Signup
+@Signup@Regression
 Feature: Signup
 
   Scenario: User can create an account and is prompted to verify the email address
@@ -15,7 +15,7 @@ Feature: Signup
     Given I open the signup page
     Then I should be on the signup page
     When I sign up with the configured existing account email
-    Then the signup page should show a validation error
+    Then the signup page should show the account creation error
 
   Scenario Outline: User cannot sign up with a password that violates the password policy
     Given I open the signup page
@@ -29,5 +29,4 @@ Feature: Signup
       | lowercase123!   |
       | UPPERCASE123!   |
       | NoDigitsHere!   |
-      | NoSpecial123    |
       | Has Space123!   |

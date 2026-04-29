@@ -28,10 +28,10 @@ export default function AuthModalShell({ isOpen, onClose, children }: AuthModalS
       aria-hidden={false}
     >
       {/* Backdrop overlay that closes the modal on click. */}
-      <div className="absolute inset-0 bg-black/40 transition-opacity opacity-100" onClick={onClose} />
+      <div className="absolute inset-0 z-0 bg-black/40 transition-opacity opacity-100" onClick={onClose} />
 
       {/* Centered modal card container. */}
-      <div className="absolute left-1/2 top-4 w-[95vw] max-w-md -translate-x-1/2 transition opacity-100 sm:top-20 sm:w-[90vw]">
+      <div className="absolute left-1/2 top-4 z-10 w-[95vw] max-w-md -translate-x-1/2 transition opacity-100 sm:top-20 sm:w-[90vw]">
         <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-xl sm:p-6">
           <div className="flex items-center justify-between">
             <button

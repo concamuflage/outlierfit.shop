@@ -1,4 +1,4 @@
-@Checkout
+@Checkout@Regression
 Feature: Checkout
 
   Scenario: A returning user can review checkout details with saved addresses
