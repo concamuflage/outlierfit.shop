@@ -28,7 +28,7 @@ export default function Header() {
   const router = useRouter();
   const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
   const trialBannerText =
-    "The site is in trial operation. If you want to buy some clothes that are not on the site, you can send us the link so we can list them on the site. If you have any suggestions, you can also write to us. All products are original, but they are bought in China and only have tags in Chinese. Shipping takes 7-60 days depending on the shipping services you choose. If U.S. Customs applies import tariffs or duties to your shipment, those charges would be the customer's responsibility; however, in most cases, orders from this site are not charged tariffs.";
+    "If you want to buy some clothes that are not on the site, you can send us the link so we can list them on the site. If you have any suggestions, you can also write to us. All products are original, but they are bought in China and only have tags in Chinese. Shipping takes 7-60 days depending on the shipping services you choose. If U.S. Customs applies import tariffs or duties to your shipment, those charges would be the customer's responsibility.";
 
   const handleLoginModalSuccess = () => {
     closeAuthModal();

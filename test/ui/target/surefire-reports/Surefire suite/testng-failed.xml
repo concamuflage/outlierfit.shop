@@ -3,13 +3,13 @@
 <suite parallel="methods" name="Failed suite [Surefire suite]" verbose="0">
   <test thread-count="5" parallel="methods" name="Surefire test(failed)" verbose="0">
     <classes>
-      <class name="com.asianfit.ui.runner.RegressionRunner">
+      <class name="com.asianfit.ui.runner.SignupRunner">
         <methods>
           <include name="setUpClass"/>
           <include name="tearDownClass"/>
-          <include name="runScenario" invocation-numbers="2 4 5 6 8 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25"/>
+          <include name="runScenario" invocation-numbers="0"/>
         </methods>
-      </class> <!-- com.asianfit.ui.runner.RegressionRunner -->
+      </class> <!-- com.asianfit.ui.runner.SignupRunner -->
     </classes>
   </test> <!-- Surefire test(failed) -->
 </suite> <!-- Failed suite [Surefire suite] -->
