@@ -75,26 +75,24 @@ pipeline {
             }
         }
 
-        // Deploy or restart the frontend app using PM2
+        // Deploy or restart the frontend app from the Jenkins workspace build.
         stage('Deploy Next.js App') {
             steps {
                 sh '''
-                    pm2 restart project888-web || pm2 start npm --name project888-web -- start
+                    pm2 startOrReload ecosystem.config.cjs --only project888-web --update-env
                     pm2 save
                 '''
             }
         }
 
 
-        // Deploy or restart the backend API using PM2
+        // Deploy or restart the backend API from the Jenkins workspace.
         stage('Deploy Express.js') {
             steps {
-                dir("${WORKSPACE}/backend") {
-                    sh '''
-                        pm2 restart project888-api || pm2 start npm --name project888-api -- start
-                        pm2 save
-                    '''
-                }
+                sh '''
+                    pm2 startOrReload ecosystem.config.cjs --only project888-api --update-env
+                    pm2 save
+                '''
             }
         }
 
