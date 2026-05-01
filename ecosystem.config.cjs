@@ -10,6 +10,8 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3000",
+        APP_URL: process.env.APP_URL || "https://asianfit.shop",
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL || "https://asianfit.shop",
       },
     },
     {
