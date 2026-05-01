@@ -225,7 +225,7 @@ export function buildInvoicePdf(payload: InvoicePayload) {
     radius: 22,
   }));
 
-  commands.push(pdfText(margin + 24, headerY + headerHeight - 44, "AsianFit", { size: 24, font: "F2" }));
+  commands.push(pdfText(margin + 24, headerY + headerHeight - 44, "OutlierFit", { size: 24, font: "F2" }));
   let businessY = headerY + headerHeight - 82;
   const businessLines = ["", BUSINESS_WEBSITE, BUSINESS_EMAIL];
   for (const line of businessLines) {

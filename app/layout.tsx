@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Clothes for Asian Men",
-  description: "Clothes with sleeve lengthes for Asian men",
+  title: "OutlierFit",
+  description: "Better-fitting clothes for shorter builds",
 };
 
 export default function RootLayout({

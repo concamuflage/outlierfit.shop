@@ -50,7 +50,7 @@ export default function Header() {
         </div>
       </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="text-lg font-semibold tracking-tight sm:text-xl">AsianFit</div>
+        <div className="text-lg font-semibold tracking-tight sm:text-xl">OutlierFit</div>
         <nav className="flex flex-wrap items-center gap-3 text-sm sm:gap-4 lg:justify-end lg:gap-6">
           <Link className="whitespace-nowrap hover:underline" href="/about">
             About

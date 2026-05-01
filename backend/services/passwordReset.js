@@ -80,11 +80,11 @@ async function sendPasswordResetEmail({ to, firstName, resetLink }) {
     body: JSON.stringify({
       from,
       to: [to],
-      subject: "Reset your AsianFit password",
+      subject: "Reset your OutlierFit password",
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #18181b;">
           <p>Hi ${greetingName},</p>
-          <p>We received a request to reset the password for your AsianFit account.</p>
+          <p>We received a request to reset the password for your OutlierFit account.</p>
           <p>This link is valid for 30 minutes.</p>
           <p>
             <a
@@ -101,7 +101,7 @@ async function sendPasswordResetEmail({ to, firstName, resetLink }) {
       `,
       text:
         `Hi ${greetingName},\n\n` +
-        `We received a request to reset the password for your AsianFit account.\n\n` +
+        `We received a request to reset the password for your OutlierFit account.\n\n` +
         `This link is valid for 30 minutes.\n\n` +
         `Reset password\n\n` +
         `If the button does not work, please copy and paste the following link into your browser:\n\n` +
