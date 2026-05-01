@@ -63,6 +63,14 @@ type StripePaymentRow = {
   failed_at: unknown;
 };
 
+export type StripePaymentDiscountDetails = {
+  stripePromotionCodeId: string | null;
+  stripeCouponId: string | null;
+  promotionCode: string | null;
+  discountAmount: number | null;
+  discountCurrency: string | null;
+};
+
 type CartCheckoutRow = {
   shipping_address_id: unknown;
   billing_address_id: unknown;
@@ -139,7 +147,8 @@ export function assertStripePaymentMatchesCheckoutPayload({
   paymentIntent?: Stripe.PaymentIntent | null;
 }) {
   const expectedAmount = expectedStripeAmountCents(payload);
-  const sessionAmount = checkoutSession.amount_total;
+  const sessionSubtotalAmount = checkoutSession.amount_subtotal ?? checkoutSession.amount_total;
+  const finalStripeAmount = checkoutSession.amount_total;
   const receivedAmount = paymentIntent?.amount_received;
   const currency = String(paymentIntent?.currency ?? checkoutSession.currency ?? "").toLowerCase();
 
@@ -147,12 +156,16 @@ export function assertStripePaymentMatchesCheckoutPayload({
     throw new Error("Stripe payment currency does not match the expected order currency.");
   }
 
-  if (sessionAmount !== expectedAmount) {
+  if (sessionSubtotalAmount !== expectedAmount) {
     throw new Error("Stripe checkout amount does not match the expected order total.");
   }
 
-  if (receivedAmount != null && receivedAmount !== expectedAmount) {
-    throw new Error("Stripe received amount does not match the expected order total.");
+  if (finalStripeAmount == null) {
+    throw new Error("Stripe checkout session is missing the paid total.");
+  }
+
+  if (receivedAmount != null && receivedAmount !== finalStripeAmount) {
+    throw new Error("Stripe received amount does not match the checkout total.");
   }
 }
 
@@ -253,6 +266,53 @@ async function ensurePaymentsTable() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`
   );
+  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_promotion_code_id TEXT");
+  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_coupon_id TEXT");
+  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS promotion_code TEXT");
+  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS discount_amount INTEGER");
+  await pool.query("ALTER TABLE payments ADD COLUMN IF NOT EXISTS discount_currency TEXT");
+}
+
+function normalizeExpandableId<T extends { id?: string }>(value: string | T | null | undefined) {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id ?? null;
+}
+
+function readPromotionCodeValue(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const code = (value as { code?: unknown }).code;
+  return typeof code === "string" && code.trim() ? code.trim() : null;
+}
+
+export function readStripePromotionCodeIdFromCheckoutSession(
+  checkoutSession: Stripe.Checkout.Session
+): string | null {
+  const discounts = checkoutSession.total_details?.breakdown?.discounts ?? [];
+  const promotionCode = discounts[0]?.discount?.promotion_code;
+  return normalizeExpandableId(promotionCode);
+}
+
+export function readStripePaymentDiscountDetails(
+  checkoutSession: Stripe.Checkout.Session,
+  expandedPromotionCode?: Stripe.PromotionCode | null
+): StripePaymentDiscountDetails {
+  const discountAmount = checkoutSession.total_details?.amount_discount ?? 0;
+  const discountCurrency =
+    discountAmount > 0 ? String(checkoutSession.currency ?? "usd").toLowerCase() : null;
+  const discounts = checkoutSession.total_details?.breakdown?.discounts ?? [];
+  const firstDiscount = discounts[0]?.discount;
+  const promotionCode = firstDiscount?.promotion_code;
+  const coupon = firstDiscount?.coupon;
+  const promotionCodeObject =
+    typeof promotionCode === "object" && promotionCode ? promotionCode : expandedPromotionCode;
+
+  return {
+    stripePromotionCodeId: normalizeExpandableId(promotionCode),
+    stripeCouponId: normalizeExpandableId(coupon),
+    promotionCode: readPromotionCodeValue(promotionCodeObject),
+    discountAmount: discountAmount > 0 ? discountAmount : null,
+    discountCurrency,
+  };
 }
 
 export async function saveStripeCheckoutSession(
@@ -596,6 +656,7 @@ export async function upsertStripePaymentRecord({
   paidAt,
   failedAt,
   orderId,
+  discountDetails,
 }: {
   stripePaymentIntentId: string;
   stripeCheckoutSessionId?: string | null;
@@ -610,6 +671,7 @@ export async function upsertStripePaymentRecord({
   paidAt?: Date | null;
   failedAt?: Date | null;
   orderId?: number | null;
+  discountDetails?: StripePaymentDiscountDetails | null;
 }) {
   await ensurePaymentsTable();
   const result = await pool.query<StripePaymentRow>(
@@ -628,6 +690,11 @@ export async function upsertStripePaymentRecord({
         failure_message,
         paid_at,
         failed_at,
+        stripe_promotion_code_id,
+        stripe_coupon_id,
+        promotion_code,
+        discount_amount,
+        discount_currency,
         created_at,
         updated_at
       )
@@ -645,6 +712,11 @@ export async function upsertStripePaymentRecord({
         $11,
         $12,
         $13,
+        $14,
+        $15,
+        $16,
+        $17,
+        $18,
         NOW(),
         NOW()
       )
@@ -662,6 +734,11 @@ export async function upsertStripePaymentRecord({
         failure_message = EXCLUDED.failure_message,
         paid_at = COALESCE(EXCLUDED.paid_at, payments.paid_at),
         failed_at = COALESCE(EXCLUDED.failed_at, payments.failed_at),
+        stripe_promotion_code_id = COALESCE(EXCLUDED.stripe_promotion_code_id, payments.stripe_promotion_code_id),
+        stripe_coupon_id = COALESCE(EXCLUDED.stripe_coupon_id, payments.stripe_coupon_id),
+        promotion_code = COALESCE(EXCLUDED.promotion_code, payments.promotion_code),
+        discount_amount = COALESCE(EXCLUDED.discount_amount, payments.discount_amount),
+        discount_currency = COALESCE(EXCLUDED.discount_currency, payments.discount_currency),
         updated_at = NOW()
       RETURNING id, order_id, status, paid_at, failed_at
     `,
@@ -679,6 +756,11 @@ export async function upsertStripePaymentRecord({
       failureMessage ?? null,
       paidAt ?? null,
       failedAt ?? null,
+      discountDetails?.stripePromotionCodeId ?? null,
+      discountDetails?.stripeCouponId ?? null,
+      discountDetails?.promotionCode ?? null,
+      discountDetails?.discountAmount ?? null,
+      discountDetails?.discountCurrency ?? null,
     ]
   );
 

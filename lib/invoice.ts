@@ -24,6 +24,9 @@ export type InvoicePayload = {
   subtotalUsd: number;
   shippingUsd: number;
   totalUsd: number;
+  promotionCode?: string | null;
+  discountAmountUsd?: number;
+  discountCurrency?: string | null;
   items: InvoiceItem[];
   shippingAddress: InvoiceAddress;
   billingAddress: InvoiceAddress;
@@ -322,6 +325,9 @@ export function buildInvoicePdf(payload: InvoicePayload) {
   const totals = [
     ["Subtotal", formatUsd(payload.subtotalUsd), false],
     [`Shipping (${payload.shippingModeLabel})`, formatUsd(payload.shippingUsd), false],
+    ...(payload.discountAmountUsd && payload.discountAmountUsd > 0
+      ? [[`Discount${payload.promotionCode ? ` (${payload.promotionCode})` : ""}`, `-${formatUsd(payload.discountAmountUsd)}`, false] as const]
+      : []),
     ["Total", formatUsd(payload.totalUsd), true],
   ] as const;
 

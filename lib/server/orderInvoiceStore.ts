@@ -27,6 +27,10 @@ type OrderInvoiceRow = {
   subtotal_usd: unknown;
   shipping_usd: unknown;
   total_usd: unknown;
+  promotion_code: unknown;
+  discount_amount: unknown;
+  discount_currency: unknown;
+  paid_amount: unknown;
   paid_at: unknown;
   customer_email: unknown;
   shipping_mode: unknown;
@@ -64,6 +68,10 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
         o.subtotal_usd,
         o.shipping_usd,
         o.total_usd,
+        p.promotion_code,
+        p.discount_amount,
+        p.discount_currency,
+        p.amount AS paid_amount,
         o.paid_at,
         u.email AS customer_email,
         sc.mode AS shipping_mode,
@@ -91,6 +99,14 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
         ON sa.id = o.shipping_address_id
       JOIN addresses ba
         ON ba.id = o.billing_address_id
+      LEFT JOIN LATERAL (
+        SELECT promotion_code, discount_amount, discount_currency, amount
+        FROM payments
+        WHERE order_id = o.id
+          AND status = 'paid'
+        ORDER BY paid_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      ) p ON TRUE
       WHERE o.id = $1
         AND o.user_id = $2
       LIMIT 1
@@ -103,6 +119,15 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
   }
 
   const row = orderResult.rows[0];
+  const discountCurrency = row.discount_currency ? String(row.discount_currency).toLowerCase() : null;
+  const discountAmountUsd =
+    discountCurrency === "usd" && row.discount_amount != null
+      ? Math.max(0, toNumber(row.discount_amount) / 100)
+      : 0;
+  const paidTotalUsd =
+    discountCurrency === "usd" && row.paid_amount != null
+      ? toNumber(row.paid_amount) / 100
+      : Math.max(0, toNumber(row.total_usd) - discountAmountUsd);
 
   const itemsResult = await pool.query<OrderInvoiceItemRow>(
     `
@@ -134,7 +159,10 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     shippingModeLabel: `${formatShippingMode(String(row.shipping_mode ?? ""))}${row.shipping_delivery_time ? ` ${String(row.shipping_delivery_time)}` : ""}`,
     subtotalUsd: toNumber(row.subtotal_usd),
     shippingUsd: toNumber(row.shipping_usd),
-    totalUsd: toNumber(row.total_usd),
+    totalUsd: paidTotalUsd,
+    promotionCode: row.promotion_code ? String(row.promotion_code) : null,
+    discountAmountUsd,
+    discountCurrency,
     items: itemsResult.rows.map((itemRow: OrderInvoiceItemRow) => ({
       name: String(itemRow.product_name ?? ""),
       quantity: toNumber(itemRow.quantity),

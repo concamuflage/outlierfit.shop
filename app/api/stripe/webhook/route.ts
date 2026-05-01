@@ -7,6 +7,8 @@ import {
   getStripeCheckoutSessionById,
   isValidCheckoutOrderPayload,
   markStripeWebhookEventProcessed,
+  readStripePaymentDiscountDetails,
+  readStripePromotionCodeIdFromCheckoutSession,
   readStripeChargeId,
   readStripeCustomerId,
   readStripePaymentIntentId,
@@ -27,6 +29,21 @@ function getWebhookSecret() {
 
 function toDateOrNull(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? new Date(value * 1000) : null;
+}
+
+async function retrieveCheckoutSessionWithDiscounts(session: Stripe.Checkout.Session) {
+  return getStripeServerClient().checkout.sessions.retrieve(session.id, {
+    expand: [
+      "payment_intent",
+      "payment_intent.latest_charge",
+      "total_details.breakdown.discounts.discount",
+    ],
+  });
+}
+
+async function retrievePromotionCodeForSession(session: Stripe.Checkout.Session) {
+  const promotionCodeId = readStripePromotionCodeIdFromCheckoutSession(session);
+  return promotionCodeId ? getStripeServerClient().promotionCodes.retrieve(promotionCodeId) : null;
 }
 
 async function retrievePaymentIntentForSession(session: Stripe.Checkout.Session) {
@@ -53,6 +70,8 @@ async function recordSuccessfulCheckoutSession(
   stripeEventId: string,
   checkoutSession: Stripe.Checkout.Session
 ) {
+  const expandedCheckoutSession = await retrieveCheckoutSessionWithDiscounts(checkoutSession);
+  const expandedPromotionCode = await retrievePromotionCodeForSession(expandedCheckoutSession);
   const persistedCheckout = await getStripeCheckoutSessionById(checkoutSession.id);
   if (!persistedCheckout || !persistedCheckout.userId) {
     throw new Error(
@@ -66,10 +85,10 @@ async function recordSuccessfulCheckoutSession(
     );
   }
 
-  const paymentIntent = await retrievePaymentIntentForSession(checkoutSession);
+  const paymentIntent = await retrievePaymentIntentForSession(expandedCheckoutSession);
   assertStripePaymentMatchesCheckoutPayload({
     payload: persistedCheckout.payload,
-    checkoutSession,
+    checkoutSession: expandedCheckoutSession,
     paymentIntent,
   });
 
@@ -85,15 +104,16 @@ async function recordSuccessfulCheckoutSession(
   if (paymentIntentId) {
     await upsertStripePaymentRecord({
       stripePaymentIntentId: paymentIntentId,
-      stripeCheckoutSessionId: checkoutSession.id,
-      stripeCustomerId: readStripeCustomerId(checkoutSession.customer),
+      stripeCheckoutSessionId: expandedCheckoutSession.id,
+      stripeCustomerId: readStripeCustomerId(expandedCheckoutSession.customer),
       stripeChargeId: readStripeChargeId(paymentIntent?.latest_charge ?? null),
       status: "paid",
-      amount: paymentIntent?.amount_received ?? checkoutSession.amount_total ?? 0,
-      currency: String(paymentIntent?.currency ?? checkoutSession.currency ?? "usd"),
-      customerEmail: checkoutSession.customer_details?.email ?? checkoutSession.customer_email ?? null,
+      amount: paymentIntent?.amount_received ?? expandedCheckoutSession.amount_total ?? 0,
+      currency: String(paymentIntent?.currency ?? expandedCheckoutSession.currency ?? "usd"),
+      customerEmail: expandedCheckoutSession.customer_details?.email ?? expandedCheckoutSession.customer_email ?? null,
       paidAt: toDateOrNull(paymentIntent?.created ?? null) ?? new Date(result.paidAt),
       orderId: result.orderId,
+      discountDetails: readStripePaymentDiscountDetails(expandedCheckoutSession, expandedPromotionCode),
     });
   }
 
@@ -104,19 +124,22 @@ async function recordPendingCheckoutSession(
   stripeEventId: string,
   checkoutSession: Stripe.Checkout.Session
 ) {
-  const paymentIntent = await retrievePaymentIntentForSession(checkoutSession);
-  const paymentIntentId = paymentIntent?.id ?? readStripePaymentIntentId(checkoutSession.payment_intent);
+  const expandedCheckoutSession = await retrieveCheckoutSessionWithDiscounts(checkoutSession);
+  const expandedPromotionCode = await retrievePromotionCodeForSession(expandedCheckoutSession);
+  const paymentIntent = await retrievePaymentIntentForSession(expandedCheckoutSession);
+  const paymentIntentId = paymentIntent?.id ?? readStripePaymentIntentId(expandedCheckoutSession.payment_intent);
 
   if (paymentIntentId) {
     await upsertStripePaymentRecord({
       stripePaymentIntentId: paymentIntentId,
-      stripeCheckoutSessionId: checkoutSession.id,
-      stripeCustomerId: readStripeCustomerId(checkoutSession.customer),
+      stripeCheckoutSessionId: expandedCheckoutSession.id,
+      stripeCustomerId: readStripeCustomerId(expandedCheckoutSession.customer),
       stripeChargeId: readStripeChargeId(paymentIntent?.latest_charge ?? null),
       status: "pending",
-      amount: paymentIntent?.amount ?? checkoutSession.amount_total ?? 0,
-      currency: String(paymentIntent?.currency ?? checkoutSession.currency ?? "usd"),
-      customerEmail: checkoutSession.customer_details?.email ?? checkoutSession.customer_email ?? null,
+      amount: paymentIntent?.amount ?? expandedCheckoutSession.amount_total ?? 0,
+      currency: String(paymentIntent?.currency ?? expandedCheckoutSession.currency ?? "usd"),
+      customerEmail: expandedCheckoutSession.customer_details?.email ?? expandedCheckoutSession.customer_email ?? null,
+      discountDetails: readStripePaymentDiscountDetails(expandedCheckoutSession, expandedPromotionCode),
     });
   }
 
@@ -127,22 +150,25 @@ async function recordFailedCheckoutSession(
   stripeEventId: string,
   checkoutSession: Stripe.Checkout.Session
 ) {
-  const paymentIntent = await retrievePaymentIntentForSession(checkoutSession);
-  const paymentIntentId = paymentIntent?.id ?? readStripePaymentIntentId(checkoutSession.payment_intent);
+  const expandedCheckoutSession = await retrieveCheckoutSessionWithDiscounts(checkoutSession);
+  const expandedPromotionCode = await retrievePromotionCodeForSession(expandedCheckoutSession);
+  const paymentIntent = await retrievePaymentIntentForSession(expandedCheckoutSession);
+  const paymentIntentId = paymentIntent?.id ?? readStripePaymentIntentId(expandedCheckoutSession.payment_intent);
 
   if (paymentIntentId) {
     await upsertStripePaymentRecord({
       stripePaymentIntentId: paymentIntentId,
-      stripeCheckoutSessionId: checkoutSession.id,
-      stripeCustomerId: readStripeCustomerId(checkoutSession.customer),
+      stripeCheckoutSessionId: expandedCheckoutSession.id,
+      stripeCustomerId: readStripeCustomerId(expandedCheckoutSession.customer),
       stripeChargeId: readStripeChargeId(paymentIntent?.latest_charge ?? null),
       status: "failed",
-      amount: paymentIntent?.amount ?? checkoutSession.amount_total ?? 0,
-      currency: String(paymentIntent?.currency ?? checkoutSession.currency ?? "usd"),
-      customerEmail: checkoutSession.customer_details?.email ?? checkoutSession.customer_email ?? null,
+      amount: paymentIntent?.amount ?? expandedCheckoutSession.amount_total ?? 0,
+      currency: String(paymentIntent?.currency ?? expandedCheckoutSession.currency ?? "usd"),
+      customerEmail: expandedCheckoutSession.customer_details?.email ?? expandedCheckoutSession.customer_email ?? null,
       failureCode: paymentIntent?.last_payment_error?.code ?? null,
       failureMessage: paymentIntent?.last_payment_error?.message ?? "Payment failed.",
       failedAt: new Date(),
+      discountDetails: readStripePaymentDiscountDetails(expandedCheckoutSession, expandedPromotionCode),
     });
   }
 

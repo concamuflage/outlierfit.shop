@@ -8,6 +8,8 @@ import {
   getStripeCheckoutOrderStatus,
   getStripeCheckoutSession,
   isValidCheckoutOrderPayload,
+  readStripePaymentDiscountDetails,
+  readStripePromotionCodeIdFromCheckoutSession,
   readStripeChargeId,
   readStripeCustomerId,
   readStripePaymentIntentId,
@@ -35,7 +37,11 @@ async function reconcilePaidStripeCheckoutSession(userId: number, stripeSessionI
 
   const stripe = getStripeServerClient();
   const checkoutSession = await stripe.checkout.sessions.retrieve(stripeSessionId, {
-    expand: ["payment_intent", "payment_intent.latest_charge"],
+    expand: [
+      "payment_intent",
+      "payment_intent.latest_charge",
+      "total_details.breakdown.discounts.discount",
+    ],
   });
 
   if (checkoutSession.payment_status !== "paid") {
@@ -43,6 +49,10 @@ async function reconcilePaidStripeCheckoutSession(userId: number, stripeSessionI
   }
 
   const paymentIntent = getExpandedPaymentIntent(checkoutSession);
+  const promotionCodeId = readStripePromotionCodeIdFromCheckoutSession(checkoutSession);
+  const expandedPromotionCode = promotionCodeId
+    ? await stripe.promotionCodes.retrieve(promotionCodeId)
+    : null;
   assertStripePaymentMatchesCheckoutPayload({
     payload: persistedCheckout.payload,
     checkoutSession,
@@ -70,6 +80,7 @@ async function reconcilePaidStripeCheckoutSession(userId: number, stripeSessionI
       customerEmail: checkoutSession.customer_details?.email ?? checkoutSession.customer_email ?? null,
       paidAt: toDateOrNull(paymentIntent?.created ?? null) ?? new Date(result.paidAt),
       orderId: result.orderId,
+      discountDetails: readStripePaymentDiscountDetails(checkoutSession, expandedPromotionCode),
     });
   }
 
