@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "OutlierFit",
-  description: "Better-fitting clothes for shorter builds",
+  description: "Mainstream Brands for Shorter Men",
 };
 
 export default function RootLayout({
