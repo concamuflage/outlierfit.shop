@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 24;
-const PRODUCTION_APP_BASE_URL = "https://asianfit.shop";
+const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
 function getVerificationTtlHours() {
   const rawValue = Number(process.env.EMAIL_VERIFICATION_TTL_HOURS || DEFAULT_VERIFICATION_TTL_HOURS);

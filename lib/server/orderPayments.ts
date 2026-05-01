@@ -41,6 +41,10 @@ type ExistingOrderRow = {
   paid_at: unknown;
 };
 
+type DailyInvoiceSequenceRow = {
+  sequence_number: unknown;
+};
+
 type StripeCheckoutSessionRow = {
   stripe_session_id: string;
   user_id: unknown;
@@ -92,6 +96,14 @@ type ShippingCostRow = {
   first_kg_cost_rmb: unknown;
   additional_kg_cost_rmb: unknown;
 };
+
+function getUtcDayBounds(date: Date) {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return { start, end };
+}
 
 export type StripeCheckoutOrderStatus =
   | {
@@ -1053,7 +1065,24 @@ export async function finalizePaidOrder({
 
     const orderId = Number(orderInsertResult.rows[0].id);
     const persistedPaidAt = new Date(orderInsertResult.rows[0].paid_at);
-    const invoiceNumber = `${createInvoiceNumber(persistedPaidAt)}-${orderId}`;
+    const invoiceDatePrefix = createInvoiceNumber(persistedPaidAt);
+    const invoiceDayBounds = getUtcDayBounds(persistedPaidAt);
+
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+      `invoice-sequence:${invoiceDatePrefix}`,
+    ]);
+
+    const dailyInvoiceSequenceResult = await client.query<DailyInvoiceSequenceRow>(
+      `
+        SELECT COUNT(*) AS sequence_number
+        FROM orders
+        WHERE paid_at >= $1
+          AND paid_at < $2
+      `,
+      [invoiceDayBounds.start, invoiceDayBounds.end]
+    );
+    const invoiceSequenceNumber = Number(dailyInvoiceSequenceResult.rows[0]?.sequence_number ?? 1);
+    const invoiceNumber = createInvoiceNumber(persistedPaidAt, invoiceSequenceNumber);
 
     await client.query(
       `

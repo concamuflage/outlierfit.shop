@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 
 const DEFAULT_PASSWORD_RESET_TTL_MINUTES = 30;
-const PRODUCTION_APP_BASE_URL = "https://asianfit.shop";
+const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
 function getPasswordResetTtlMinutes() {
   const rawValue = Number(process.env.PASSWORD_RESET_TTL_MINUTES || DEFAULT_PASSWORD_RESET_TTL_MINUTES);

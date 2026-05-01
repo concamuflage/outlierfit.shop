@@ -34,7 +34,7 @@ export type InvoicePayload = {
 
 type PdfCommand = string;
 const BUSINESS_EMAIL = "info@outlierfit.shop";
-const BUSINESS_WEBSITE = "www.asianfit.shop";
+const BUSINESS_WEBSITE = "www.outlierfit.shop";
 
 function toPdfSafeText(value: string) {
   return value
@@ -194,17 +194,16 @@ function drawAddressCard(commands: PdfCommand[], x: number, yTop: number, width:
   }
 }
 
-export function createInvoiceNumber(date = new Date()) {
+export function createInvoiceNumber(date = new Date(), sequenceNumber?: number | string) {
   const stamp = [
     date.getUTCFullYear(),
     String(date.getUTCMonth() + 1).padStart(2, "0"),
     String(date.getUTCDate()).padStart(2, "0"),
-    String(date.getUTCHours()).padStart(2, "0"),
-    String(date.getUTCMinutes()).padStart(2, "0"),
-    String(date.getUTCSeconds()).padStart(2, "0"),
   ].join("");
 
-  return `AF-${stamp}`;
+  const sequence = sequenceNumber == null ? "" : `-${String(sequenceNumber)}`;
+
+  return `OF-${stamp}${sequence}`;
 }
 
 export function buildInvoicePdf(payload: InvoicePayload) {
