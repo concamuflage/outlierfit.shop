@@ -30,10 +30,20 @@ public final class TestConfig {
 
   public static String baseUrl() {
     String value = System.getProperty("baseUrl");
-    if (value == null || value.isBlank()) {
-      return "http://localhost:3000";
+    if (value != null && !value.isBlank()) {
+      return value;
     }
-    return value;
+
+    String nodeEnv = firstNonBlank(
+      System.getProperty("nodeEnv"),
+      System.getenv("NODE_ENV"),
+      LOCAL_ENV.get("NODE_ENV")
+    );
+    if ("production".equalsIgnoreCase(nodeEnv)) {
+      return "https://outlierfit.shop";
+    }
+
+    return "http://localhost:3000";
   }
 
   public static boolean headless() {
