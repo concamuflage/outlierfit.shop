@@ -16,9 +16,10 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import java.net.URI;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.testng.Assert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -623,7 +624,7 @@ public class CartSteps {
       "Generated signup email uses Gmail plus-addressing, so TEST_SIGNUP_EMAIL must be a Gmail inbox with API access."
     );
 
-    return localPart + "+ui" + System.currentTimeMillis() + "@gmail.com";
+    return localPart + "+ui" + UUID.randomUUID().toString().replace("-", "") + "@gmail.com";
   }
 
   private record ExpectedCartTotals(

@@ -31,35 +31,35 @@ Feature: Test the signup feature of the application
     Then the email verification should be successful
     And the user should be able to log in
 
-  # Scenario: User cannot sign up twice with the same email address
-  #   # register for the first time
-  #   When I sign up with a plus email based on "concamuflage@gmail.com" and password
-  #   Then the signup should be successful and ask the user to verify their email address
-  #   # register for the second time with the same generated plus email
-  #   Given I open the signup page
-  #   Then I should be on the signup page
-  #   When I sign up with the same generated plus email and password
-  #   Then the signup page should show a validation error
+  Scenario: User cannot sign up twice with the same email address
+    # register for the first time
+    When I sign up with a plus email based on "concamuflage@gmail.com" and password
+    Then the signup should be successful and ask the user to verify their email address
+    # register for the second time with the same generated plus email
+    Given I open the signup page
+    Then I should be on the signup page
+    When I sign up with the same generated plus email and password
+    Then the signup page should show a validation error
 
-  # Scenario Outline: User cannot sign up with a password that violates the password policy
-  #   # Minimum length: 12
-  #   # Must include lowercase: [a-z]
-  #   # Must include uppercase: [A-Z]
-  #   # Must include a digit: \d
-  #   # Must not contain whitespace: \s
-  #   # Special characters are allowed but not required
-  #   When I sign up with a generated account using password "<password>"
-  #   Then the signup page should show the password requirements error
+  Scenario Outline: User cannot sign up with a password that violates the password policy
+    # Minimum length: 12
+    # Must include lowercase: [a-z]
+    # Must include uppercase: [A-Z]
+    # Must include a digit: \d
+    # Must not contain whitespace: \s
+    # Special characters are allowed but not required
+    When I sign up with a generated account using password "<password>"
+    Then the signup page should show the password requirements error
 
-  #   Examples:
-  #     | password      |
-  #     | Short1!       |
-  #     | lowercase123! |
-  #     | UPPERCASE123! |
-  #     | NoDigitsHere! |
-  #     | Has Space123! |
-  #     # Too short
-  #     # Missing uppercase letter
-  #     # Missing lowercase letter
-  #     # Missing digit
-  #     # Contains whitespace
+    Examples:
+      | password      |
+      | Short1!       |
+      | lowercase123! |
+      | UPPERCASE123! |
+      | NoDigitsHere! |
+      | Has Space123! |
+      # Too short
+      # Missing uppercase letter
+      # Missing lowercase letter
+      # Missing digit
+      # Contains whitespace
