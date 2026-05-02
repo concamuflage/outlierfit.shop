@@ -36,6 +36,7 @@ public class CartSteps {
   private String rememberedSubtotal;
   private String generatedSignupEmail;
   private String verificationLink;
+  private String verificationEmailSender;
   private double rememberedTotalProductPriceUsd;
   private double rememberedTotalProductWeightKg;
   private final List<Double> addedProductPricesUsd = new ArrayList<>();
@@ -396,10 +397,25 @@ public class CartSteps {
   @Then("I log into its email account through the API and find the verification email")
   public void iLogIntoItsEmailAccountThroughTheApiAndFindTheVerificationEmail() {
     Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
-    verificationLink = GmailVerificationClient.findLatestVerificationLink(generatedSignupEmail);
+    GmailVerificationClient.VerificationEmail verificationEmail =
+      GmailVerificationClient.findLatestVerificationEmail(generatedSignupEmail);
+    verificationLink = verificationEmail.verificationLink();
+    verificationEmailSender = verificationEmail.from();
     Assert.assertTrue(
       verificationLink.contains("/verify-email?"),
       "Expected a verification link, got: " + verificationLink
+    );
+  }
+
+  @Then("the verification email sender should be correct")
+  public void theVerificationEmailSenderShouldBeCorrect() {
+    Assert.assertNotNull(verificationEmailSender, "Verification email sender should have been captured first");
+    Assert.assertTrue(
+      verificationEmailSender.toLowerCase().contains(TestConfig.resendFromEmail().toLowerCase()),
+      "Expected verification email sender to contain "
+        + TestConfig.resendFromEmail()
+        + ", got: "
+        + verificationEmailSender
     );
   }
 

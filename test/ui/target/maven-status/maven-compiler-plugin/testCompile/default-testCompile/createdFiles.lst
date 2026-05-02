@@ -6,4 +6,5 @@ com/asianfit/ui/utils/GmailVerificationClient.class
 com/asianfit/api/support/OrdersApiSupport$DisposableAccount.class
 com/asianfit/ui/runner/PaymentRunner.class
 com/asianfit/ui/steps/PaymentSteps.class
+com/asianfit/ui/utils/GmailVerificationClient$VerificationEmail.class
 com/asianfit/ui/pages/SignupPage.class

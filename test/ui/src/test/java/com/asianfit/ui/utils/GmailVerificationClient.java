@@ -26,7 +26,7 @@ public final class GmailVerificationClient {
 
   private GmailVerificationClient() {}
 
-  public static String findLatestVerificationLink(String recipientEmail) {
+  public static VerificationEmail findLatestVerificationEmail(String recipientEmail) {
     String accessToken = accessToken();
     String query = "to:" + recipientEmail + " subject:\"Verify your OutlierFit account\" newer_than:14d";
     String listUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
@@ -48,11 +48,18 @@ public final class GmailVerificationClient {
       );
       String link = extractVerificationLink(message);
       if (link != null) {
-        return decodeHtmlEntities(link);
+        return new VerificationEmail(
+          decodeHtmlEntities(link),
+          headerValue(message, "From")
+        );
       }
     }
 
     throw new IllegalStateException("Gmail messages were found, but none contained a verification link.");
+  }
+
+  public static String findLatestVerificationLink(String recipientEmail) {
+    return findLatestVerificationEmail(recipientEmail).verificationLink();
   }
 
   private static String accessToken() {
@@ -137,6 +144,24 @@ public final class GmailVerificationClient {
   }
 
   @SuppressWarnings("unchecked")
+  private static String headerValue(Map<String, Object> message, String headerName) {
+    Object payloadObject = message.get("payload");
+    if (!(payloadObject instanceof Map<?, ?> payload)) return "";
+
+    Object headersObject = payload.get("headers");
+    if (!(headersObject instanceof List<?> headers)) return "";
+
+    for (Object headerObject : headers) {
+      Map<String, Object> header = (Map<String, Object>) headerObject;
+      if (headerName.equalsIgnoreCase(String.valueOf(header.get("name")))) {
+        return String.valueOf(header.get("value"));
+      }
+    }
+
+    return "";
+  }
+
+  @SuppressWarnings("unchecked")
   private static void collectBodyParts(Map<String, Object> part, StringBuilder body) {
     if (part == null) return;
 
@@ -172,4 +197,9 @@ public final class GmailVerificationClient {
   private static String urlEncode(String value) {
     return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
+
+  public record VerificationEmail(
+    String verificationLink,
+    String from
+  ) {}
 }

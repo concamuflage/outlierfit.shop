@@ -11,6 +11,7 @@ Feature: Signup
     Then the login should fail with an error message about email verification
     And Wait 10 Seconds before login and look for verification email
     And I log into its email account through the API and find the verification email
+    And the verification email sender should be correct
     And I click the link in the verification email
     Then the email verification should be successful
     And the user should be able to log in

@@ -231,6 +231,20 @@ public final class TestConfig {
     );
   }
 
+  public static String resendFromEmail() {
+    String value = firstNonBlank(
+      System.getProperty("resendFromEmail"),
+      System.getenv("RESEND_FROM_EMAIL"),
+      LOCAL_ENV.get("RESEND_FROM_EMAIL")
+    );
+    if (value == null) {
+      throw new IllegalStateException(
+        "Missing expected sender email. Set -DresendFromEmail, RESEND_FROM_EMAIL, or backend/.env"
+      );
+    }
+    return value;
+  }
+
   public static String unverifiedTestUserEmail() {
     String value = System.getProperty("unverifiedTestUserEmail");
     if (value == null || value.isBlank()) {
