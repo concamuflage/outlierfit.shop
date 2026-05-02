@@ -16,7 +16,6 @@ import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 import { PASSWORD_REQUIREMENTS_MESSAGE, isStrongPassword } from "@/shared/passwordPolicy";
 
 type SignupFormProps = {
-  onSuccess?: () => void;
   compact?: boolean;
 };
 
@@ -24,7 +23,7 @@ type SignupFormProps = {
  * Signup form UI and client-side submission handler.
  * Creates a user in the backend and prompts for email verification.
  */
-export default function SignupForm({ onSuccess, compact = false }: SignupFormProps) {
+export default function SignupForm({ compact = false }: SignupFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -77,7 +76,6 @@ export default function SignupForm({ onSuccess, compact = false }: SignupFormPro
       setLoading(false);
       const data = await res.json().catch(() => null);
       setSuccessMessage(data?.message ?? "Check your email to verify your account before signing in.");
-      onSuccess?.();
     } catch {
       setError("Unable to reach the signup service.");
       setLoading(false);

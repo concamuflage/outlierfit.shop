@@ -11,6 +11,7 @@ export async function isUserEmailVerified(userId: string) {
       SELECT email_verified
       FROM users
       WHERE id = $1
+        AND deleted_at IS NULL
     `,
     [numericUserId]
   );

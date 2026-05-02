@@ -20,7 +20,6 @@
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 type LoginFormProps = {
@@ -172,9 +171,9 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
             required
           />
           <div className="mt-2 text-right">
-            <Link href="/forgot-password" className="text-xs text-zinc-700 underline">
+            <a href="/forgot-password" className="text-xs text-zinc-700 underline">
               Forgot password?
-            </Link>
+            </a>
           </div>
         </div>
 

@@ -21,7 +21,7 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }: Signup
   return (
     <AuthModalShell isOpen={isOpen} onClose={onClose}>
       {/* Main signup form content. */}
-      <SignupForm compact onSuccess={onClose} />
+      <SignupForm compact />
       {/* Optional switch link so this modal can be used standalone. */}
       {onSwitchToLogin ? (
         <div className="mt-4 text-center text-xs text-zinc-600">

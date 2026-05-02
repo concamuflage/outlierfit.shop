@@ -96,6 +96,20 @@ pipeline {
             }
         }
 
+        stage('Post-deploy Signup Verification Test') {
+            steps {
+                dir("${WORKSPACE}/test/ui") {
+                    sh '''
+                        NODE_ENV=production \
+                        mvn -Dtest=SignupRunner \
+                            -Dheadless=true \
+                            -Dcucumber.filter.name='User cannot login without verifying their email address' \
+                            test
+                    '''
+                }
+            }
+        }
+
         // stage('Test') {
         //     steps {
         //         dir("${WORKSPACE}") {

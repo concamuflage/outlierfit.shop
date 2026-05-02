@@ -37,6 +37,8 @@ const ensureUsersTable = async () => {
       email_verified BOOLEAN NOT NULL DEFAULT FALSE,
       email_verification_token TEXT,
       email_verification_expires TIMESTAMP,
+      deleted_at TIMESTAMP WITH TIME ZONE,
+      deleted_email TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )`
   );
@@ -47,6 +49,8 @@ const ensureUsersTable = async () => {
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires TIMESTAMP");
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT");
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_email TEXT");
 };
 
 async function issueEmailVerification(user) {
@@ -130,7 +134,7 @@ exports.signup = async (req, res) => {
     await ensureUsersTable();
 
     const existing = await pool.query(
-      "SELECT id, email, first_name, email_verified FROM users WHERE email = $1",
+      "SELECT id, email, first_name, email_verified FROM users WHERE email = $1 AND deleted_at IS NULL",
       [normalizedEmail]
     );
     if (existing.rows.length > 0) {
@@ -201,6 +205,7 @@ exports.login = async (req, res) => {
           email_verified
         FROM users
         WHERE email = $1
+          AND deleted_at IS NULL
       `,
       [normalizedEmail]
     );
@@ -259,6 +264,7 @@ exports.verifyEmail = async (req, res) => {
           email_verification_expires
         FROM users
         WHERE email = $1
+          AND deleted_at IS NULL
       `,
       [email]
     );
@@ -321,7 +327,7 @@ exports.resendVerification = async (req, res) => {
     await ensureUsersTable();
 
     const result = await pool.query(
-      "SELECT id, email, first_name, email_verified FROM users WHERE email = $1",
+      "SELECT id, email, first_name, email_verified FROM users WHERE email = $1 AND deleted_at IS NULL",
       [normalizedEmail]
     );
 
@@ -358,6 +364,7 @@ exports.requestPasswordReset = async (req, res) => {
         SELECT id, email, first_name
         FROM users
         WHERE email = $1
+          AND deleted_at IS NULL
         LIMIT 1
       `,
       [normalizedEmail]
@@ -398,6 +405,7 @@ exports.resetPassword = async (req, res) => {
         SELECT id, password_reset_token, password_reset_expires
         FROM users
         WHERE email = $1
+          AND deleted_at IS NULL
         LIMIT 1
       `,
       [email]
