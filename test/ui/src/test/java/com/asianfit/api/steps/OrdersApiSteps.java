@@ -95,6 +95,18 @@ public class OrdersApiSteps {
     OrdersApiContext.setAuthCookies(OrdersApiSupport.authenticate());
   }
 
+  @Given("a verified disposable account exists for account deletion")
+  public void aVerifiedDisposableAccountExistsForAccountDeletion() throws Exception {
+    OrdersApiContext.setDisposableAccount(OrdersApiSupport.createVerifiedDisposableAccount());
+  }
+
+  @Given("I am authenticated as the disposable account")
+  public void iAmAuthenticatedAsTheDisposableAccount() {
+    OrdersApiSupport.DisposableAccount account = OrdersApiContext.disposableAccount();
+    Assert.assertNotNull(account, "Disposable account should have been created first");
+    OrdersApiContext.setAuthCookies(OrdersApiSupport.authenticate(account.email(), account.password()));
+  }
+
   @Given("I remember the current default measurement")
   public void iRememberTheCurrentDefaultMeasurement() throws Exception {
     OrdersApiContext.setOriginalMeasurement(OrdersApiSupport.loadMeasurementSnapshot());
@@ -122,6 +134,57 @@ public class OrdersApiSteps {
     response.then().statusCode(200);
     Assert.assertNotNull(response.jsonPath().getMap("user"));
     Assert.assertEquals(response.jsonPath().getString("user.email").toLowerCase(), TestConfig.testUserEmail().toLowerCase());
+  }
+
+  @When("I delete the current account without authentication")
+  public void iDeleteTheCurrentAccountWithoutAuthentication() {
+    OrdersApiContext.setAccountDeleteResponse(
+      OrdersApiSupport.deleteCurrentAccountWithoutAuthentication("StrongPass123A")
+    );
+  }
+
+  @When("I delete the current account with the wrong password")
+  public void iDeleteTheCurrentAccountWithTheWrongPassword() {
+    OrdersApiContext.setAccountDeleteResponse(
+      OrdersApiSupport.deleteCurrentAccount(OrdersApiContext.authCookies(), "WrongPassword123A")
+    );
+  }
+
+  @When("I delete the current account with the correct password")
+  public void iDeleteTheCurrentAccountWithTheCorrectPassword() {
+    OrdersApiSupport.DisposableAccount account = OrdersApiContext.disposableAccount();
+    Assert.assertNotNull(account, "Disposable account should have been created first");
+    OrdersApiContext.setAccountDeleteResponse(
+      OrdersApiSupport.deleteCurrentAccount(OrdersApiContext.authCookies(), account.password())
+    );
+  }
+
+  @Then("the account delete response should be unauthorized")
+  public void theAccountDeleteResponseShouldBeUnauthorized() {
+    OrdersApiContext.accountDeleteResponse().then().statusCode(401);
+  }
+
+  @Then("the account delete response should reject password confirmation")
+  public void theAccountDeleteResponseShouldRejectPasswordConfirmation() {
+    OrdersApiContext.accountDeleteResponse().then().statusCode(403);
+  }
+
+  @Then("the account delete response should be successful")
+  public void theAccountDeleteResponseShouldBeSuccessful() {
+    OrdersApiContext.accountDeleteResponse().then().statusCode(200);
+    Assert.assertEquals(OrdersApiContext.accountDeleteResponse().jsonPath().getString("message"), "Account deleted.");
+  }
+
+  @Then("the disposable account should no longer be able to log in")
+  public void theDisposableAccountShouldNoLongerBeAbleToLogIn() {
+    OrdersApiSupport.DisposableAccount account = OrdersApiContext.disposableAccount();
+    Assert.assertNotNull(account, "Disposable account should have been created first");
+
+    Response response = OrdersApiSupport.loginThroughBackend(account.email(), account.password());
+    Assert.assertTrue(
+      response.statusCode() == 401 || response.statusCode() == 403,
+      "Expected deleted account login to fail, got status " + response.statusCode() + " with body " + response.asString()
+    );
   }
 
   @When("I save a new default measurement")

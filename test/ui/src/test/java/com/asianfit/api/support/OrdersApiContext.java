@@ -9,10 +9,12 @@ public final class OrdersApiContext {
 
   private static final ThreadLocal<Cookies> AUTH_COOKIES = new ThreadLocal<>();
   private static final ThreadLocal<Response> PROFILE_RESPONSE = new ThreadLocal<>();
+  private static final ThreadLocal<Response> ACCOUNT_DELETE_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Response> CART_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Response> MOCK_PAYMENT_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<OrdersApiSupport.OrderFixture> FIXTURE = new ThreadLocal<>();
   private static final ThreadLocal<OrdersApiSupport.CheckoutFixture> CHECKOUT_FIXTURE = new ThreadLocal<>();
+  private static final ThreadLocal<OrdersApiSupport.DisposableAccount> DISPOSABLE_ACCOUNT = new ThreadLocal<>();
   private static final ThreadLocal<OrdersApiSupport.MeasurementSnapshot> ORIGINAL_MEASUREMENT = new ThreadLocal<>();
   private static final ThreadLocal<OrdersApiSupport.MeasurementSnapshot> TARGET_MEASUREMENT = new ThreadLocal<>();
   private static final ThreadLocal<OrdersApiSupport.AddressPayload> TARGET_ADDRESS = new ThreadLocal<>();
@@ -48,6 +50,14 @@ public final class OrdersApiContext {
     PROFILE_RESPONSE.set(response);
   }
 
+  public static Response accountDeleteResponse() {
+    return ACCOUNT_DELETE_RESPONSE.get();
+  }
+
+  public static void setAccountDeleteResponse(Response response) {
+    ACCOUNT_DELETE_RESPONSE.set(response);
+  }
+
   public static Response cartResponse() {
     return CART_RESPONSE.get();
   }
@@ -78,6 +88,14 @@ public final class OrdersApiContext {
 
   public static void setCheckoutFixture(OrdersApiSupport.CheckoutFixture fixture) {
     CHECKOUT_FIXTURE.set(fixture);
+  }
+
+  public static OrdersApiSupport.DisposableAccount disposableAccount() {
+    return DISPOSABLE_ACCOUNT.get();
+  }
+
+  public static void setDisposableAccount(OrdersApiSupport.DisposableAccount account) {
+    DISPOSABLE_ACCOUNT.set(account);
   }
 
   public static OrdersApiSupport.MeasurementSnapshot originalMeasurement() {

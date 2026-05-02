@@ -11,6 +11,10 @@ public final class TestConfig {
   private static final List<Path> LOCAL_ENV_PATHS = List.of(
     Path.of(".env"),
     Path.of(".env.local"),
+    Path.of("../.env"),
+    Path.of("../.env.local"),
+    Path.of("../../.env"),
+    Path.of("../../.env.local"),
     Path.of("backend/.env"),
     Path.of("backend/database/.env"),
     Path.of("../backend/.env"),
@@ -181,6 +185,50 @@ public final class TestConfig {
       );
     }
     return value;
+  }
+
+  public static String googleClientId() {
+    String value = firstNonBlank(
+      System.getProperty("googleClientId"),
+      System.getenv("GOOGLE_CLIENT_ID"),
+      LOCAL_ENV.get("GOOGLE_CLIENT_ID")
+    );
+    if (value == null || "change-me".equals(value)) {
+      throw new IllegalStateException(
+        "Missing Google client ID. Set -DgoogleClientId, GOOGLE_CLIENT_ID, or .env.local"
+      );
+    }
+    return value;
+  }
+
+  public static String googleClientSecret() {
+    String value = firstNonBlank(
+      System.getProperty("googleClientSecret"),
+      System.getenv("GOOGLE_CLIENT_SECRET"),
+      LOCAL_ENV.get("GOOGLE_CLIENT_SECRET")
+    );
+    if (value == null || "change-me".equals(value)) {
+      throw new IllegalStateException(
+        "Missing Google client secret. Set -DgoogleClientSecret, GOOGLE_CLIENT_SECRET, or .env.local"
+      );
+    }
+    return value;
+  }
+
+  public static String gmailAccessToken() {
+    return firstNonBlank(
+      System.getProperty("gmailAccessToken"),
+      System.getenv("GMAIL_ACCESS_TOKEN"),
+      LOCAL_ENV.get("GMAIL_ACCESS_TOKEN")
+    );
+  }
+
+  public static String gmailRefreshToken() {
+    return firstNonBlank(
+      System.getProperty("gmailRefreshToken"),
+      System.getenv("GMAIL_REFRESH_TOKEN"),
+      LOCAL_ENV.get("GMAIL_REFRESH_TOKEN")
+    );
   }
 
   public static String unverifiedTestUserEmail() {

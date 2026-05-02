@@ -2,6 +2,8 @@ com/asianfit/api/runner/StripeWebhookApiRunner.class
 com/asianfit/ui/pages/CheckoutSuccessPage.class
 com/asianfit/api/steps/StripeWebhookApiSteps.class
 com/asianfit/ui/pages/StripeCheckoutPage.class
+com/asianfit/ui/utils/GmailVerificationClient.class
+com/asianfit/api/support/OrdersApiSupport$DisposableAccount.class
 com/asianfit/ui/runner/PaymentRunner.class
 com/asianfit/ui/steps/PaymentSteps.class
 com/asianfit/ui/pages/SignupPage.class

@@ -2,30 +2,30 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2026-04-29T11:21:51 EDT" name="Surefire suite" finished-at="2026-04-29T11:22:05 EDT" duration-ms="13860">
+  <suite started-at="2026-05-01T20:12:08 EDT" name="Surefire suite" finished-at="2026-05-01T20:12:53 EDT" duration-ms="44490">
     <groups>
       <group name="cucumber">
-        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@233fe9b6]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
+        <method signature="AbstractTestNGCucumberTests.runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@ec756bd]" name="runScenario" class="io.cucumber.testng.AbstractTestNGCucumberTests"/>
       </group> <!-- cucumber -->
     </groups>
-    <test started-at="2026-04-29T11:21:51 EDT" name="Surefire test" finished-at="2026-04-29T11:22:05 EDT" duration-ms="13860">
+    <test started-at="2026-05-01T20:12:08 EDT" name="Surefire test" finished-at="2026-05-01T20:12:53 EDT" duration-ms="44490">
       <class name="com.asianfit.ui.runner.SignupRunner">
-        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@233fe9b6]" started-at="2026-04-29T11:21:51 EDT" name="setUpClass" finished-at="2026-04-29T11:21:52 EDT" duration-ms="255" status="PASS">
+        <test-method is-config="true" signature="setUpClass(org.testng.ITestContext)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@ec756bd]" started-at="2026-05-01T20:12:08 EDT" name="setUpClass" finished-at="2026-05-01T20:12:09 EDT" duration-ms="261" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA[org.testng.TestRunner@74e52303]]>
+                <![CDATA[org.testng.TestRunner@47af7f3d]]>
               </value>
             </param>
           </params>
           <reporter-output>
           </reporter-output>
         </test-method> <!-- setUpClass -->
-        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@233fe9b6]" started-at="2026-04-29T11:21:52 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-04-29T11:22:05 EDT" duration-ms="13567" status="PASS">
+        <test-method signature="runScenario(io.cucumber.testng.PickleWrapper,io.cucumber.testng.FeatureWrapper)[pri:0, instance:com.asianfit.ui.runner.SignupRunner@ec756bd]" started-at="2026-05-01T20:12:09 EDT" name="runScenario" description="Runs Cucumber Scenarios" data-provider="scenarios" finished-at="2026-05-01T20:12:53 EDT" duration-ms="44165" status="PASS">
           <params>
             <param index="0">
               <value>
-                <![CDATA["User cannot sign up twice with the same email address"]]>
+                <![CDATA["User cannot login without verifying their email address"]]>
               </value>
             </param>
             <param index="1">
@@ -37,7 +37,7 @@
           <reporter-output>
           </reporter-output>
         </test-method> <!-- runScenario -->
-        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.ui.runner.SignupRunner@233fe9b6]" started-at="2026-04-29T11:22:05 EDT" name="tearDownClass" finished-at="2026-04-29T11:22:05 EDT" duration-ms="16" status="PASS">
+        <test-method is-config="true" signature="tearDownClass()[pri:0, instance:com.asianfit.ui.runner.SignupRunner@ec756bd]" started-at="2026-05-01T20:12:53 EDT" name="tearDownClass" finished-at="2026-05-01T20:12:53 EDT" duration-ms="47" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- tearDownClass -->

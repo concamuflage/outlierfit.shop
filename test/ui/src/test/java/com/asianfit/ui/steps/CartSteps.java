@@ -8,13 +8,21 @@ import com.asianfit.ui.pages.ProductDetailPage;
 import com.asianfit.ui.pages.ProductsPage;
 import com.asianfit.ui.pages.SignupPage;
 import com.asianfit.ui.utils.DriverFactory;
+import com.asianfit.ui.utils.GmailVerificationClient;
 import com.asianfit.ui.utils.TestConfig;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import java.net.URI;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import org.testng.Assert;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
 
 public class CartSteps {
   private static final String PASSWORD_REQUIREMENTS_MESSAGE =
@@ -27,6 +35,7 @@ public class CartSteps {
 
   private String rememberedSubtotal;
   private String generatedSignupEmail;
+  private String verificationLink;
   private double rememberedTotalProductPriceUsd;
   private double rememberedTotalProductWeightKg;
   private final List<Double> addedProductPricesUsd = new ArrayList<>();
@@ -341,6 +350,13 @@ public class CartSteps {
     signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
   }
 
+  @When("I sign up with email {string} and password")
+  public void iSignUpWithEmailAndPassword(String email) {
+    // The email inbox must be accessible through the Gmail API credentials used by this test.
+    generatedSignupEmail = email;
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+  }
+
   @When("I sign up with a generated account")
   public void iSignUpWithAGeneratedAccount() {
     generatedSignupEmail = TestConfig.signupUserEmail();
@@ -365,9 +381,66 @@ public class CartSteps {
     loginPage().signIn(generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
   }
 
+  @When("I log in with the unverified account credentials")
+  public void iLogInWithTheUnverifiedAccountCredentials() {
+    Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
+    DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
+    loginPage().signIn(generatedSignupEmail, TestConfig.signupUserPassword());
+  }
+
+  @Then("the login should fail with an error message about email verification")
+  public void theLoginShouldFailWithAnErrorMessageAboutEmailVerification() {
+    theLoginPageShouldShowTheEmailVerificationError();
+  }
+
+  @Then("I log into its email account through the API and find the verification email")
+  public void iLogIntoItsEmailAccountThroughTheApiAndFindTheVerificationEmail() {
+    Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
+    verificationLink = GmailVerificationClient.findLatestVerificationLink(generatedSignupEmail);
+    Assert.assertTrue(
+      verificationLink.contains("/verify-email?"),
+      "Expected a verification link, got: " + verificationLink
+    );
+  }
+
+  @Then("I click the link in the verification email")
+  public void iClickTheLinkInTheVerificationEmail() {
+    Assert.assertNotNull(verificationLink, "Verification link should have been found first");
+    DriverFactory.getDriver().get(linkForCurrentBaseUrl(verificationLink));
+  }
+
+  @Then("the email verification should be successful")
+  public void theEmailVerificationShouldBeSuccessful() {
+    WebDriverWait wait = new WebDriverWait(DriverFactory.getDriver(), Duration.ofSeconds(15));
+    wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), "Email verified"));
+  }
+
+  @Then("the user should be able to log in")
+  public void theUserShouldBeAbleToLogIn() {
+    Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
+    DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
+    loginPage().signIn(generatedSignupEmail, TestConfig.signupUserPassword());
+    Assert.assertTrue(productsPage().showsAllFilter(), "Expected verified user to land on the products page");
+  }
+
+  @Then("delete the account through the API")
+  public void deleteTheAccountThroughTheApi() {
+    deleteSignupAccount();
+  }
+
+  @Then("I delete the account")
+  public void iDeleteTheAccount() {
+    deleteSignupAccount();
+  }
+
   @When("I wait 10 seconds before signing in")
   public void iWaitTenSecondsBeforeSigningIn() throws InterruptedException {
     Thread.sleep(10_000);
+  }
+
+  @When("Wait 10 Seconds before login and look for verification email")
+  public void waitTenSecondsBeforeLoginAndLookForVerificationEmail() throws InterruptedException {
+    iWaitTenSecondsBeforeSigningIn();
   }
 
   @Then("I should land on the cart page")
@@ -456,6 +529,37 @@ public class CartSteps {
     double orderTotalUsd = rememberedTotalProductPriceUsd + shippingUsd;
 
     return new ExpectedCartTotals(boxWeightKg, shipmentWeightKg, shippingUsd, orderTotalUsd);
+  }
+
+  private void deleteSignupAccount() {
+    String password = generatedSignupEmail != null ? TestConfig.signupUserPassword() : TestConfig.testUserPassword();
+    Object result = ((JavascriptExecutor) DriverFactory.getDriver()).executeAsyncScript(
+      """
+        const done = arguments[arguments.length - 1];
+        fetch('/api/account', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: arguments[0] })
+        })
+          .then(async (response) => done({
+            ok: response.ok,
+            status: response.status,
+            body: await response.json().catch(() => null)
+          }))
+          .catch((error) => done({ ok: false, status: 0, body: { error: String(error) } }));
+      """,
+      password
+    );
+
+    Assert.assertTrue(result instanceof Map<?, ?>, "Expected account delete API response, got: " + result);
+    Map<?, ?> response = (Map<?, ?>) result;
+    Assert.assertEquals(response.get("ok"), Boolean.TRUE, "Account delete API failed: " + response);
+  }
+
+  private String linkForCurrentBaseUrl(String link) {
+    URI original = URI.create(link);
+    URI base = URI.create(TestConfig.baseUrl());
+    return base.resolve(original.getRawPath() + "?" + original.getRawQuery()).toString();
   }
 
   private record ExpectedCartTotals(

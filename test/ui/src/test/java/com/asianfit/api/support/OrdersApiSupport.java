@@ -20,6 +20,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.mindrot.jbcrypt.BCrypt;
 import org.testng.Assert;
 
 /**
@@ -43,6 +44,13 @@ public final class OrdersApiSupport {
    * authenticated API requests.
    */
   public static Cookies authenticate() {
+    return authenticate(TestConfig.testUserEmail(), TestConfig.testUserPassword());
+  }
+
+  /**
+   * Logs in a specific user through NextAuth and returns authenticated session cookies.
+   */
+  public static Cookies authenticate(String email, String password) {
     // Ask NextAuth for a CSRF token before submitting credentials.
     Response csrfResponse = RestAssured
       .given()
@@ -70,8 +78,8 @@ public final class OrdersApiSupport {
       .contentType("application/x-www-form-urlencoded; charset=UTF-8")
       .accept(ContentType.JSON)
       .formParam("csrfToken", csrfToken)
-      .formParam("email", TestConfig.testUserEmail())
-      .formParam("password", TestConfig.testUserPassword())
+      .formParam("email", email)
+      .formParam("password", password)
       .formParam("callbackUrl", TestConfig.baseUrl() + "/products")
       .formParam("json", "true")
       .post(ApiEndpoints.path("auth.credentials"));
@@ -94,9 +102,76 @@ public final class OrdersApiSupport {
       .get(ApiEndpoints.path("auth.session"));
 
     sessionResponse.then().statusCode(200);
-    Assert.assertEquals(sessionResponse.jsonPath().getString("user.email"), TestConfig.testUserEmail());
+    Assert.assertEquals(sessionResponse.jsonPath().getString("user.email").toLowerCase(), email.toLowerCase());
     // Return only the authenticated cookies so callers can reuse them for protected API calls.
     return sessionCookies;
+  }
+
+  public static Response deleteCurrentAccountWithoutAuthentication(String password) {
+    return RestAssured
+      .given()
+      .contentType(ContentType.JSON)
+      .accept(ContentType.JSON)
+      .body(Map.of("password", password))
+      .delete(ApiEndpoints.path("account.current"));
+  }
+
+  public static Response deleteCurrentAccount(Cookies cookies, String password) {
+    return RestAssured
+      .given()
+      .cookies(cookies)
+      .contentType(ContentType.JSON)
+      .accept(ContentType.JSON)
+      .body(Map.of("password", password))
+      .delete(ApiEndpoints.path("account.current"));
+  }
+
+  public static Response loginThroughBackend(String email, String password) {
+    return RestAssured
+      .given()
+      .contentType(ContentType.JSON)
+      .accept(ContentType.JSON)
+      .body(Map.of("email", email, "password", password))
+      .post("/backend/auth/login");
+  }
+
+  public static DisposableAccount createVerifiedDisposableAccount() throws SQLException {
+    long suffix = System.currentTimeMillis();
+    String email = "api-delete-" + suffix + "@example.com";
+    String password = "StrongPass123A";
+    String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt(10));
+
+    try (
+      Connection connection = openConnection();
+      PreparedStatement deleteExisting = connection.prepareStatement("DELETE FROM users WHERE email = ?");
+      PreparedStatement insertUser = connection.prepareStatement(
+        """
+          INSERT INTO users (
+            email,
+            password_hash,
+            first_name,
+            last_name,
+            email_verified,
+            email_verification_token,
+            email_verification_expires
+          )
+          VALUES (?, ?, 'API', 'Delete', TRUE, NULL, NULL)
+          RETURNING id
+        """
+      )
+    ) {
+      deleteExisting.setString(1, email);
+      deleteExisting.executeUpdate();
+
+      insertUser.setString(1, email);
+      insertUser.setString(2, passwordHash);
+      try (ResultSet resultSet = insertUser.executeQuery()) {
+        if (!resultSet.next()) {
+          throw new IllegalStateException("Failed to create disposable account.");
+        }
+        return new DisposableAccount(resultSet.getInt("id"), email, password);
+      }
+    }
   }
 
   /** Retrieves the current authenticated user's profile payload. */
@@ -1171,5 +1246,11 @@ public final class OrdersApiSupport {
     BigDecimal chestCm,
     BigDecimal sleeveLengthCm,
     boolean existed
+  ) {}
+
+  public record DisposableAccount(
+    int userId,
+    String email,
+    String password
   ) {}
 }
