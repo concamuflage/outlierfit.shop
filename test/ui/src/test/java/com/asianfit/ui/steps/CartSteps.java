@@ -39,6 +39,7 @@ public class CartSteps {
 
   private String rememberedSubtotal;
   private String generatedSignupEmail;
+  private String generatedSignupPassword;
   private String verificationLink;
   private String verificationEmailSender;
   private double rememberedTotalProductPriceUsd;
@@ -349,46 +350,78 @@ public class CartSteps {
     loginPage().signIn(TestConfig.unverifiedTestUserEmail(), TestConfig.unverifiedTestUserPassword());
   }
 
+  @When("I login in with username {string} and password {string}")
+  public void iLoginInWithUsernameAndPassword(String username, String password) {
+    loginPage().signIn(username, password);
+  }
+
+  @When("I login in with the generated plus email and password {string}")
+  public void iLoginInWithTheGeneratedPlusEmailAndPassword(String password) {
+    Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
+    loginPage().signIn(generatedSignupEmail, password);
+  }
+
   @When("I sign up with a specified email address and password")
   public void iSignUpWithASpecifiedEmailAddressAndPassword() {
     generatedSignupEmail = TestConfig.signupUserEmail();
+    generatedSignupPassword = TestConfig.signupUserPassword();
     SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
   }
 
   @When("I sign up with email {string} and password")
   public void iSignUpWithEmailAndPassword(String email) {
     // The email inbox must be accessible through the Gmail API credentials used by this test.
     generatedSignupEmail = email;
+    generatedSignupPassword = TestConfig.signupUserPassword();
     SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
   }
 
   @When("I sign up with a generated account email and password")
   public void iSignUpWithAGeneratedAccountEmailAndPassword() {
     generatedSignupEmail = generatedGmailAlias(TestConfig.signupUserEmail());
+    generatedSignupPassword = TestConfig.signupUserPassword();
     SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
   }
 
   @When("I sign up with a plus email based on {string} and password")
   public void iSignUpWithAPlusEmailBasedOnAndPassword(String email) {
     generatedSignupEmail = generatedGmailAlias(email);
+    generatedSignupPassword = TestConfig.signupUserPassword();
     SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
+  }
+
+  @When("I sign up with a plus email based on {string} and password {string}")
+  public void iSignUpWithAPlusEmailBasedOnAndPassword(String email, String password) {
+    generatedSignupEmail = generatedGmailAlias(email);
+    generatedSignupPassword = password;
+    SignupTestState.rememberSignupEmail(generatedSignupEmail);
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
   }
 
   @When("I sign up with the same generated plus email and password")
   public void iSignUpWithTheSameGeneratedPlusEmailAndPassword() {
     Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+    generatedSignupPassword = generatedSignupPassword != null ? generatedSignupPassword : TestConfig.signupUserPassword();
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
+  }
+
+  @When("I sign up with the same generated plus email and password {string}")
+  public void iSignUpWithTheSameGeneratedPlusEmailAndPassword(String password) {
+    Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
+    generatedSignupPassword = password;
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
   }
 
   @When("I sign up with a generated account")
   public void iSignUpWithAGeneratedAccount() {
     generatedSignupEmail = TestConfig.signupUserEmail();
+    generatedSignupPassword = GENERATED_SIGNUP_PASSWORD;
     SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
   }
 
   @When("I sign up with a generated account using password {string}")
@@ -409,12 +442,18 @@ public class CartSteps {
   public void iLogInWithTheUnverifiedAccountCredentials() {
     Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
     DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
-    loginPage().signIn(generatedSignupEmail, TestConfig.signupUserPassword());
+    loginPage().signIn(generatedSignupEmail, signupPassword());
   }
 
   @Then("the login should fail with an error message about email verification")
   public void theLoginShouldFailWithAnErrorMessageAboutEmailVerification() {
     theLoginPageShouldShowTheEmailVerificationError();
+  }
+
+  @Then("the login should fail with an error message about incorrect password")
+  public void theLoginShouldFailWithAnErrorMessageAboutIncorrectPassword() {
+    Assert.assertTrue(loginPage().hasErrorMessage(), "Login page should show an authentication error");
+    Assert.assertEquals(loginPage().errorMessage(), "Invalid credentials");
   }
 
   @When("I request a new verification email")
@@ -465,10 +504,12 @@ public class CartSteps {
 
   @Then("the user should be able to log in")
   public void theUserShouldBeAbleToLogIn() {
-    Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
-    DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
-    loginPage().signIn(generatedSignupEmail, TestConfig.signupUserPassword());
-    Assert.assertTrue(productsPage().showsAllFilter(), "Expected verified user to land on the products page");
+    Assert.assertTrue(productsPage().showsAllFilter(), "Expected logged-in user to land on the products page");
+  }
+
+  @Then("the login should be successful and land on the products page")
+  public void theLoginShouldBeSuccessfulAndLandOnTheProductsPage() {
+    Assert.assertTrue(productsPage().showsAllFilter(), "Expected successful login to land on the products page");
   }
 
   @Then("delete the account through the API")
@@ -581,8 +622,12 @@ public class CartSteps {
     return new ExpectedCartTotals(boxWeightKg, shipmentWeightKg, shippingUsd, orderTotalUsd);
   }
 
+  private String signupPassword() {
+    return generatedSignupPassword != null ? generatedSignupPassword : TestConfig.signupUserPassword();
+  }
+
   private void deleteSignupAccount() {
-    String password = generatedSignupEmail != null ? TestConfig.signupUserPassword() : TestConfig.testUserPassword();
+    String password = generatedSignupEmail != null ? signupPassword() : TestConfig.testUserPassword();
     Object result = ((JavascriptExecutor) DriverFactory.getDriver()).executeAsyncScript(
       """
         const done = arguments[arguments.length - 1];
