@@ -7,8 +7,10 @@ import com.asianfit.ui.pages.HomePage;
 import com.asianfit.ui.pages.ProductDetailPage;
 import com.asianfit.ui.pages.ProductsPage;
 import com.asianfit.ui.pages.SignupPage;
+import com.asianfit.ui.utils.DatabaseCleanup;
 import com.asianfit.ui.utils.DriverFactory;
 import com.asianfit.ui.utils.GmailVerificationClient;
+import com.asianfit.ui.utils.SignupTestState;
 import com.asianfit.ui.utils.TestConfig;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -29,6 +31,7 @@ public class CartSteps {
     "Password must be at least 12 characters and include uppercase, lowercase, a number, and no spaces.";
   private static final String SIGNUP_SUCCESS_MESSAGE =
     "Check your email to verify your account before signing in.";
+  private static final String RESEND_VERIFICATION_SUCCESS_MESSAGE = "Verification email sent.";
   private static final String EMAIL_NOT_VERIFIED_MESSAGE =
     "Please verify your email before signing in.";
   private static final String GENERATED_SIGNUP_PASSWORD = "StrongPass123A";
@@ -348,6 +351,7 @@ public class CartSteps {
   @When("I sign up with a specified email address and password")
   public void iSignUpWithASpecifiedEmailAddressAndPassword() {
     generatedSignupEmail = TestConfig.signupUserEmail();
+    SignupTestState.rememberSignupEmail(generatedSignupEmail);
     signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
   }
 
@@ -355,24 +359,42 @@ public class CartSteps {
   public void iSignUpWithEmailAndPassword(String email) {
     // The email inbox must be accessible through the Gmail API credentials used by this test.
     generatedSignupEmail = email;
+    SignupTestState.rememberSignupEmail(generatedSignupEmail);
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+  }
+
+  @When("I sign up with a generated account email and password")
+  public void iSignUpWithAGeneratedAccountEmailAndPassword() {
+    generatedSignupEmail = generatedGmailAlias(TestConfig.signupUserEmail());
+    SignupTestState.rememberSignupEmail(generatedSignupEmail);
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+  }
+
+  @When("I sign up with a plus email based on {string} and password")
+  public void iSignUpWithAPlusEmailBasedOnAndPassword(String email) {
+    generatedSignupEmail = generatedGmailAlias(email);
+    SignupTestState.rememberSignupEmail(generatedSignupEmail);
+    signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
+  }
+
+  @When("I sign up with the same generated plus email and password")
+  public void iSignUpWithTheSameGeneratedPlusEmailAndPassword() {
+    Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
     signupPage().signUp("UI", "Tester", generatedSignupEmail, TestConfig.signupUserPassword());
   }
 
   @When("I sign up with a generated account")
   public void iSignUpWithAGeneratedAccount() {
     generatedSignupEmail = TestConfig.signupUserEmail();
+    SignupTestState.rememberSignupEmail(generatedSignupEmail);
     signupPage().signUp("UI", "Tester", generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
-  }
-
-  @When("I sign up with the configured existing account email")
-  public void iSignUpWithTheConfiguredExistingAccountEmail() {
-    signupPage().signUp("Existing", "User", TestConfig.testUserEmail(), GENERATED_SIGNUP_PASSWORD);
   }
 
   @When("I sign up with a generated account using password {string}")
   public void iSignUpWithAGeneratedAccountUsingPassword(String password) {
     long uniqueSuffix = System.currentTimeMillis();
     String email = "ui-test-invalid-" + uniqueSuffix + "@example.com";
+    SignupTestState.rememberSignupEmail(email);
     signupPage().signUp("UI", "Tester", email, password);
   }
 
@@ -392,6 +414,15 @@ public class CartSteps {
   @Then("the login should fail with an error message about email verification")
   public void theLoginShouldFailWithAnErrorMessageAboutEmailVerification() {
     theLoginPageShouldShowTheEmailVerificationError();
+  }
+
+  @When("I request a new verification email")
+  public void iRequestANewVerificationEmail() {
+    signupPage().requestNewVerificationEmail();
+    Assert.assertTrue(
+      signupPage().hasSuccessMessage(RESEND_VERIFICATION_SUCCESS_MESSAGE),
+      "Signup page should confirm a new verification email was sent, but got: " + signupPage().submissionState()
+    );
   }
 
   @Then("I log into its email account through the API and find the verification email")
@@ -444,10 +475,12 @@ public class CartSteps {
     deleteSignupAccount();
   }
 
-  @Then("I delete the account")
-  public void iDeleteTheAccount() {
-    deleteSignupAccount();
+  @Then("delete the account through database query")
+  public void deleteTheAccount() {
+    String email = generatedSignupEmail != null ? generatedSignupEmail : TestConfig.signupUserEmail();
+    DatabaseCleanup.deleteUserByEmail(email);
   }
+
 
   @When("I wait 10 seconds before signing in")
   public void iWaitTenSecondsBeforeSigningIn() throws InterruptedException {
@@ -576,6 +609,21 @@ public class CartSteps {
     URI original = URI.create(link);
     URI base = URI.create(TestConfig.baseUrl());
     return base.resolve(original.getRawPath() + "?" + original.getRawQuery()).toString();
+  }
+
+  private String generatedGmailAlias(String email) {
+    int atIndex = email.indexOf('@');
+    Assert.assertTrue(atIndex > 0, "Signup email must be a valid email address: " + email);
+
+    String localPart = email.substring(0, atIndex);
+    String domain = email.substring(atIndex + 1);
+    Assert.assertEquals(
+      domain.toLowerCase(),
+      "gmail.com",
+      "Generated signup email uses Gmail plus-addressing, so TEST_SIGNUP_EMAIL must be a Gmail inbox with API access."
+    );
+
+    return localPart + "+ui" + System.currentTimeMillis() + "@gmail.com";
   }
 
   private record ExpectedCartTotals(

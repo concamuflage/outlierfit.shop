@@ -6,6 +6,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class SignupPage extends BasePage {
@@ -17,6 +18,7 @@ public class SignupPage extends BasePage {
   private static final By SUBMIT = By.id("signup-submit");
   private static final By ERROR = By.id("signup-error");
   private static final By SUCCESS = By.id("signup-success");
+  private static final By RESEND_VERIFICATION = By.xpath("//button[normalize-space()='Resend verification email']");
 
   public SignupPage(WebDriver driver) {
     super(driver);
@@ -62,6 +64,20 @@ public class SignupPage extends BasePage {
     return text(SUCCESS);
   }
 
+  public void requestNewVerificationEmail() {
+    WebElement resendButton = waitForClickable(RESEND_VERIFICATION);
+    resendButton.click();
+  }
+
+  public boolean hasSuccessMessage(String message) {
+    try {
+      return new WebDriverWait(driver, Duration.ofSeconds(10))
+        .until(ExpectedConditions.textToBePresentInElementLocated(SUCCESS, message));
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
   public String submissionState() {
     if (count(SUCCESS) > 0) {
       return "success: " + successMessage();
@@ -92,10 +108,13 @@ public class SignupPage extends BasePage {
   }
 
   private void typeIntoField(By locator, String value) {
-    WebElement field = waitForClickable(locator);
-    field.click();
+    WebElement field = waitForPresence(locator);
     field.clear();
     field.sendKeys(value);
+  }
+
+  private WebElement waitForPresence(By locator) {
+    return wait.until(org.openqa.selenium.support.ui.ExpectedConditions.presenceOfElementLocated(locator));
   }
 
   private void submitForm() {

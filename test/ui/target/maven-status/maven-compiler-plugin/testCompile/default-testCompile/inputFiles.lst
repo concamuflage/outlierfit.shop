@@ -35,4 +35,5 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DatabaseCleanup.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DriverFactory.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/GmailVerificationClient.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/SignupTestState.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/TestConfig.java

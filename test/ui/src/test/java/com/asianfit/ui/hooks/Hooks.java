@@ -2,7 +2,7 @@ package com.asianfit.ui.hooks;
 
 import com.asianfit.ui.utils.DriverFactory;
 import com.asianfit.ui.utils.DatabaseCleanup;
-import com.asianfit.ui.utils.TestConfig;
+import com.asianfit.ui.utils.SignupTestState;
 import io.cucumber.java.After;
 import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
@@ -15,14 +15,6 @@ public class Hooks {
   public void setUp() {
     // Each scenario gets its own browser session to avoid cross-test state bleed.
     DriverFactory.createDriver();
-  }
-
-  @Before("@Signup")
-  public void cleanSignupUserBeforeScenario() {
-    if (TestConfig.productionMode()) {
-      return;
-    }
-    DatabaseCleanup.deleteSignupUser();
   }
 
   @Before("@Cart or @CartAndDrawerSync or @Payment")
@@ -51,10 +43,14 @@ public class Hooks {
 
   @After("@Signup")
   public void cleanSignupUserAfterScenario() {
-    if (TestConfig.productionMode()) {
-      return;
+    String signupEmail = SignupTestState.signupEmail();
+    try {
+      if (signupEmail != null && !signupEmail.isBlank()) {
+        DatabaseCleanup.deleteUserByEmail(signupEmail);
+      }
+    } finally {
+      SignupTestState.clear();
     }
-    DatabaseCleanup.deleteSignupUser();
   }
 
   @After("@Cart or @CartAndDrawerSync or @Payment")
