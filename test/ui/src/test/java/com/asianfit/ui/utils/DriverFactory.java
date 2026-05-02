@@ -14,7 +14,11 @@ public final class DriverFactory {
   private DriverFactory() {}
 
   public static void createDriver() {
-    WebDriverManager.chromedriver().setup();
+    if (Files.isExecutable(Path.of("/usr/bin/chromedriver"))) {
+      System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver");
+    } else {
+      WebDriverManager.chromedriver().setup();
+    }
 
     ChromeOptions options = new ChromeOptions();
     options.addArguments("--window-size=1600,1200");
