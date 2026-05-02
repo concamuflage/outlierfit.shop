@@ -41,6 +41,7 @@ public class LoginPage extends BasePage {
   private void typeIntoField(By locator, String value) {
     WebElement field = waitForClickable(locator);
     field.click();
+    field.clear();
     field.sendKeys(value);
   }
 }
