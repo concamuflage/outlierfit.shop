@@ -4,7 +4,6 @@ import com.asianfit.ui.utils.TestConfig;
 import java.time.Duration;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -96,8 +95,6 @@ public class SignupPage extends BasePage {
     WebElement field = waitForClickable(locator);
     field.click();
     field.clear();
-    field.sendKeys(Keys.chord(Keys.COMMAND, "a"));
-    field.sendKeys(Keys.DELETE);
     field.sendKeys(value);
   }
 
