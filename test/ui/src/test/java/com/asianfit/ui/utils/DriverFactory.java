@@ -1,6 +1,8 @@
 package com.asianfit.ui.utils;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -20,6 +22,11 @@ public final class DriverFactory {
     options.addArguments("--disable-dev-shm-usage");
     if (TestConfig.headless()) {
       options.addArguments("--headless=new");
+    }
+    if (Files.isExecutable(Path.of("/usr/bin/chromium"))) {
+      options.setBinary("/usr/bin/chromium");
+    } else if (Files.isExecutable(Path.of("/usr/bin/chromium-browser"))) {
+      options.setBinary("/usr/bin/chromium-browser");
     }
 
     WebDriver driver = new ChromeDriver(options);

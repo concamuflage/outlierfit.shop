@@ -2,6 +2,7 @@ package com.asianfit.ui.hooks;
 
 import com.asianfit.ui.utils.DriverFactory;
 import com.asianfit.ui.utils.DatabaseCleanup;
+import com.asianfit.ui.utils.TestConfig;
 import io.cucumber.java.After;
 import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
@@ -18,6 +19,9 @@ public class Hooks {
 
   @Before("@Signup")
   public void cleanSignupUserBeforeScenario() {
+    if (TestConfig.productionMode()) {
+      return;
+    }
     DatabaseCleanup.deleteSignupUser();
   }
 
@@ -47,6 +51,9 @@ public class Hooks {
 
   @After("@Signup")
   public void cleanSignupUserAfterScenario() {
+    if (TestConfig.productionMode()) {
+      return;
+    }
     DatabaseCleanup.deleteSignupUser();
   }
 

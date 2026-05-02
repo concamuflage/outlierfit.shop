@@ -54,6 +54,15 @@ public final class TestConfig {
     return Boolean.parseBoolean(value);
   }
 
+  public static boolean productionMode() {
+    String nodeEnv = firstNonBlank(
+      System.getProperty("nodeEnv"),
+      System.getenv("NODE_ENV"),
+      LOCAL_ENV.get("NODE_ENV")
+    );
+    return "production".equalsIgnoreCase(nodeEnv);
+  }
+
   public static String testUserEmail() {
     String value = System.getProperty("testUserEmail");
     if (value == null || value.isBlank()) {
