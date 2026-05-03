@@ -1,6 +1,9 @@
 package com.asianfit.ui.utils;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -80,19 +83,7 @@ public final class TestConfig {
   }
 
   public static String databaseUrl() {
-    String value = System.getProperty("testDatabaseUrl");
-    if (value == null || value.isBlank()) {
-      value = System.getenv("TEST_DATABASE_URL");
-    }
-    if (value == null || value.isBlank()) {
-      value = LOCAL_ENV.get("TEST_DATABASE_URL");
-    }
-    if (value == null || value.isBlank()) {
-      value = System.getenv("DATABASE_URL");
-    }
-    if (value == null || value.isBlank()) {
-      value = LOCAL_ENV.get("DATABASE_URL");
-    }
+    String value = configuredDatabaseUrl();
     if (value == null || value.isBlank()) {
       String host = firstNonBlank(
         System.getProperty("pgHost"),
@@ -127,7 +118,8 @@ public final class TestConfig {
     String value = firstNonBlank(
       System.getProperty("pgUser"),
       System.getenv("PGUSER"),
-      LOCAL_ENV.get("PGUSER")
+      LOCAL_ENV.get("PGUSER"),
+      databaseUrlUsername()
     );
     if (value == null) {
       throw new IllegalStateException(
@@ -141,7 +133,8 @@ public final class TestConfig {
     String value = firstNonBlank(
       System.getProperty("pgPassword"),
       System.getenv("PGPASSWORD"),
-      LOCAL_ENV.get("PGPASSWORD")
+      LOCAL_ENV.get("PGPASSWORD"),
+      databaseUrlPassword()
     );
     if (value == null) {
       throw new IllegalStateException(
@@ -350,14 +343,98 @@ public final class TestConfig {
 
   private static String toJdbcUrl(String value) {
     if (value.startsWith("jdbc:postgresql://")) {
-      return value;
+      return stripJdbcUserInfo(value);
     }
     if (value.startsWith("postgresql://")) {
-      return "jdbc:" + value;
+      return postgresUrlToJdbcUrl(value);
     }
     if (value.startsWith("postgres://")) {
-      return "jdbc:postgresql://" + value.substring("postgres://".length());
+      return postgresUrlToJdbcUrl(value);
     }
     return value;
+  }
+
+  private static String configuredDatabaseUrl() {
+    return firstNonBlank(
+      System.getProperty("testDatabaseUrl"),
+      System.getenv("TEST_DATABASE_URL"),
+      LOCAL_ENV.get("TEST_DATABASE_URL"),
+      System.getenv("DATABASE_URL"),
+      LOCAL_ENV.get("DATABASE_URL")
+    );
+  }
+
+  private static String databaseUrlUsername() {
+    String userInfo = databaseUrlUserInfo();
+    if (userInfo == null || userInfo.isBlank()) {
+      return null;
+    }
+
+    int passwordSeparator = userInfo.indexOf(':');
+    String username = passwordSeparator >= 0 ? userInfo.substring(0, passwordSeparator) : userInfo;
+    return decodeUrlPart(username);
+  }
+
+  private static String databaseUrlPassword() {
+    String userInfo = databaseUrlUserInfo();
+    if (userInfo == null || userInfo.isBlank()) {
+      return null;
+    }
+
+    int passwordSeparator = userInfo.indexOf(':');
+    if (passwordSeparator < 0 || passwordSeparator == userInfo.length() - 1) {
+      return null;
+    }
+
+    return decodeUrlPart(userInfo.substring(passwordSeparator + 1));
+  }
+
+  private static String databaseUrlUserInfo() {
+    URI uri = postgresUri(configuredDatabaseUrl());
+    return uri == null ? null : uri.getRawUserInfo();
+  }
+
+  private static String postgresUrlToJdbcUrl(String value) {
+    URI uri = postgresUri(value);
+    if (uri == null || uri.getHost() == null) {
+      return "jdbc:postgresql://" + value.substring(value.indexOf("://") + 3);
+    }
+
+    StringBuilder jdbcUrl = new StringBuilder("jdbc:postgresql://").append(uri.getHost());
+    if (uri.getPort() > 0) {
+      jdbcUrl.append(':').append(uri.getPort());
+    }
+    if (uri.getRawPath() != null && !uri.getRawPath().isBlank()) {
+      jdbcUrl.append(uri.getRawPath());
+    }
+    if (uri.getRawQuery() != null && !uri.getRawQuery().isBlank()) {
+      jdbcUrl.append('?').append(uri.getRawQuery());
+    }
+    return jdbcUrl.toString();
+  }
+
+  private static URI postgresUri(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    if (value.startsWith("jdbc:postgresql://")) {
+      return URI.create("postgresql://" + value.substring("jdbc:postgresql://".length()));
+    }
+    if (value.startsWith("postgresql://") || value.startsWith("postgres://")) {
+      return URI.create(value);
+    }
+    return null;
+  }
+
+  private static String stripJdbcUserInfo(String value) {
+    URI uri = postgresUri(value);
+    if (uri == null || uri.getRawUserInfo() == null) {
+      return value;
+    }
+    return postgresUrlToJdbcUrl("postgresql://" + value.substring("jdbc:postgresql://".length()));
+  }
+
+  private static String decodeUrlPart(String value) {
+    return URLDecoder.decode(value, StandardCharsets.UTF_8);
   }
 }

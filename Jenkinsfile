@@ -101,8 +101,9 @@ pipeline {
                 dir("${WORKSPACE}/test/ui") {
                     sh '''
                         NODE_ENV=production \
-                        mvn -Dtest=SignupRunner,ResetPasswordRunner \
+                        mvn -Dtest=TaggedRunner \
                             -Dheadless=true \
+                            -Dcucumber.filter.tags='@Signup or @ResetPassword' \
                             test
                     '''
                 }
