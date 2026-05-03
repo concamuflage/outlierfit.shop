@@ -12,7 +12,8 @@
     "migrate:up": "node-pg-migrate -m migrations up",
     "migrate:down": "node-pg-migrate -m migrations down",
     "migrate:create": "node-pg-migrate -m migrations create",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postbuild": "next-sitemap"
   },
   "dependencies": {
     "next": "16.1.2",
