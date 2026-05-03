@@ -53,6 +53,12 @@ public class EmailSteps {
     wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), "Email verified"));
   }
 
+  @Then("I should see message {string}")
+  public void iShouldSeeMessage(String message) {
+    WebDriverWait wait = new WebDriverWait(DriverFactory.getDriver(), Duration.ofSeconds(15));
+    wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), message));
+  }
+
   @When("I wait 10 seconds before signing in")
   public void iWaitTenSecondsBeforeSigningIn() throws InterruptedException {
     Thread.sleep(10_000);

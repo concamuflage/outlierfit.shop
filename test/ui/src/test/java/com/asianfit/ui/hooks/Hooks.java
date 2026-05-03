@@ -41,7 +41,7 @@ public class Hooks {
     DriverFactory.quitDriver();
   }
 
-  @After("@Signup")
+  @After("@Signup or @ResetPassword")
   public void cleanSignupUserAfterScenario() {
     String signupEmail = SignupTestState.signupEmail();
     try {
