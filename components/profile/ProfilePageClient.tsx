@@ -36,9 +36,10 @@ type ProfileData = {
 };
 
 type MeasurementForm = {
-  heightCm: string;
-  chestCm: string;
-  sleeveLengthCm: string;
+  heightFeet: string;
+  heightInches: string;
+  chestInches: string;
+  sleeveLengthInches: string;
 };
 
 type AddressForm = {
@@ -133,9 +134,10 @@ const US_STATES = [
 
 function emptyMeasurementForm(): MeasurementForm {
   return {
-    heightCm: "",
-    chestCm: "",
-    sleeveLengthCm: "",
+    heightFeet: "",
+    heightInches: "",
+    chestInches: "",
+    sleeveLengthInches: "",
   };
 }
 
@@ -152,11 +154,39 @@ function emptyAddressForm(): AddressForm {
 }
 
 function measurementToForm(measurement: Measurement): MeasurementForm {
+  const heightInches = measurement.heightCm == null ? null : cmToRoundedInches(measurement.heightCm);
+
   return {
-    heightCm: measurement.heightCm == null ? "" : String(measurement.heightCm),
-    chestCm: measurement.chestCm == null ? "" : String(measurement.chestCm),
-    sleeveLengthCm: measurement.sleeveLengthCm == null ? "" : String(measurement.sleeveLengthCm),
+    heightFeet: heightInches == null ? "" : String(Math.floor(heightInches / 12)),
+    heightInches: heightInches == null ? "" : String(heightInches % 12),
+    chestInches: measurement.chestCm == null ? "" : String(cmToRoundedInches(measurement.chestCm)),
+    sleeveLengthInches:
+      measurement.sleeveLengthCm == null ? "" : String(cmToRoundedInches(measurement.sleeveLengthCm)),
   };
+}
+
+function cmToRoundedInches(cm: number) {
+  return Math.round(cm / 2.54);
+}
+
+function inchesToCm(inches: number) {
+  return Math.round(inches * 2.54 * 10) / 10;
+}
+
+function formatHeightUs(cm: number | null) {
+  if (cm == null) return "Not set";
+  const totalInches = cmToRoundedInches(cm);
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}'${inches}"`;
+}
+
+function formatInches(cm: number | null) {
+  return cm == null ? "Not set" : `${cmToRoundedInches(cm)} in`;
+}
+
+function formatCm(cm: number | null) {
+  return cm == null ? "Not set" : `${cm} cm`;
 }
 
 function addressToForm(address: Address): AddressForm {
@@ -204,8 +234,62 @@ function formatUsPhone(phone: string) {
   return trimmedPhone.startsWith("+1") ? trimmedPhone : `+1 ${trimmedPhone}`;
 }
 
-function validateMeasurementForm(_values: MeasurementForm): MeasurementFormErrors {
-  return {};
+function parseOptionalMeasurement(value: string, options?: { allowZero?: boolean }) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const parsed = Number(trimmed);
+  const isValid = options?.allowZero ? parsed >= 0 : parsed > 0;
+  return Number.isFinite(parsed) && isValid ? parsed : NaN;
+}
+
+function validateMeasurementForm(values: MeasurementForm): MeasurementFormErrors {
+  const errors: MeasurementFormErrors = {};
+  const heightFeet = parseOptionalMeasurement(values.heightFeet);
+  const heightInches = parseOptionalMeasurement(values.heightInches, { allowZero: true });
+  const chestInches = parseOptionalMeasurement(values.chestInches);
+  const sleeveLengthInches = parseOptionalMeasurement(values.sleeveLengthInches);
+  const totalHeightInches =
+    heightFeet == null && heightInches == null ? null : (heightFeet ?? 0) * 12 + (heightInches ?? 0);
+
+  if (Number.isNaN(heightFeet)) errors.heightFeet = "Enter a valid height.";
+  if (Number.isNaN(heightInches) || (heightInches != null && heightInches >= 12)) {
+    errors.heightInches = "Enter inches from 0 to 11.";
+  }
+  if (totalHeightInches != null && (totalHeightInches < 36 || totalHeightInches > 96)) {
+    errors.heightFeet = "Height must be between 3'0\" and 8'0\".";
+  }
+  if (Number.isNaN(chestInches)) errors.chestInches = "Enter a valid chest measurement.";
+  if (chestInches != null && !Number.isNaN(chestInches) && (chestInches < 20 || chestInches > 80)) {
+    errors.chestInches = "Chest must be between 20 and 80 inches.";
+  }
+  if (Number.isNaN(sleeveLengthInches)) {
+    errors.sleeveLengthInches = "Enter a valid arm length.";
+  }
+  if (
+    sleeveLengthInches != null &&
+    !Number.isNaN(sleeveLengthInches) &&
+    (sleeveLengthInches < 15 || sleeveLengthInches > 45)
+  ) {
+    errors.sleeveLengthInches = "Arm length must be between 15 and 45 inches.";
+  }
+
+  return errors;
+}
+
+function measurementFormToCentimeters(values: MeasurementForm) {
+  const heightFeet = parseOptionalMeasurement(values.heightFeet);
+  const heightInches = parseOptionalMeasurement(values.heightInches, { allowZero: true });
+  const chestInches = parseOptionalMeasurement(values.chestInches);
+  const sleeveLengthInches = parseOptionalMeasurement(values.sleeveLengthInches);
+  const totalHeightInches =
+    heightFeet == null && heightInches == null ? null : (heightFeet ?? 0) * 12 + (heightInches ?? 0);
+
+  return {
+    heightCm: totalHeightInches == null ? null : inchesToCm(totalHeightInches),
+    chestCm: chestInches == null ? null : inchesToCm(chestInches),
+    sleeveLengthCm: sleeveLengthInches == null ? null : inchesToCm(sleeveLengthInches),
+  };
 }
 
 function validateAddressForm(values: AddressForm): AddressFormErrors {
@@ -584,7 +668,7 @@ export default function ProfilePageClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         section: "measurement",
-        measurement: measurementForm,
+        measurement: measurementFormToCentimeters(measurementForm),
       }),
     });
 
@@ -939,66 +1023,94 @@ export default function ProfilePageClient({
                 <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Height</p>
-                    <p className="mt-3 text-2xl font-semibold">{profile.measurement.heightCm} cm</p>
+                    <p className="mt-3 text-2xl font-semibold">{formatHeightUs(profile.measurement.heightCm)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.heightCm)}</p>
                   </div>
                   <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Chest</p>
-                    <p className="mt-3 text-2xl font-semibold">{profile.measurement.chestCm} cm</p>
+                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.chestCm)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.chestCm)}</p>
                   </div>
                   <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Sleeve Length</p>
-                    <p className="mt-3 text-2xl font-semibold">{profile.measurement.sleeveLengthCm} cm</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Arm Length
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">From shoulder seam to wrist</p>
+                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.sleeveLengthCm)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.sleeveLengthCm)}</p>
                   </div>
                 </div>
               ) : (
                 <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-5">
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    <label className="text-sm text-zinc-700">
-                      Height (cm)
-                      <input
-                        value={measurementForm.heightCm}
-                        onChange={(event) => setMeasurementForm((current) => ({
-                          ...current,
-                          heightCm: event.target.value,
-                        }))}
-                        className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
-                          measurementErrors.heightCm ? "border-red-300" : "border-zinc-200"
-                        }`}
-                      />
-                      {measurementErrors.heightCm ? (
-                        <div className="mt-2 text-xs text-red-600">{measurementErrors.heightCm}</div>
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-12 items-start">Height</span>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <input
+                          value={measurementForm.heightFeet}
+                          onChange={(event) => setMeasurementForm((current) => ({
+                            ...current,
+                            heightFeet: event.target.value,
+                          }))}
+                          placeholder="ft"
+                          inputMode="decimal"
+                          className={`w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
+                            measurementErrors.heightFeet ? "border-red-300" : "border-zinc-200"
+                          }`}
+                        />
+                        <input
+                          value={measurementForm.heightInches}
+                          onChange={(event) => setMeasurementForm((current) => ({
+                            ...current,
+                            heightInches: event.target.value,
+                          }))}
+                          placeholder="in"
+                          inputMode="decimal"
+                          className={`w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
+                            measurementErrors.heightInches ? "border-red-300" : "border-zinc-200"
+                          }`}
+                        />
+                      </div>
+                      {measurementErrors.heightFeet || measurementErrors.heightInches ? (
+                        <div className="mt-2 text-xs text-red-600">
+                          {measurementErrors.heightFeet ?? measurementErrors.heightInches}
+                        </div>
                       ) : null}
                     </label>
-                    <label className="text-sm text-zinc-700">
-                      Chest (cm)
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-12 items-start">Chest (in)</span>
                       <input
-                        value={measurementForm.chestCm}
+                        value={measurementForm.chestInches}
                         onChange={(event) => setMeasurementForm((current) => ({
                           ...current,
-                          chestCm: event.target.value,
+                          chestInches: event.target.value,
                         }))}
+                        inputMode="decimal"
                         className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
-                          measurementErrors.chestCm ? "border-red-300" : "border-zinc-200"
+                          measurementErrors.chestInches ? "border-red-300" : "border-zinc-200"
                         }`}
                       />
-                      {measurementErrors.chestCm ? (
-                        <div className="mt-2 text-xs text-red-600">{measurementErrors.chestCm}</div>
+                      {measurementErrors.chestInches ? (
+                        <div className="mt-2 text-xs text-red-600">{measurementErrors.chestInches}</div>
                       ) : null}
                     </label>
-                    <label className="text-sm text-zinc-700">
-                      Sleeve length (cm)
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-12 items-start">
+                        Arm length (from shoulder seam to wrist) (in)
+                      </span>
                       <input
-                        value={measurementForm.sleeveLengthCm}
+                        value={measurementForm.sleeveLengthInches}
                         onChange={(event) => setMeasurementForm((current) => ({
                           ...current,
-                          sleeveLengthCm: event.target.value,
+                          sleeveLengthInches: event.target.value,
                         }))}
+                        inputMode="decimal"
                         className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
-                          measurementErrors.sleeveLengthCm ? "border-red-300" : "border-zinc-200"
+                          measurementErrors.sleeveLengthInches ? "border-red-300" : "border-zinc-200"
                         }`}
                       />
-                      {measurementErrors.sleeveLengthCm ? (
-                        <div className="mt-2 text-xs text-red-600">{measurementErrors.sleeveLengthCm}</div>
+                      {measurementErrors.sleeveLengthInches ? (
+                        <div className="mt-2 text-xs text-red-600">{measurementErrors.sleeveLengthInches}</div>
                       ) : null}
                     </label>
                   </div>

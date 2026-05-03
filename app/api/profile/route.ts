@@ -16,12 +16,28 @@ function badRequest(message: string) {
 }
 
 function toOptionalNumber(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
   if (typeof value !== "string" || !value.trim()) {
     return null;
   }
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function validateMeasurementRange(label: string, value: number | null, min: number, max: number) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value < min || value > max) {
+    return `${label} is outside the allowed range.`;
+  }
+
+  return null;
 }
 
 async function resolveSessionUserId() {
@@ -78,6 +94,15 @@ export async function POST(request: Request) {
       const hasInvalidValue = [heightCm, chestCm, sleeveLengthCm].some((value) => value !== null && value <= 0);
       if (hasInvalidValue) {
         return badRequest("Measurement values must be greater than zero when provided.");
+      }
+
+      const rangeError =
+        validateMeasurementRange("Height", heightCm, 91.4, 243.8) ??
+        validateMeasurementRange("Chest", chestCm, 50.8, 203.2) ??
+        validateMeasurementRange("Arm length", sleeveLengthCm, 38.1, 114.3);
+
+      if (rangeError) {
+        return badRequest(rangeError);
       }
 
       await saveMeasurement(userId, {

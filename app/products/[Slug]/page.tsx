@@ -36,6 +36,21 @@ type ProductDetail = {
   variants: ProductVariant[];
 };
 
+function cmToRoundedInches(cm: number) {
+  return Math.round(cm / 2.54);
+}
+
+function formatHeightUs(cm: number) {
+  const totalInches = cmToRoundedInches(cm);
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}'${inches}"`;
+}
+
+function formatMeasurementInches(cm: number) {
+  return `${cmToRoundedInches(cm)} in`;
+}
+
 export default function ProductDetailPage() {
   const params = useParams<{ Slug: string }>();
   const slug = params?.Slug ?? "";
@@ -299,6 +314,12 @@ export default function ProductDetailPage() {
                           ]
                             .filter(Boolean)
                             .join(" · ");
+                          const sizeMetaUs = [
+                            sizeDetails?.height_cm != null ? `Height ${formatHeightUs(sizeDetails.height_cm)}` : null,
+                            sizeDetails?.chest_cm != null ? `Chest ${formatMeasurementInches(sizeDetails.chest_cm)}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ");
 
                           return (
                             <div key={s} className="grid grid-cols-1 gap-2 sm:grid-cols-[96px_1fr] sm:items-center sm:gap-3">
@@ -317,7 +338,10 @@ export default function ProductDetailPage() {
                                 {s}
                               </button>
                               {sizeMeta ? (
-                                <span className="text-xs text-zinc-500">{sizeMeta}</span>
+                                <span className="text-xs text-zinc-500">
+                                  {sizeMetaUs ? <span className="block">{sizeMetaUs}</span> : null}
+                                  <span className="block">{sizeMeta}</span>
+                                </span>
                               ) : null}
                             </div>
                           );
