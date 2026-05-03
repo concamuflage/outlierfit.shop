@@ -96,14 +96,13 @@ pipeline {
             }
         }
 
-        stage('Post-deploy Signup Verification Test') {
+        stage('Post-deploy Auth UI Tests') {
             steps {
                 dir("${WORKSPACE}/test/ui") {
                     sh '''
                         NODE_ENV=production \
-                        mvn -Dtest=SignupRunner \
+                        mvn -Dtest=SignupRunner,ResetPasswordRunner \
                             -Dheadless=true \
-                            -Dcucumber.filter.name='User cannot login without verifying their email address' \
                             test
                     '''
                 }
