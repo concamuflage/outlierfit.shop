@@ -2,46 +2,19 @@ package com.asianfit.ui.steps;
 
 import com.asianfit.ui.pages.CartPage;
 import com.asianfit.ui.pages.CartDrawer;
-import com.asianfit.ui.pages.LoginPage;
 import com.asianfit.ui.pages.HomePage;
 import com.asianfit.ui.pages.ProductDetailPage;
 import com.asianfit.ui.pages.ProductsPage;
-import com.asianfit.ui.pages.SignupPage;
-import com.asianfit.ui.utils.DatabaseCleanup;
 import com.asianfit.ui.utils.DriverFactory;
-import com.asianfit.ui.utils.GmailVerificationClient;
-import com.asianfit.ui.utils.SignupTestState;
-import com.asianfit.ui.utils.TestConfig;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.testng.Assert;
-import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
-import java.time.Duration;
 
 public class CartSteps {
-  private static final String PASSWORD_REQUIREMENTS_MESSAGE =
-    "Password must be at least 12 characters and include uppercase, lowercase, a number, and no spaces.";
-  private static final String SIGNUP_SUCCESS_MESSAGE =
-    "Check your email to verify your account before signing in.";
-  private static final String RESEND_VERIFICATION_SUCCESS_MESSAGE = "Verification email sent.";
-  private static final String EMAIL_NOT_VERIFIED_MESSAGE =
-    "Please verify your email before signing in.";
-  private static final String GENERATED_SIGNUP_PASSWORD = "StrongPass123A";
-
   private String rememberedSubtotal;
-  private String generatedSignupEmail;
-  private String generatedSignupPassword;
-  private String verificationLink;
-  private String verificationEmailSender;
   private double rememberedTotalProductPriceUsd;
   private double rememberedTotalProductWeightKg;
   private final List<Double> addedProductPricesUsd = new ArrayList<>();
@@ -63,16 +36,8 @@ public class CartSteps {
     return new CartDrawer(DriverFactory.getDriver());
   }
 
-  private LoginPage loginPage() {
-    return new LoginPage(DriverFactory.getDriver());
-  }
-
   private CartPage cartPage() {
     return new CartPage(DriverFactory.getDriver());
-  }
-
-  private SignupPage signupPage() {
-    return new SignupPage(DriverFactory.getDriver());
   }
 
   @Given("I open the products page")
@@ -88,16 +53,6 @@ public class CartSteps {
   @Given("I open the protected cart page")
   public void iOpenTheProtectedCartPage() {
     productsPage().openProtectedCartPage();
-  }
-
-  @Given("I open the login page")
-  public void iOpenTheLoginPage() {
-    DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
-  }
-
-  @Given("I open the signup page")
-  public void iOpenTheSignupPage() {
-    signupPage().open();
   }
 
   @When("I open the first product from the grid")
@@ -335,205 +290,6 @@ public class CartSteps {
     Assert.assertNotEquals(cartDrawer().subtotal(), rememberedSubtotal);
   }
 
-  @Then("I should be on the login page")
-  public void iShouldBeOnTheLoginPage() {
-    Assert.assertTrue(loginPage().isVisible(), "Expected login page to be visible");
-  }
-
-  @When("I sign in with the configured test account")
-  public void iSignInWithTheConfiguredTestAccount() {
-    loginPage().signIn(TestConfig.testUserEmail(), TestConfig.testUserPassword());
-  }
-
-  @When("I sign in with the unverified test account")
-  public void iSignInWithTheUnverifiedTestAccount() {
-    loginPage().signIn(TestConfig.unverifiedTestUserEmail(), TestConfig.unverifiedTestUserPassword());
-  }
-
-  @When("I login in with username {string} and password {string}")
-  public void iLoginInWithUsernameAndPassword(String username, String password) {
-    loginPage().signIn(username, password);
-  }
-
-  @When("I login in with the generated plus email and password {string}")
-  public void iLoginInWithTheGeneratedPlusEmailAndPassword(String password) {
-    Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
-    loginPage().signIn(generatedSignupEmail, password);
-  }
-
-  @When("I sign up with a specified email address and password")
-  public void iSignUpWithASpecifiedEmailAddressAndPassword() {
-    generatedSignupEmail = TestConfig.signupUserEmail();
-    generatedSignupPassword = TestConfig.signupUserPassword();
-    SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with email {string} and password")
-  public void iSignUpWithEmailAndPassword(String email) {
-    // The email inbox must be accessible through the Gmail API credentials used by this test.
-    generatedSignupEmail = email;
-    generatedSignupPassword = TestConfig.signupUserPassword();
-    SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with a generated account email and password")
-  public void iSignUpWithAGeneratedAccountEmailAndPassword() {
-    generatedSignupEmail = generatedGmailAlias(TestConfig.signupUserEmail());
-    generatedSignupPassword = TestConfig.signupUserPassword();
-    SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with a plus email based on {string} and password")
-  public void iSignUpWithAPlusEmailBasedOnAndPassword(String email) {
-    generatedSignupEmail = generatedGmailAlias(email);
-    generatedSignupPassword = TestConfig.signupUserPassword();
-    SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with a plus email based on {string} and password {string}")
-  public void iSignUpWithAPlusEmailBasedOnAndPassword(String email, String password) {
-    generatedSignupEmail = generatedGmailAlias(email);
-    generatedSignupPassword = password;
-    SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with the same generated plus email and password")
-  public void iSignUpWithTheSameGeneratedPlusEmailAndPassword() {
-    Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
-    generatedSignupPassword = generatedSignupPassword != null ? generatedSignupPassword : TestConfig.signupUserPassword();
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with the same generated plus email and password {string}")
-  public void iSignUpWithTheSameGeneratedPlusEmailAndPassword(String password) {
-    Assert.assertNotNull(generatedSignupEmail, "Generated plus email should have been created first");
-    generatedSignupPassword = password;
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with a generated account")
-  public void iSignUpWithAGeneratedAccount() {
-    generatedSignupEmail = TestConfig.signupUserEmail();
-    generatedSignupPassword = GENERATED_SIGNUP_PASSWORD;
-    SignupTestState.rememberSignupEmail(generatedSignupEmail);
-    signupPage().signUp("UI", "Tester", generatedSignupEmail, generatedSignupPassword);
-  }
-
-  @When("I sign up with a generated account using password {string}")
-  public void iSignUpWithAGeneratedAccountUsingPassword(String password) {
-    long uniqueSuffix = System.currentTimeMillis();
-    String email = "ui-test-invalid-" + uniqueSuffix + "@example.com";
-    SignupTestState.rememberSignupEmail(email);
-    signupPage().signUp("UI", "Tester", email, password);
-  }
-
-  @When("I sign in with the generated account")
-  public void iSignInWithTheGeneratedAccount() {
-    Assert.assertNotNull(generatedSignupEmail, "Generated signup email should have been created first");
-    loginPage().signIn(generatedSignupEmail, GENERATED_SIGNUP_PASSWORD);
-  }
-
-  @When("I log in with the unverified account credentials")
-  public void iLogInWithTheUnverifiedAccountCredentials() {
-    Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
-    DriverFactory.getDriver().get(TestConfig.baseUrl() + "/login");
-    loginPage().signIn(generatedSignupEmail, signupPassword());
-  }
-
-  @Then("the login should fail with an error message about email verification")
-  public void theLoginShouldFailWithAnErrorMessageAboutEmailVerification() {
-    theLoginPageShouldShowTheEmailVerificationError();
-  }
-
-  @Then("the login should fail with an error message about incorrect password")
-  public void theLoginShouldFailWithAnErrorMessageAboutIncorrectPassword() {
-    Assert.assertTrue(loginPage().hasErrorMessage(), "Login page should show an authentication error");
-    Assert.assertEquals(loginPage().errorMessage(), "Invalid credentials");
-  }
-
-  @When("I request a new verification email")
-  public void iRequestANewVerificationEmail() {
-    signupPage().requestNewVerificationEmail();
-    Assert.assertTrue(
-      signupPage().hasSuccessMessage(RESEND_VERIFICATION_SUCCESS_MESSAGE),
-      "Signup page should confirm a new verification email was sent, but got: " + signupPage().submissionState()
-    );
-  }
-
-  @Then("I log into its email account through the API and find the verification email")
-  public void iLogIntoItsEmailAccountThroughTheApiAndFindTheVerificationEmail() {
-    Assert.assertNotNull(generatedSignupEmail, "Signup email should have been created first");
-    GmailVerificationClient.VerificationEmail verificationEmail =
-      GmailVerificationClient.findLatestVerificationEmail(generatedSignupEmail);
-    verificationLink = verificationEmail.verificationLink();
-    verificationEmailSender = verificationEmail.from();
-    Assert.assertTrue(
-      verificationLink.contains("/verify-email?"),
-      "Expected a verification link, got: " + verificationLink
-    );
-  }
-
-  @Then("the verification email sender should be correct")
-  public void theVerificationEmailSenderShouldBeCorrect() {
-    Assert.assertNotNull(verificationEmailSender, "Verification email sender should have been captured first");
-    Assert.assertTrue(
-      verificationEmailSender.toLowerCase().contains(TestConfig.resendFromEmail().toLowerCase()),
-      "Expected verification email sender to contain "
-        + TestConfig.resendFromEmail()
-        + ", got: "
-        + verificationEmailSender
-    );
-  }
-
-  @Then("I click the link in the verification email")
-  public void iClickTheLinkInTheVerificationEmail() {
-    Assert.assertNotNull(verificationLink, "Verification link should have been found first");
-    DriverFactory.getDriver().get(linkForCurrentBaseUrl(verificationLink));
-  }
-
-  @Then("the email verification should be successful")
-  public void theEmailVerificationShouldBeSuccessful() {
-    WebDriverWait wait = new WebDriverWait(DriverFactory.getDriver(), Duration.ofSeconds(15));
-    wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), "Email verified"));
-  }
-
-  @Then("the user should be able to log in")
-  public void theUserShouldBeAbleToLogIn() {
-    Assert.assertTrue(productsPage().showsAllFilter(), "Expected logged-in user to land on the products page");
-  }
-
-  @Then("the login should be successful and land on the products page")
-  public void theLoginShouldBeSuccessfulAndLandOnTheProductsPage() {
-    Assert.assertTrue(productsPage().showsAllFilter(), "Expected successful login to land on the products page");
-  }
-
-  @Then("delete the account through the API")
-  public void deleteTheAccountThroughTheApi() {
-    deleteSignupAccount();
-  }
-
-  @Then("delete the account through database query")
-  public void deleteTheAccount() {
-    String email = generatedSignupEmail != null ? generatedSignupEmail : TestConfig.signupUserEmail();
-    DatabaseCleanup.deleteUserByEmail(email);
-  }
-
-
-  @When("I wait 10 seconds before signing in")
-  public void iWaitTenSecondsBeforeSigningIn() throws InterruptedException {
-    Thread.sleep(10_000);
-  }
-
-  @When("Wait 10 Seconds before login and look for verification email")
-  public void waitTenSecondsBeforeLoginAndLookForVerificationEmail() throws InterruptedException {
-    iWaitTenSecondsBeforeSigningIn();
-  }
-
   @Then("I should land on the cart page")
   public void iShouldLandOnTheCartPage() {
     Assert.assertTrue(cartPage().isVisible(), "Expected cart page to be visible");
@@ -542,51 +298,6 @@ public class CartSteps {
   @Then("I should land on the products page")
   public void iShouldLandOnTheProductsPage() {
     Assert.assertTrue(productsPage().showsAllFilter(), "Expected products page to show the All filter");
-  }
-
-  @Then("I should be on the signup page")
-  public void iShouldBeOnTheSignupPage() {
-    Assert.assertTrue(signupPage().isVisible(), "Expected signup page to be visible");
-  }
-
-  @Then("the login page should not show an authentication error")
-  public void theLoginPageShouldNotShowAnAuthenticationError() {
-    Assert.assertFalse(loginPage().hasErrorMessage(), "Login page should not show an authentication error");
-  }
-
-  @Then("the login page should show the email verification error")
-  public void theLoginPageShouldShowTheEmailVerificationError() {
-    Assert.assertTrue(loginPage().hasErrorMessage(), "Login page should show the email verification error");
-    Assert.assertEquals(loginPage().errorMessage(), EMAIL_NOT_VERIFIED_MESSAGE);
-  }
-
-  @Then("the signup page should not show a validation error")
-  public void theSignupPageShouldNotShowAValidationError() {
-    Assert.assertFalse(signupPage().hasErrorMessage(), "Signup page should not show a validation error");
-  }
-
-  @Then("the signup page should show a validation error")
-  public void theSignupPageShouldShowAValidationError() {
-    Assert.assertTrue(signupPage().hasErrorMessage(), "Signup page should show a validation error");
-  }
-
-  @Then("the signup page should show the password requirements error")
-  public void theSignupPageShouldShowThePasswordRequirementsError() {
-    Assert.assertEquals(signupPage().errorMessage(), PASSWORD_REQUIREMENTS_MESSAGE);
-  }
-
-  @Then("the signup page should show a verification success message")
-  public void theSignupPageShouldShowAVerificationSuccessMessage() {
-    Assert.assertTrue(
-      signupPage().hasSuccessMessage(),
-      "Signup page should show a verification success message, but got: " + signupPage().submissionState()
-    );
-    Assert.assertEquals(signupPage().successMessage(), SIGNUP_SUCCESS_MESSAGE);
-  }
-
-  @Then("the signup should be successful and ask the user to verify their email address")
-  public void theSignupShouldBeSuccessfulAndAskTheUserToVerifyTheirEmailAddress() {
-    theSignupPageShouldShowAVerificationSuccessMessage();
   }
 
   private double calculateBoxWeightKg(double clothesWeightKg) {
@@ -620,56 +331,6 @@ public class CartSteps {
     double orderTotalUsd = rememberedTotalProductPriceUsd + shippingUsd;
 
     return new ExpectedCartTotals(boxWeightKg, shipmentWeightKg, shippingUsd, orderTotalUsd);
-  }
-
-  private String signupPassword() {
-    return generatedSignupPassword != null ? generatedSignupPassword : TestConfig.signupUserPassword();
-  }
-
-  private void deleteSignupAccount() {
-    String password = generatedSignupEmail != null ? signupPassword() : TestConfig.testUserPassword();
-    Object result = ((JavascriptExecutor) DriverFactory.getDriver()).executeAsyncScript(
-      """
-        const done = arguments[arguments.length - 1];
-        fetch('/api/account', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: arguments[0] })
-        })
-          .then(async (response) => done({
-            ok: response.ok,
-            status: response.status,
-            body: await response.json().catch(() => null)
-          }))
-          .catch((error) => done({ ok: false, status: 0, body: { error: String(error) } }));
-      """,
-      password
-    );
-
-    Assert.assertTrue(result instanceof Map<?, ?>, "Expected account delete API response, got: " + result);
-    Map<?, ?> response = (Map<?, ?>) result;
-    Assert.assertEquals(response.get("ok"), Boolean.TRUE, "Account delete API failed: " + response);
-  }
-
-  private String linkForCurrentBaseUrl(String link) {
-    URI original = URI.create(link);
-    URI base = URI.create(TestConfig.baseUrl());
-    return base.resolve(original.getRawPath() + "?" + original.getRawQuery()).toString();
-  }
-
-  private String generatedGmailAlias(String email) {
-    int atIndex = email.indexOf('@');
-    Assert.assertTrue(atIndex > 0, "Signup email must be a valid email address: " + email);
-
-    String localPart = email.substring(0, atIndex);
-    String domain = email.substring(atIndex + 1);
-    Assert.assertEquals(
-      domain.toLowerCase(),
-      "gmail.com",
-      "Generated signup email uses Gmail plus-addressing, so TEST_SIGNUP_EMAIL must be a Gmail inbox with API access."
-    );
-
-    return localPart + "+ui" + UUID.randomUUID().toString().replace("-", "") + "@gmail.com";
   }
 
   private record ExpectedCartTotals(

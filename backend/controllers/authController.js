@@ -275,7 +275,7 @@ exports.verifyEmail = async (req, res) => {
 
     const user = result.rows[0];
     if (user.email_verified) {
-      return res.json({ message: "Email already verified." });
+      return res.json({ message: "Your email is already verified. You can sign in." });
     }
 
     const hashedToken = hashVerificationToken(token);
@@ -441,7 +441,10 @@ exports.resetPassword = async (req, res) => {
         UPDATE users
         SET password_hash = $2,
             password_reset_token = NULL,
-            password_reset_expires = NULL
+            password_reset_expires = NULL,
+            email_verified = TRUE,
+            email_verification_token = NULL,
+            email_verification_expires = NULL
         WHERE id = $1
       `,
       [user.id, passwordHash]

@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
 public final class GmailVerificationClient {
   private static final Pattern VERIFICATION_LINK_PATTERN =
     Pattern.compile("https?://[^\\s\"'<>]+/verify-email\\?[^\\s\"'<>]+");
+  private static final Pattern PASSWORD_RESET_LINK_PATTERN =
+    Pattern.compile("https?://[^\\s\"'<>]+/reset-password\\?[^\\s\"'<>]+");
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(15);
   private static final HttpClient HTTP_CLIENT = HttpClient
     .newBuilder()
@@ -60,6 +62,51 @@ public final class GmailVerificationClient {
 
   public static String findLatestVerificationLink(String recipientEmail) {
     return findLatestVerificationEmail(recipientEmail).verificationLink();
+  }
+
+  public static String findLatestPasswordResetLink(String recipientEmail) {
+    return findLatestLink(
+      recipientEmail,
+      "Reset your OutlierFit password",
+      PASSWORD_RESET_LINK_PATTERN,
+      "/reset-password?",
+      "password reset"
+    );
+  }
+
+  private static String findLatestLink(
+    String recipientEmail,
+    String subject,
+    Pattern linkPattern,
+    String requiredPath,
+    String linkDescription
+  ) {
+    String accessToken = accessToken();
+    String query = "to:" + recipientEmail + " subject:\"" + subject + "\" newer_than:14d";
+    String listUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+      + "?maxResults=10"
+      + "&includeSpamTrash=true"
+      + "&q=" + urlEncode(query);
+
+    Map<String, Object> listPayload = getJson(listUrl, accessToken);
+    List<Map<String, Object>> messages = listPayloadValue(listPayload, "messages");
+    if (messages == null || messages.isEmpty()) {
+      throw new IllegalStateException("No Gmail " + linkDescription + " emails found for " + recipientEmail);
+    }
+
+    for (Map<String, Object> messageSummary : messages) {
+      String messageId = String.valueOf(messageSummary.get("id"));
+      Map<String, Object> message = getJson(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/" + messageId + "?format=full",
+        accessToken
+      );
+      String link = extractLink(message, linkPattern, requiredPath);
+      if (link != null) {
+        return decodeHtmlEntities(link);
+      }
+    }
+
+    throw new IllegalStateException("Gmail messages were found, but none contained a " + linkDescription + " link.");
   }
 
   private static String accessToken() {
@@ -136,6 +183,22 @@ public final class GmailVerificationClient {
     while (matcher.find()) {
       String link = matcher.group();
       if (link.contains("email=") && link.contains("token=")) {
+        return link;
+      }
+    }
+
+    return null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String extractLink(Map<String, Object> message, Pattern linkPattern, String requiredPath) {
+    StringBuilder body = new StringBuilder();
+    collectBodyParts((Map<String, Object>) message.get("payload"), body);
+
+    Matcher matcher = linkPattern.matcher(body.toString());
+    while (matcher.find()) {
+      String link = matcher.group();
+      if (link.contains(requiredPath) && link.contains("email=") && link.contains("token=")) {
         return link;
       }
     }

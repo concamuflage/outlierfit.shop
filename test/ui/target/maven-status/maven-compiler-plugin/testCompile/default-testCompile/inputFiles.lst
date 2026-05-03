@@ -17,10 +17,12 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CartDrawer.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CartPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/CheckoutSuccessPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ForgotPasswordPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/HomePage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/LoginPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductDetailPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ProductsPage.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/ResetPasswordPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/SignupPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/pages/StripeCheckoutPage.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/CartAndDrawerSyncRunner.java
@@ -30,8 +32,14 @@
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/PaymentRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/RegressionRunner.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/runner/SignupRunner.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/AccountSteps.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/CartSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/EmailSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/LoginSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/NavigationSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/PasswordResetSteps.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/PaymentSteps.java
+/Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/steps/SignupSteps.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DatabaseCleanup.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/DriverFactory.java
 /Users/Mark_1/project888/test/ui/src/test/java/com/asianfit/ui/utils/GmailVerificationClient.java

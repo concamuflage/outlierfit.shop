@@ -10,6 +10,7 @@ public class LoginPage extends BasePage {
   private static final By PASSWORD = By.id("login-password");
   private static final By SUBMIT = By.id("login-submit");
   private static final By ERROR = By.id("login-error");
+  private static final By FORGOT_PASSWORD = By.linkText("Forgot password?");
 
   public LoginPage(WebDriver driver) {
     super(driver);
@@ -36,6 +37,10 @@ public class LoginPage extends BasePage {
 
   public String errorMessage() {
     return text(ERROR);
+  }
+
+  public void openForgotPassword() {
+    click(FORGOT_PASSWORD);
   }
 
   private void typeIntoField(By locator, String value) {
