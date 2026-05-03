@@ -5,6 +5,9 @@ type MeasurementRecord = {
   heightCm: number | null;
   chestCm: number | null;
   sleeveLengthCm: number | null;
+  waistCm: number | null;
+  hipCm: number | null;
+  inseamCm: number | null;
 };
 
 type AddressRecord = {
@@ -52,6 +55,9 @@ async function ensureProfileTables() {
   await pool.query("ALTER TABLE measurements ALTER COLUMN height_cm DROP NOT NULL");
   await pool.query("ALTER TABLE measurements ALTER COLUMN chest_cm DROP NOT NULL");
   await pool.query("ALTER TABLE measurements ALTER COLUMN sleeve_length_cm DROP NOT NULL");
+  await pool.query("ALTER TABLE measurements ADD COLUMN IF NOT EXISTS waist_cm NUMERIC(5,2)");
+  await pool.query("ALTER TABLE measurements ADD COLUMN IF NOT EXISTS hip_cm NUMERIC(5,2)");
+  await pool.query("ALTER TABLE measurements ADD COLUMN IF NOT EXISTS inseam_cm NUMERIC(5,2)");
 
   await pool.query(
     `CREATE TABLE IF NOT EXISTS user_measurement (
@@ -92,6 +98,9 @@ function mapMeasurement(row: Record<string, unknown>): MeasurementRecord {
     heightCm: row.height_cm == null ? null : toNumber(row.height_cm),
     chestCm: row.chest_cm == null ? null : toNumber(row.chest_cm),
     sleeveLengthCm: row.sleeve_length_cm == null ? null : toNumber(row.sleeve_length_cm),
+    waistCm: row.waist_cm == null ? null : toNumber(row.waist_cm),
+    hipCm: row.hip_cm == null ? null : toNumber(row.hip_cm),
+    inseamCm: row.inseam_cm == null ? null : toNumber(row.inseam_cm),
   };
 }
 
@@ -128,7 +137,13 @@ export async function getProfile(userId: number): Promise<ProfileData> {
 
   const measurementResult = await pool.query(
     `
-      SELECT m.id, m.height_cm, m.chest_cm, m.sleeve_length_cm
+      SELECT m.id,
+             m.height_cm,
+             m.chest_cm,
+             m.sleeve_length_cm,
+             m.waist_cm,
+             m.hip_cm,
+             m.inseam_cm
       FROM user_measurement um
       JOIN measurements m ON m.id = um.measurement_id
       WHERE um.user_id = $1
@@ -203,6 +218,9 @@ export async function saveMeasurement(
     heightCm: number | null;
     chestCm: number | null;
     sleeveLengthCm: number | null;
+    waistCm: number | null;
+    hipCm: number | null;
+    inseamCm: number | null;
   }
 ) {
   await ensureProfileTables();
@@ -225,7 +243,10 @@ export async function saveMeasurement(
         UPDATE measurements
         SET height_cm = $2,
             chest_cm = $3,
-            sleeve_length_cm = $4
+            sleeve_length_cm = $4,
+            waist_cm = $5,
+            hip_cm = $6,
+            inseam_cm = $7
         WHERE id = $1
       `,
       [
@@ -233,6 +254,9 @@ export async function saveMeasurement(
         measurement.heightCm,
         measurement.chestCm,
         measurement.sleeveLengthCm,
+        measurement.waistCm,
+        measurement.hipCm,
+        measurement.inseamCm,
       ]
     );
     return;
@@ -240,11 +264,18 @@ export async function saveMeasurement(
 
   const insertedMeasurement = await pool.query(
     `
-      INSERT INTO measurements (height_cm, chest_cm, sleeve_length_cm)
-      VALUES ($1, $2, $3)
+      INSERT INTO measurements (height_cm, chest_cm, sleeve_length_cm, waist_cm, hip_cm, inseam_cm)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id
     `,
-    [measurement.heightCm, measurement.chestCm, measurement.sleeveLengthCm]
+    [
+      measurement.heightCm,
+      measurement.chestCm,
+      measurement.sleeveLengthCm,
+      measurement.waistCm,
+      measurement.hipCm,
+      measurement.inseamCm,
+    ]
   );
 
   await pool.query(

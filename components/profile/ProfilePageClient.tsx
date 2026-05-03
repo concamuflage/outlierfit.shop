@@ -8,6 +8,9 @@ type Measurement = {
   heightCm: number | null;
   chestCm: number | null;
   sleeveLengthCm: number | null;
+  waistCm: number | null;
+  hipCm: number | null;
+  inseamCm: number | null;
 };
 
 type Address = {
@@ -40,6 +43,9 @@ type MeasurementForm = {
   heightInches: string;
   chestInches: string;
   sleeveLengthInches: string;
+  waistInches: string;
+  hipInches: string;
+  inseamInches: string;
 };
 
 type AddressForm = {
@@ -138,6 +144,9 @@ function emptyMeasurementForm(): MeasurementForm {
     heightInches: "",
     chestInches: "",
     sleeveLengthInches: "",
+    waistInches: "",
+    hipInches: "",
+    inseamInches: "",
   };
 }
 
@@ -162,6 +171,9 @@ function measurementToForm(measurement: Measurement): MeasurementForm {
     chestInches: measurement.chestCm == null ? "" : String(cmToRoundedInches(measurement.chestCm)),
     sleeveLengthInches:
       measurement.sleeveLengthCm == null ? "" : String(cmToRoundedInches(measurement.sleeveLengthCm)),
+    waistInches: measurement.waistCm == null ? "" : String(cmToRoundedInches(measurement.waistCm)),
+    hipInches: measurement.hipCm == null ? "" : String(cmToRoundedInches(measurement.hipCm)),
+    inseamInches: measurement.inseamCm == null ? "" : String(cmToRoundedInches(measurement.inseamCm)),
   };
 }
 
@@ -249,6 +261,9 @@ function validateMeasurementForm(values: MeasurementForm): MeasurementFormErrors
   const heightInches = parseOptionalMeasurement(values.heightInches, { allowZero: true });
   const chestInches = parseOptionalMeasurement(values.chestInches);
   const sleeveLengthInches = parseOptionalMeasurement(values.sleeveLengthInches);
+  const waistInches = parseOptionalMeasurement(values.waistInches);
+  const hipInches = parseOptionalMeasurement(values.hipInches);
+  const inseamInches = parseOptionalMeasurement(values.inseamInches);
   const totalHeightInches =
     heightFeet == null && heightInches == null ? null : (heightFeet ?? 0) * 12 + (heightInches ?? 0);
 
@@ -273,6 +288,18 @@ function validateMeasurementForm(values: MeasurementForm): MeasurementFormErrors
   ) {
     errors.sleeveLengthInches = "Arm length must be between 15 and 45 inches.";
   }
+  if (Number.isNaN(waistInches)) errors.waistInches = "Enter a valid waist measurement.";
+  if (waistInches != null && !Number.isNaN(waistInches) && (waistInches < 18 || waistInches > 79)) {
+    errors.waistInches = "Waist must be between 18 and 79 inches.";
+  }
+  if (Number.isNaN(hipInches)) errors.hipInches = "Enter a valid hip measurement.";
+  if (hipInches != null && !Number.isNaN(hipInches) && (hipInches < 24 || hipInches > 87)) {
+    errors.hipInches = "Hip must be between 24 and 87 inches.";
+  }
+  if (Number.isNaN(inseamInches)) errors.inseamInches = "Enter a valid inseam.";
+  if (inseamInches != null && !Number.isNaN(inseamInches) && (inseamInches < 16 || inseamInches > 47)) {
+    errors.inseamInches = "Inseam must be between 16 and 47 inches.";
+  }
 
   return errors;
 }
@@ -282,6 +309,9 @@ function measurementFormToCentimeters(values: MeasurementForm) {
   const heightInches = parseOptionalMeasurement(values.heightInches, { allowZero: true });
   const chestInches = parseOptionalMeasurement(values.chestInches);
   const sleeveLengthInches = parseOptionalMeasurement(values.sleeveLengthInches);
+  const waistInches = parseOptionalMeasurement(values.waistInches);
+  const hipInches = parseOptionalMeasurement(values.hipInches);
+  const inseamInches = parseOptionalMeasurement(values.inseamInches);
   const totalHeightInches =
     heightFeet == null && heightInches == null ? null : (heightFeet ?? 0) * 12 + (heightInches ?? 0);
 
@@ -289,6 +319,9 @@ function measurementFormToCentimeters(values: MeasurementForm) {
     heightCm: totalHeightInches == null ? null : inchesToCm(totalHeightInches),
     chestCm: chestInches == null ? null : inchesToCm(chestInches),
     sleeveLengthCm: sleeveLengthInches == null ? null : inchesToCm(sleeveLengthInches),
+    waistCm: waistInches == null ? null : inchesToCm(waistInches),
+    hipCm: hipInches == null ? null : inchesToCm(hipInches),
+    inseamCm: inseamInches == null ? null : inchesToCm(inseamInches),
   };
 }
 
@@ -1039,6 +1072,21 @@ export default function ProfilePageClient({
                     <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.sleeveLengthCm)}</p>
                     <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.sleeveLengthCm)}</p>
                   </div>
+                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Waist</p>
+                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.waistCm)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.waistCm)}</p>
+                  </div>
+                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Hip</p>
+                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.hipCm)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.hipCm)}</p>
+                  </div>
+                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Inseam</p>
+                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.inseamCm)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.inseamCm)}</p>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-5">
@@ -1111,6 +1159,57 @@ export default function ProfilePageClient({
                       />
                       {measurementErrors.sleeveLengthInches ? (
                         <div className="mt-2 text-xs text-red-600">{measurementErrors.sleeveLengthInches}</div>
+                      ) : null}
+                    </label>
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-12 items-start">Waist (in)</span>
+                      <input
+                        value={measurementForm.waistInches}
+                        onChange={(event) => setMeasurementForm((current) => ({
+                          ...current,
+                          waistInches: event.target.value,
+                        }))}
+                        inputMode="decimal"
+                        className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
+                          measurementErrors.waistInches ? "border-red-300" : "border-zinc-200"
+                        }`}
+                      />
+                      {measurementErrors.waistInches ? (
+                        <div className="mt-2 text-xs text-red-600">{measurementErrors.waistInches}</div>
+                      ) : null}
+                    </label>
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-12 items-start">Hip (in)</span>
+                      <input
+                        value={measurementForm.hipInches}
+                        onChange={(event) => setMeasurementForm((current) => ({
+                          ...current,
+                          hipInches: event.target.value,
+                        }))}
+                        inputMode="decimal"
+                        className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
+                          measurementErrors.hipInches ? "border-red-300" : "border-zinc-200"
+                        }`}
+                      />
+                      {measurementErrors.hipInches ? (
+                        <div className="mt-2 text-xs text-red-600">{measurementErrors.hipInches}</div>
+                      ) : null}
+                    </label>
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-12 items-start">Inseam (in)</span>
+                      <input
+                        value={measurementForm.inseamInches}
+                        onChange={(event) => setMeasurementForm((current) => ({
+                          ...current,
+                          inseamInches: event.target.value,
+                        }))}
+                        inputMode="decimal"
+                        className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
+                          measurementErrors.inseamInches ? "border-red-300" : "border-zinc-200"
+                        }`}
+                      />
+                      {measurementErrors.inseamInches ? (
+                        <div className="mt-2 text-xs text-red-600">{measurementErrors.inseamInches}</div>
                       ) : null}
                     </label>
                   </div>

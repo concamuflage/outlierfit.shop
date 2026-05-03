@@ -90,8 +90,13 @@ export async function POST(request: Request) {
       const heightCm = toOptionalNumber(payload.measurement?.heightCm);
       const chestCm = toOptionalNumber(payload.measurement?.chestCm);
       const sleeveLengthCm = toOptionalNumber(payload.measurement?.sleeveLengthCm);
+      const waistCm = toOptionalNumber(payload.measurement?.waistCm);
+      const hipCm = toOptionalNumber(payload.measurement?.hipCm);
+      const inseamCm = toOptionalNumber(payload.measurement?.inseamCm);
 
-      const hasInvalidValue = [heightCm, chestCm, sleeveLengthCm].some((value) => value !== null && value <= 0);
+      const hasInvalidValue = [heightCm, chestCm, sleeveLengthCm, waistCm, hipCm, inseamCm].some(
+        (value) => value !== null && value <= 0
+      );
       if (hasInvalidValue) {
         return badRequest("Measurement values must be greater than zero when provided.");
       }
@@ -99,7 +104,10 @@ export async function POST(request: Request) {
       const rangeError =
         validateMeasurementRange("Height", heightCm, 91.4, 243.8) ??
         validateMeasurementRange("Chest", chestCm, 50.8, 203.2) ??
-        validateMeasurementRange("Arm length", sleeveLengthCm, 38.1, 114.3);
+        validateMeasurementRange("Arm length", sleeveLengthCm, 38.1, 114.3) ??
+        validateMeasurementRange("Waist", waistCm, 45, 200) ??
+        validateMeasurementRange("Hip", hipCm, 60, 220) ??
+        validateMeasurementRange("Inseam", inseamCm, 40, 120);
 
       if (rangeError) {
         return badRequest(rangeError);
@@ -109,6 +117,9 @@ export async function POST(request: Request) {
         heightCm,
         chestCm,
         sleeveLengthCm,
+        waistCm,
+        hipCm,
+        inseamCm,
       });
     } else if (payload.section === "address") {
       const addressType = payload.addressType === "billing" ? "billing" : "shipping";
