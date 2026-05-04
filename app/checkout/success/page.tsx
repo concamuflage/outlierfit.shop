@@ -1,20 +1,35 @@
+
 "use client";
 
+// Client-side page shown after Stripe Checkout redirect.
+// Responsible for:
+// - reading session/order info from URL or sessionStorage
+// - reading the order created by the Stripe webhook
+// - displaying invoice download link once available
+
+
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/components/cart/CartContext";
 
-const FINALIZE_RETRY_LIMIT = 20;
-const FINALIZE_RETRY_DELAY_MS = 1500;
 const FINALIZE_REQUEST_TIMEOUT_MS = 5000;
 
+
+// Main component handling checkout success flow and UI state
 function CheckoutSuccessPageContent() {
+  // Read query parameters returned from Stripe redirect
   const searchParams = useSearchParams();
   const { clearCart } = useCart();
   const orderIdFromUrl = searchParams.get("orderId");
   const stripeSessionId = searchParams.get("session_id");
+
+  // Key used to persist orderId across reloads for a specific Stripe session
   const storageKey = stripeSessionId ? `stripe-order:${stripeSessionId}` : null;
+
+  // Initialize orderId from:
+  // 1) URL (preferred)
+  // 2) sessionStorage (fallback for refresh/revisit)
   const [orderId, setOrderId] = useState(() => {
     if (orderIdFromUrl) {
       return orderIdFromUrl;
@@ -24,22 +39,23 @@ function CheckoutSuccessPageContent() {
     }
     return window.sessionStorage.getItem(storageKey);
   });
+
+  // Loading indicates whether we are still reading webhook-created order data from backend.
   const [loading, setLoading] = useState(
     Boolean(stripeSessionId && !orderIdFromUrl),
   );
+
+  // Error state for displaying issues while reading order data.
   const [error, setError] = useState<string | null>(null);
-  const finalizedSessionIdRef = useRef<string | null>(null);
-  const clearCartRef = useRef(clearCart);
+  const [pendingWebhook, setPendingWebhook] = useState(false);
 
-  useEffect(() => {
-    clearCartRef.current = clearCart;
-  }, [clearCart]);
-
+  // Sync orderId from URL or sessionStorage and stop loading if already known
   useEffect(() => {
     if (orderIdFromUrl) {
       setOrderId(orderIdFromUrl);
       setLoading(false);
       setError(null);
+      setPendingWebhook(false);
       if (storageKey) {
         window.sessionStorage.setItem(storageKey, orderIdFromUrl);
       }
@@ -51,121 +67,102 @@ function CheckoutSuccessPageContent() {
         setOrderId(storedOrderId);
         setLoading(false);
         setError(null);
+        setPendingWebhook(false);
       }
     }
   }, [orderIdFromUrl, storageKey]);
 
+  // If orderId is not yet known, ask the backend once for the order created by the webhook.
   useEffect(() => {
     if (!stripeSessionId || orderIdFromUrl || orderId) {
       return;
     }
-    if (finalizedSessionIdRef.current === stripeSessionId) {
-      return;
-    }
-
-    finalizedSessionIdRef.current = stripeSessionId;
 
     let cancelled = false;
 
-    async function finalizeOrder() {
+    async function loadWebhookOrder() {
       setLoading(true);
       setError(null);
-      let attempt = 0;
+      setPendingWebhook(false);
 
-      while (!cancelled && attempt < FINALIZE_RETRY_LIMIT) {
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(
-          () => controller.abort(),
-          FINALIZE_REQUEST_TIMEOUT_MS,
-        );
-        let response: Response | null = null;
-        let payload: {
-          orderId?: unknown;
-          error?: string;
-          status?: string;
-        } | null = null;
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        FINALIZE_REQUEST_TIMEOUT_MS,
+      );
+      let response: Response | null = null;
+      let payload: {
+        orderId?: unknown;
+        error?: string;
+        status?: string;
+      } | null = null;
 
-        try {
-          response = await fetch("/api/orders/checkout-complete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId: stripeSessionId }),
-            cache: "no-store",
-            signal: controller.signal,
-          });
+      try {
+        response = await fetch("/api/orders/checkout-complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: stripeSessionId }),
+          cache: "no-store",
+          signal: controller.signal,
+        });
 
-          payload = await response.json().catch(() => null);
-        } catch (error) {
-          if (!(error instanceof DOMException && error.name === "AbortError")) {
-            setError("Unable to finalize your order after payment.");
-            setLoading(false);
-            return;
-          }
-        } finally {
-          window.clearTimeout(timeoutId);
+        payload = await response.json().catch(() => null);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setError("Unable to load your order after payment.");
+        } else {
+          setError("Loading your order took too long. Refresh this page in a moment.");
         }
-
-        if (cancelled) {
-          return;
-        }
-
-        if (response?.ok && payload?.orderId != null) {
-          const nextOrderId = String(payload.orderId);
-          if (storageKey) {
-            window.sessionStorage.setItem(storageKey, nextOrderId);
-          }
-          setOrderId(nextOrderId);
-          setLoading(false);
-          setError(null);
-          clearCartRef.current();
-          window.history.replaceState(
-            null,
-            "",
-            `/checkout/success?orderId=${encodeURIComponent(nextOrderId)}`,
-          );
-          return;
-        }
-
-        if (payload?.status === "failed") {
-          setError(payload?.error ?? "Payment failed. Please try again.");
-          setLoading(false);
-          return;
-        }
-
-        if (response && response.status !== 409 && response.status < 500) {
-          setError(
-            payload?.error ?? "Unable to finalize your order after payment.",
-          );
-          setLoading(false);
-          return;
-        }
-
-        attempt += 1;
-        if (attempt < FINALIZE_RETRY_LIMIT) {
-          await new Promise((resolve) =>
-            window.setTimeout(resolve, FINALIZE_RETRY_DELAY_MS),
-          );
-        }
-      }
-
-      if (!cancelled) {
-        setError(
-          "Payment is still being confirmed. Refresh this page in a moment if your invoice does not appear.",
-        );
         setLoading(false);
+        return;
+      } finally {
+        window.clearTimeout(timeoutId);
       }
+
+      if (cancelled) {
+        return;
+      }
+
+      if (response?.ok && payload?.orderId != null) {
+        const nextOrderId = String(payload.orderId);
+        if (storageKey) {
+          window.sessionStorage.setItem(storageKey, nextOrderId);
+        }
+        setOrderId(nextOrderId);
+        setLoading(false);
+        setError(null);
+        setPendingWebhook(false);
+        clearCart();
+        window.history.replaceState(
+          null,
+          "",
+          `/checkout/success?orderId=${encodeURIComponent(nextOrderId)}`,
+        );
+        return;
+      }
+
+      if (payload?.status === "pending") {
+        setPendingWebhook(true);
+        setLoading(false);
+        return;
+      }
+
+      if (payload?.status === "failed") {
+        setError(payload?.error ?? "Payment failed. Please try again.");
+      } else {
+        setError(payload?.error ?? "Unable to load your order after payment.");
+      }
+      setLoading(false);
     }
 
-    void finalizeOrder();
+    void loadWebhookOrder();
 
     return () => {
       cancelled = true;
-      if (finalizedSessionIdRef.current === stripeSessionId) {
-        finalizedSessionIdRef.current = null;
-      }
     };
-  }, [orderId, orderIdFromUrl, storageKey, stripeSessionId]);
+  }, [clearCart, orderId, orderIdFromUrl, storageKey, stripeSessionId]);
 
+  // Build invoice download link once orderId is available
   const invoiceHref = useMemo(() => {
     if (!orderId) {
       return null;
@@ -173,6 +170,7 @@ function CheckoutSuccessPageContent() {
     return `/api/profile/orders/${encodeURIComponent(orderId)}/invoice/pdf`;
   }, [orderId]);
 
+  // Render UI based on loading, success, or error states
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
@@ -188,13 +186,21 @@ function CheckoutSuccessPageContent() {
           </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-600">
             {loading
-              ? "Your payment succeeded. We are waiting for Stripe to confirm the order and prepare your invoice."
-              : "Your payment was recorded successfully. We saved your order and your invoice is ready to download."}
+              ? "Your payment was submitted. We are checking whether Stripe has sent the order confirmation."
+              : pendingWebhook
+                ? "Your payment was submitted. Your order will appear after Stripe sends the confirmation event."
+                : "Your payment was recorded successfully. We saved your order and your invoice is ready to download."}
           </p>
 
           {error ? (
             <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
+            </div>
+          ) : null}
+
+          {pendingWebhook ? (
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Payment was submitted. Stripe has not finished sending the order confirmation to this app yet. Refresh this page in a moment to load your invoice.
             </div>
           ) : null}
 

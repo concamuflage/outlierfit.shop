@@ -20,6 +20,8 @@ public final class GmailVerificationClient {
     Pattern.compile("https?://[^\\s\"'<>]+/verify-email\\?[^\\s\"'<>]+");
   private static final Pattern PASSWORD_RESET_LINK_PATTERN =
     Pattern.compile("https?://[^\\s\"'<>]+/reset-password\\?[^\\s\"'<>]+");
+  private static final Pattern INVOICE_LINK_PATTERN =
+    Pattern.compile("https?://[^\\s\"'<>]+/api/profile/orders/\\d+/invoice/pdf");
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(15);
   private static final HttpClient HTTP_CLIENT = HttpClient
     .newBuilder()
@@ -72,6 +74,67 @@ public final class GmailVerificationClient {
       "/reset-password?",
       "password reset"
     );
+  }
+
+  public static InvoiceEmail findLatestCustomerInvoiceEmail(String recipientEmail) {
+    return findLatestInvoiceEmail(
+      recipientEmail,
+      "Your OutlierFit invoice",
+      "Hi there",
+      "customer invoice"
+    );
+  }
+
+  public static InvoiceEmail findLatestStoreInvoiceEmail(String recipientEmail) {
+    return findLatestInvoiceEmail(
+      recipientEmail,
+      "Paid order invoice",
+      "Hi OutlierFit team",
+      "store invoice notification"
+    );
+  }
+
+  private static InvoiceEmail findLatestInvoiceEmail(
+    String recipientEmail,
+    String subject,
+    String requiredBodyText,
+    String linkDescription
+  ) {
+    String accessToken = accessToken();
+    String query = "to:" + recipientEmail + " subject:\"" + subject + "\" newer_than:14d";
+    String listUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+      + "?maxResults=10"
+      + "&includeSpamTrash=true"
+      + "&q=" + urlEncode(query);
+
+    Map<String, Object> listPayload = getJson(listUrl, accessToken);
+    List<Map<String, Object>> messages = listPayloadValue(listPayload, "messages");
+    if (messages == null || messages.isEmpty()) {
+      throw new IllegalStateException("No Gmail " + linkDescription + " emails found for " + recipientEmail);
+    }
+
+    for (Map<String, Object> messageSummary : messages) {
+      String messageId = String.valueOf(messageSummary.get("id"));
+      Map<String, Object> message = getJson(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/" + messageId + "?format=full",
+        accessToken
+      );
+      String body = messageBody(message);
+      if (!body.contains(requiredBodyText)) {
+        continue;
+      }
+
+      String link = extractInvoiceLink(body);
+      if (link != null) {
+        return new InvoiceEmail(
+          decodeHtmlEntities(link),
+          headerValue(message, "From"),
+          body
+        );
+      }
+    }
+
+    throw new IllegalStateException("Gmail messages were found, but none contained a " + linkDescription + " link.");
   }
 
   private static String findLatestLink(
@@ -192,10 +255,7 @@ public final class GmailVerificationClient {
 
   @SuppressWarnings("unchecked")
   private static String extractLink(Map<String, Object> message, Pattern linkPattern, String requiredPath) {
-    StringBuilder body = new StringBuilder();
-    collectBodyParts((Map<String, Object>) message.get("payload"), body);
-
-    Matcher matcher = linkPattern.matcher(body.toString());
+    Matcher matcher = linkPattern.matcher(messageBody(message));
     while (matcher.find()) {
       String link = matcher.group();
       if (link.contains(requiredPath) && link.contains("email=") && link.contains("token=")) {
@@ -203,6 +263,21 @@ public final class GmailVerificationClient {
       }
     }
 
+    return null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String messageBody(Map<String, Object> message) {
+    StringBuilder body = new StringBuilder();
+    collectBodyParts((Map<String, Object>) message.get("payload"), body);
+    return body.toString();
+  }
+
+  private static String extractInvoiceLink(String body) {
+    Matcher matcher = INVOICE_LINK_PATTERN.matcher(body);
+    while (matcher.find()) {
+      return decodeHtmlEntities(matcher.group());
+    }
     return null;
   }
 
@@ -264,5 +339,11 @@ public final class GmailVerificationClient {
   public record VerificationEmail(
     String verificationLink,
     String from
+  ) {}
+
+  public record InvoiceEmail(
+    String invoiceLink,
+    String from,
+    String body
   ) {}
 }

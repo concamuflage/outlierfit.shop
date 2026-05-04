@@ -7,6 +7,7 @@ import org.openqa.selenium.WebElement;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class CartPage extends BasePage {
@@ -23,6 +24,13 @@ public class CartPage extends BasePage {
   private static final By CHECKOUT_BUTTON = By.xpath("//button[normalize-space()='Checkout' or normalize-space()='Hide checkout details']");
   private static final By CHECKOUT_DETAILS_TITLE = By.xpath("//h3[normalize-space()='Essential order details']");
   private static final By PAY_WITH_CARD_BUTTON = By.xpath("//button[normalize-space()='Pay with card' or normalize-space()='Redirecting...']");
+  private static final By SHIPPING_FULL_NAME_INPUT = By.xpath("//label[contains(normalize-space(.), 'Full name')]//input");
+  private static final By SHIPPING_PHONE_INPUT = By.xpath("//label[contains(normalize-space(.), 'Phone')]//input");
+  private static final By SHIPPING_STREET_INPUT = By.xpath("//label[contains(normalize-space(.), 'Street')]//input");
+  private static final By SHIPPING_CITY_INPUT = By.xpath("//label[contains(normalize-space(.), 'City')]//input");
+  private static final By SHIPPING_STATE_SELECT = By.xpath("//label[contains(normalize-space(.), 'State')]//select");
+  private static final By SHIPPING_ZIP_CODE_INPUT = By.xpath("//label[contains(normalize-space(.), 'ZIP code')]//input");
+  private static final By SAVE_SHIPPING_ADDRESS_BUTTON = By.xpath("//button[normalize-space()='Save shipping address' or normalize-space()='Saving...']");
 
   public CartPage(WebDriver driver) {
     super(driver);
@@ -50,6 +58,39 @@ public class CartPage extends BasePage {
 
   public void waitForCheckoutDetails() {
     waitForVisible(CHECKOUT_DETAILS_TITLE);
+  }
+
+  public void clickButton(String label) {
+    click(By.xpath("//button[normalize-space()='" + label + "']"));
+  }
+
+  public void enterShippingFullName(String fullName) {
+    type(SHIPPING_FULL_NAME_INPUT, fullName);
+  }
+
+  public void enterShippingPhone(String phone) {
+    type(SHIPPING_PHONE_INPUT, phone);
+  }
+
+  public void enterShippingStreet(String street) {
+    type(SHIPPING_STREET_INPUT, street);
+  }
+
+  public void enterShippingCity(String city) {
+    type(SHIPPING_CITY_INPUT, city);
+  }
+
+  public void selectShippingState(String state) {
+    new Select(waitForVisible(SHIPPING_STATE_SELECT)).selectByValue(state);
+  }
+
+  public void enterShippingZipCode(String zipCode) {
+    type(SHIPPING_ZIP_CODE_INPUT, zipCode);
+  }
+
+  public void saveShippingAddress() {
+    click(SAVE_SHIPPING_ADDRESS_BUTTON);
+    waitForClickable(PAY_WITH_CARD_BUTTON);
   }
 
   public boolean hasCheckoutDetails() {

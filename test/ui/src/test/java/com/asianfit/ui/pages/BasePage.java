@@ -28,6 +28,12 @@ public abstract class BasePage {
     waitForClickable(locator).click();
   }
 
+  protected void type(By locator, String value) {
+    WebElement element = waitForVisible(locator);
+    element.clear();
+    element.sendKeys(value);
+  }
+
   protected String text(By locator) {
     return waitForVisible(locator).getText().trim();
   }

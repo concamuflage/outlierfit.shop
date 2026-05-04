@@ -17,7 +17,7 @@ public class Hooks {
     DriverFactory.createDriver();
   }
 
-  @Before("@Cart or @CartAndDrawerSync or @Payment")
+  @Before("@Cart or @CartAndDrawerSync")
   public void cleanCartBeforeScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }
@@ -53,7 +53,19 @@ public class Hooks {
     }
   }
 
-  @After("@Cart or @CartAndDrawerSync or @Payment")
+  @After("@Payment")
+  public void cleanPaymentUserAfterScenario() {
+    String signupEmail = SignupTestState.signupEmail();
+    try {
+      if (signupEmail != null && !signupEmail.isBlank()) {
+        DatabaseCleanup.deletePaymentUserDataByEmail(signupEmail);
+      }
+    } finally {
+      SignupTestState.clear();
+    }
+  }
+
+  @After("@Cart or @CartAndDrawerSync")
   public void cleanCartAfterScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }

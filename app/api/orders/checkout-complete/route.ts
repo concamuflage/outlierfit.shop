@@ -1,109 +1,35 @@
+// Called by the browser after Stripe redirects the customer back to /checkout/success.
+// It reads the local order result created by the Stripe webhook and returns invoice details.
+
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import type Stripe from "stripe";
 import { authOptions } from "@/lib/auth";
-import {
-  assertStripePaymentMatchesCheckoutPayload,
-  finalizePaidOrder,
-  getStripeCheckoutOrderStatus,
-  getStripeCheckoutSession,
-  isValidCheckoutOrderPayload,
-  readStripePaymentDiscountDetails,
-  readStripePromotionCodeIdFromCheckoutSession,
-  readStripeChargeId,
-  readStripeCustomerId,
-  readStripePaymentIntentId,
-  upsertStripePaymentRecord,
-} from "@/lib/server/orderPayments";
-import { getStripeServerClient } from "@/lib/server/stripe";
+import { getStripeCheckoutOrderStatus } from "@/lib/server/orderPayments";
 
-function toDateOrNull(value: number | null | undefined) {
-  return typeof value === "number" && Number.isFinite(value) ? new Date(value * 1000) : null;
-}
-
-function getExpandedPaymentIntent(session: Stripe.Checkout.Session) {
-  return session.payment_intent && typeof session.payment_intent !== "string" ? session.payment_intent : null;
-}
-
-async function reconcilePaidStripeCheckoutSession(userId: number, stripeSessionId: string) {
-  const persistedCheckout = await getStripeCheckoutSession(stripeSessionId, userId);
-  if (!persistedCheckout) {
-    return null;
-  }
-
-  if (!isValidCheckoutOrderPayload(persistedCheckout.payload)) {
-    throw new Error("Saved Stripe checkout payload is invalid.");
-  }
-
-  const stripe = getStripeServerClient();
-  const checkoutSession = await stripe.checkout.sessions.retrieve(stripeSessionId, {
-    expand: [
-      "payment_intent",
-      "payment_intent.latest_charge",
-      "total_details.breakdown.discounts.discount",
-    ],
-  });
-
-  if (checkoutSession.payment_status !== "paid") {
-    return null;
-  }
-
-  const paymentIntent = getExpandedPaymentIntent(checkoutSession);
-  const promotionCodeId = readStripePromotionCodeIdFromCheckoutSession(checkoutSession);
-  const expandedPromotionCode = promotionCodeId
-    ? await stripe.promotionCodes.retrieve(promotionCodeId)
-    : null;
-  assertStripePaymentMatchesCheckoutPayload({
-    payload: persistedCheckout.payload,
-    checkoutSession,
-    paymentIntent,
-  });
-
-  const result = await finalizePaidOrder({
-    userId,
-    payload: persistedCheckout.payload,
-    paymentProvider: "stripe",
-    paymentReference: checkoutSession.id,
-    paidAt: toDateOrNull(paymentIntent?.created ?? null) ?? new Date(),
-  });
-
-  const paymentIntentId = paymentIntent?.id ?? readStripePaymentIntentId(checkoutSession.payment_intent);
-  if (paymentIntentId) {
-    await upsertStripePaymentRecord({
-      stripePaymentIntentId: paymentIntentId,
-      stripeCheckoutSessionId: checkoutSession.id,
-      stripeCustomerId: readStripeCustomerId(checkoutSession.customer),
-      stripeChargeId: readStripeChargeId(paymentIntent?.latest_charge ?? null),
-      status: "paid",
-      amount: paymentIntent?.amount_received ?? checkoutSession.amount_total ?? 0,
-      currency: String(paymentIntent?.currency ?? checkoutSession.currency ?? "usd"),
-      customerEmail: checkoutSession.customer_details?.email ?? checkoutSession.customer_email ?? null,
-      paidAt: toDateOrNull(paymentIntent?.created ?? null) ?? new Date(result.paidAt),
-      orderId: result.orderId,
-      discountDetails: readStripePaymentDiscountDetails(checkoutSession, expandedPromotionCode),
-    });
-  }
-
-  return result;
-}
-
+// POST handler invoked after client returns from Stripe Checkout
 export async function POST(request: Request) {
+  // Require authenticated user
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Read Stripe sessionId from request body
   const userId = Number(session.user.id);
   const payload = (await request.json().catch(() => null)) as { sessionId?: unknown } | null;
   const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId.trim() : "";
 
+  // Validate required parameter
   if (!sessionId) {
     return NextResponse.json({ error: "Missing Stripe session id." }, { status: 400 });
   }
 
   try {
+    // Check current status of this checkout in our system
     const status = await getStripeCheckoutOrderStatus(userId, sessionId);
 
+    // No record of this checkout for the user
     if (status.state === "not_found") {
       return NextResponse.json(
         {
@@ -114,6 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Payment failed according to our records/Stripe
     if (status.state === "failed") {
       return NextResponse.json(
         {
@@ -124,17 +51,8 @@ export async function POST(request: Request) {
       );
     }
 
+    // Pending means the webhook has not finalized the order yet.
     if (status.state === "pending") {
-      const completedOrder = await reconcilePaidStripeCheckoutSession(userId, sessionId);
-      if (completedOrder) {
-        return NextResponse.json({
-          status: "completed",
-          orderId: completedOrder.orderId,
-          invoiceNumber: completedOrder.invoiceNumber,
-          paidAt: completedOrder.paidAt,
-        });
-      }
-
       return NextResponse.json(
         {
           status: "pending",
@@ -145,6 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Already completed: return stored order details
     return NextResponse.json({
       status: "completed",
       orderId: status.orderId,
@@ -152,6 +71,7 @@ export async function POST(request: Request) {
       paidAt: status.paidAt,
     });
   } catch (error) {
+    // Unexpected error while reading locally recorded checkout status.
     console.error("stripe checkout status error:", error);
     const message = error instanceof Error ? error.message : "Unable to load Stripe checkout status.";
     return NextResponse.json({ error: message }, { status: 500 });

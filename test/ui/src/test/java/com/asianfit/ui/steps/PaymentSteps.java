@@ -4,6 +4,9 @@ import com.asianfit.ui.pages.CartPage;
 import com.asianfit.ui.pages.CheckoutSuccessPage;
 import com.asianfit.ui.pages.StripeCheckoutPage;
 import com.asianfit.ui.utils.DriverFactory;
+import com.asianfit.ui.utils.GmailVerificationClient;
+import com.asianfit.ui.utils.SignupTestState;
+import com.asianfit.ui.utils.TestConfig;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import java.time.Instant;
@@ -30,6 +33,46 @@ public class PaymentSteps {
   public void iClickCheckout() {
     cartPage().clickCheckout();
     cartPage().waitForCheckoutDetails();
+  }
+
+  @When("I click {string} button")
+  public void iClickButton(String label) {
+    cartPage().clickButton(label);
+  }
+
+  @When("I enter shipping full name {string}")
+  public void iEnterShippingFullName(String fullName) {
+    cartPage().enterShippingFullName(fullName);
+  }
+
+  @When("I enter shipping phone {string}")
+  public void iEnterShippingPhone(String phone) {
+    cartPage().enterShippingPhone(phone);
+  }
+
+  @When("I enter shipping street {string}")
+  public void iEnterShippingStreet(String street) {
+    cartPage().enterShippingStreet(street);
+  }
+
+  @When("I enter shipping city {string}")
+  public void iEnterShippingCity(String city) {
+    cartPage().enterShippingCity(city);
+  }
+
+  @When("I select shipping state {string}")
+  public void iSelectShippingState(String state) {
+    cartPage().selectShippingState(state);
+  }
+
+  @When("I enter shipping ZIP code {string}")
+  public void iEnterShippingZipCode(String zipCode) {
+    cartPage().enterShippingZipCode(zipCode);
+  }
+
+  @When("I save the shipping address")
+  public void iSaveTheShippingAddress() {
+    cartPage().saveShippingAddress();
   }
 
   @When("I start Stripe Checkout payment")
@@ -103,6 +146,16 @@ public class PaymentSteps {
     Assert.assertTrue(checkoutSuccessPage().isVisible(), "Expected checkout success page to be visible");
   }
 
+  @Then("I wait 10 seconds for the Stripe webhook to complete")
+  public void iWaitTenSecondsForTheStripeWebhookToComplete() throws InterruptedException {
+    Thread.sleep(10_000);
+  }
+
+  @Then("I refresh the checkout success page")
+  public void iRefreshTheCheckoutSuccessPage() {
+    checkoutSuccessPage().refresh();
+  }
+
   @Then("I should be returned to the cart page")
   public void iShouldBeReturnedToTheCartPage() {
     Assert.assertTrue(
@@ -115,6 +168,60 @@ public class PaymentSteps {
   public void iShouldSeeTheInvoiceDownloadLink() {
     checkoutSuccessPage().waitForConfirmationStateToDisappear();
     checkoutSuccessPage().waitForInvoiceLink();
+  }
+
+  @Then("I should receive a payment confirmation email with the invoice attached")
+  public void iShouldReceiveAPaymentConfirmationEmailWithTheInvoiceAttached() {
+    String email = SignupTestState.signupEmail();
+    Assert.assertNotNull(email, "Generated signup email should have been captured before checking invoice email");
+
+    GmailVerificationClient.InvoiceEmail invoiceEmail =
+      GmailVerificationClient.findLatestCustomerInvoiceEmail(email);
+
+    Assert.assertTrue(
+      invoiceEmail.body().contains("Hi there"),
+      "Expected customer invoice email greeting to distinguish it from the store notification"
+    );
+    Assert.assertTrue(
+      invoiceEmail.body().contains("Your invoice"),
+      "Expected customer invoice email to contain customer-facing invoice copy"
+    );
+    SignupTestState.rememberCustomerInvoiceLink(invoiceEmail.invoiceLink());
+  }
+
+  @Then("the invoice link should be correct")
+  public void theInvoiceLinkShouldBeCorrect() {
+    String expectedLink = checkoutSuccessPage().invoiceLinkHref();
+    String actualLink = SignupTestState.storeInvoiceLink() != null
+      ? SignupTestState.storeInvoiceLink()
+      : SignupTestState.customerInvoiceLink();
+
+    Assert.assertNotNull(actualLink, "Invoice link should have been captured from an invoice email first");
+    Assert.assertEquals(
+      normalizeUrl(actualLink),
+      normalizeUrl(expectedLink),
+      "Expected invoice email link to match the invoice download link shown after checkout"
+    );
+  }
+
+  @Then("the store email should also receive a notification email with an invoice link")
+  public void theStoreEmailShouldAlsoReceiveANotificationEmailWithAnInvoiceLink() {
+    GmailVerificationClient.InvoiceEmail invoiceEmail =
+      GmailVerificationClient.findLatestStoreInvoiceEmail(TestConfig.invoiceStoreEmail());
+
+    Assert.assertTrue(
+      invoiceEmail.body().contains("Hi OutlierFit team"),
+      "Expected store invoice email greeting to distinguish it from the customer email"
+    );
+    Assert.assertTrue(
+      invoiceEmail.body().contains("Customer email:"),
+      "Expected store invoice email to contain internal customer/order context"
+    );
+    SignupTestState.rememberStoreInvoiceLink(invoiceEmail.invoiceLink());
+  }
+
+  private String normalizeUrl(String value) {
+    return value == null ? null : value.trim().replace("&amp;", "&");
   }
 
   @Then("Stripe Checkout should show a declined card error")

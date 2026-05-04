@@ -257,6 +257,15 @@ public final class TestConfig {
     return value;
   }
 
+  public static String invoiceStoreEmail() {
+    return firstNonBlank(
+      System.getProperty("invoiceStoreEmail"),
+      System.getenv("INVOICE_STORE_EMAIL"),
+      LOCAL_ENV.get("INVOICE_STORE_EMAIL"),
+      "unodostreszlm@gmail.com"
+    );
+  }
+
   public static String unverifiedTestUserEmail() {
     String value = System.getProperty("unverifiedTestUserEmail");
     if (value == null || value.isBlank()) {

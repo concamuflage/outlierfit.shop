@@ -26,6 +26,12 @@ public final class SignupTestState {
   // The new password entered during a password-reset scenario.
   private static final ThreadLocal<String> RESET_PASSWORD = new ThreadLocal<>();
 
+  // The invoice URL found in the customer-facing payment email.
+  private static final ThreadLocal<String> CUSTOMER_INVOICE_LINK = new ThreadLocal<>();
+
+  // The invoice URL found in the store-facing payment notification email.
+  private static final ThreadLocal<String> STORE_INVOICE_LINK = new ThreadLocal<>();
+
   private SignupTestState() {}
 
   public static void rememberSignupEmail(String email) {
@@ -54,6 +60,14 @@ public final class SignupTestState {
     RESET_PASSWORD.set(password);
   }
 
+  public static void rememberCustomerInvoiceLink(String link) {
+    CUSTOMER_INVOICE_LINK.set(link);
+  }
+
+  public static void rememberStoreInvoiceLink(String link) {
+    STORE_INVOICE_LINK.set(link);
+  }
+
   public static String signupEmail() {
     return SIGNUP_EMAIL.get();
   }
@@ -78,6 +92,14 @@ public final class SignupTestState {
     return RESET_PASSWORD.get();
   }
 
+  public static String customerInvoiceLink() {
+    return CUSTOMER_INVOICE_LINK.get();
+  }
+
+  public static String storeInvoiceLink() {
+    return STORE_INVOICE_LINK.get();
+  }
+
   public static void clear() {
     // Remove all ThreadLocal values so the next scenario on the same worker thread starts clean.
     SIGNUP_EMAIL.remove();
@@ -86,5 +108,7 @@ public final class SignupTestState {
     VERIFICATION_EMAIL_SENDER.remove();
     PASSWORD_RESET_LINK.remove();
     RESET_PASSWORD.remove();
+    CUSTOMER_INVOICE_LINK.remove();
+    STORE_INVOICE_LINK.remove();
   }
 }

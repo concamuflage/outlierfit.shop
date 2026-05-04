@@ -2,10 +2,16 @@ import pool from "@/backend/database/pool";
 import { formatShippingMode } from "@/lib/shipping";
 import type { InvoicePayload } from "@/lib/invoice";
 
+// This module builds an invoice payload for a given order.
+// It queries order, payment, shipping, and item data from the database,
+// normalizes types, and formats the result into a structure used for invoices/emails.
+
+// Safely converts a value to a number (handles unknown DB types)
 function toNumber(value: unknown) {
   return typeof value === "number" ? value : Number(value);
 }
 
+// Converts various date formats into ISO string for consistent output
 function toIsoString(value: unknown) {
   if (value == null) {
     return "";
@@ -22,6 +28,7 @@ function toIsoString(value: unknown) {
   return "";
 }
 
+// Represents the shape of the main order query result
 type OrderInvoiceRow = {
   invoice_number: unknown;
   subtotal_usd: unknown;
@@ -51,6 +58,7 @@ type OrderInvoiceRow = {
   billing_phone: unknown;
 };
 
+// Represents the shape of each order item row
 type OrderInvoiceItemRow = {
   quantity: unknown;
   snapshot_price: unknown;
@@ -59,7 +67,10 @@ type OrderInvoiceItemRow = {
   size: unknown;
 };
 
+// Fetches and constructs the full invoice payload for a specific order and user
+// Combines order details, payment info, shipping data, and line items
 export async function getInvoicePayloadForOrder(userId: number, orderId: number): Promise<InvoicePayload | null> {
+  // Query main order + payment + address data
   const orderResult = await pool.query<OrderInvoiceRow>(
     `
       SELECT
@@ -114,11 +125,14 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     [orderId, userId]
   );
 
+  // If no order found for this user, return null
   if (orderResult.rows.length === 0) {
     return null;
   }
 
+  // Extract single order row
   const row = orderResult.rows[0];
+  // Normalize discount and payment values (Stripe stores amounts in cents)
   const discountCurrency = row.discount_currency ? String(row.discount_currency).toLowerCase() : null;
   const discountAmountUsd =
     discountCurrency === "usd" && row.discount_amount != null
@@ -129,6 +143,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
       ? toNumber(row.paid_amount) / 100
       : Math.max(0, toNumber(row.total_usd) - discountAmountUsd);
 
+  // Query order line items (products, variants, quantity, pricing)
   const itemsResult = await pool.query<OrderInvoiceItemRow>(
     `
       SELECT
@@ -152,6 +167,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     [orderId]
   );
 
+  // Build final invoice payload object
   return {
     invoiceNumber: String(row.invoice_number ?? ""),
     paidAt: toIsoString(row.paid_at),
@@ -163,6 +179,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     promotionCode: row.promotion_code ? String(row.promotion_code) : null,
     discountAmountUsd,
     discountCurrency,
+    // Map DB item rows into invoice line items
     items: itemsResult.rows.map((itemRow: OrderInvoiceItemRow) => ({
       name: String(itemRow.product_name ?? ""),
       quantity: toNumber(itemRow.quantity),
@@ -170,6 +187,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
       color: itemRow.color ? String(itemRow.color) : null,
       size: itemRow.size ? String(itemRow.size) : null,
     })),
+    // Shipping address details
     shippingAddress: {
       name: String(row.shipping_name ?? ""),
       street: String(row.shipping_street ?? ""),
@@ -179,6 +197,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
       country: String(row.shipping_country ?? ""),
       phone: String(row.shipping_phone ?? ""),
     },
+    // Billing address details
     billingAddress: {
       name: String(row.billing_name ?? ""),
       street: String(row.billing_street ?? ""),

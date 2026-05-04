@@ -21,8 +21,17 @@ public class CheckoutSuccessPage extends BasePage {
     waitForVisible(TITLE);
   }
 
+  public void refresh() {
+    driver.navigate().refresh();
+    waitForSuccessPage();
+  }
+
   public void waitForInvoiceLink() {
     waitForVisible(INVOICE_LINK);
+  }
+
+  public String invoiceLinkHref() {
+    return waitForVisible(INVOICE_LINK).getAttribute("href");
   }
 
   public void waitForConfirmationStateToDisappear() {
