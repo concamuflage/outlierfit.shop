@@ -89,12 +89,13 @@ export async function POST(request: Request) {
     if (payload.section === "measurement") {
       const heightCm = toOptionalNumber(payload.measurement?.heightCm);
       const chestCm = toOptionalNumber(payload.measurement?.chestCm);
+      const shoulderWidthCm = toOptionalNumber(payload.measurement?.shoulderWidthCm);
       const sleeveLengthCm = toOptionalNumber(payload.measurement?.sleeveLengthCm);
       const waistCm = toOptionalNumber(payload.measurement?.waistCm);
       const hipCm = toOptionalNumber(payload.measurement?.hipCm);
       const inseamCm = toOptionalNumber(payload.measurement?.inseamCm);
 
-      const hasInvalidValue = [heightCm, chestCm, sleeveLengthCm, waistCm, hipCm, inseamCm].some(
+      const hasInvalidValue = [heightCm, chestCm, shoulderWidthCm, sleeveLengthCm, waistCm, hipCm, inseamCm].some(
         (value) => value !== null && value <= 0
       );
       if (hasInvalidValue) {
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
       const rangeError =
         validateMeasurementRange("Height", heightCm, 91.4, 243.8) ??
         validateMeasurementRange("Chest", chestCm, 50.8, 203.2) ??
+        validateMeasurementRange("Shoulder width", shoulderWidthCm, 25.4, 76.2) ??
         validateMeasurementRange("Arm length", sleeveLengthCm, 38.1, 114.3) ??
         validateMeasurementRange("Waist", waistCm, 45, 200) ??
         validateMeasurementRange("Hip", hipCm, 60, 220) ??
@@ -116,6 +118,7 @@ export async function POST(request: Request) {
       await saveMeasurement(userId, {
         heightCm,
         chestCm,
+        shoulderWidthCm,
         sleeveLengthCm,
         waistCm,
         hipCm,

@@ -14,6 +14,8 @@ import {
   readStripePaymentIntentId,
   upsertStripePaymentRecord,
 } from "@/lib/server/orderPayments";
+import { sendInvoiceLinkEmail } from "@/lib/server/invoiceEmail";
+import { getInvoicePayloadForOrder } from "@/lib/server/orderInvoiceStore";
 import { getStripeServerClient } from "@/lib/server/stripe";
 
 export const runtime = "nodejs";
@@ -64,6 +66,24 @@ async function retrievePaymentIntentForSession(session: Stripe.Checkout.Session)
   return stripe.paymentIntents.retrieve(paymentIntentId, {
     expand: ["latest_charge"],
   });
+}
+
+async function sendInvoiceEmailForOrder(userId: number, orderId: number) {
+  try {
+    const invoicePayload = await getInvoicePayloadForOrder(userId, orderId);
+    if (!invoicePayload?.customerEmail) {
+      return;
+    }
+
+    await sendInvoiceLinkEmail({
+      to: invoicePayload.customerEmail,
+      orderId,
+      invoiceNumber: invoicePayload.invoiceNumber,
+      paidAt: invoicePayload.paidAt,
+    });
+  } catch (error) {
+    console.error("invoice email error:", error);
+  }
 }
 
 async function recordSuccessfulCheckoutSession(
@@ -117,6 +137,7 @@ async function recordSuccessfulCheckoutSession(
     });
   }
 
+  await sendInvoiceEmailForOrder(persistedCheckout.userId, result.orderId);
   await markStripeWebhookEventProcessed(stripeEventId, result.orderId);
 }
 

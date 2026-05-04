@@ -4,6 +4,7 @@ type MeasurementRecord = {
   id: number;
   heightCm: number | null;
   chestCm: number | null;
+  shoulderWidthCm: number | null;
   sleeveLengthCm: number | null;
   waistCm: number | null;
   hipCm: number | null;
@@ -43,60 +44,12 @@ function trimText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-async function ensureProfileTables() {
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS measurements (
-      id SERIAL PRIMARY KEY,
-      height_cm NUMERIC(5,2),
-      chest_cm NUMERIC(5,2),
-      sleeve_length_cm NUMERIC(5,2)
-    )`
-  );
-  await pool.query("ALTER TABLE measurements ALTER COLUMN height_cm DROP NOT NULL");
-  await pool.query("ALTER TABLE measurements ALTER COLUMN chest_cm DROP NOT NULL");
-  await pool.query("ALTER TABLE measurements ALTER COLUMN sleeve_length_cm DROP NOT NULL");
-  await pool.query("ALTER TABLE measurements ADD COLUMN IF NOT EXISTS waist_cm NUMERIC(5,2)");
-  await pool.query("ALTER TABLE measurements ADD COLUMN IF NOT EXISTS hip_cm NUMERIC(5,2)");
-  await pool.query("ALTER TABLE measurements ADD COLUMN IF NOT EXISTS inseam_cm NUMERIC(5,2)");
-
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS user_measurement (
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      measurement_id INTEGER NOT NULL REFERENCES measurements(id) ON DELETE CASCADE,
-      is_default BOOLEAN NOT NULL DEFAULT FALSE,
-      PRIMARY KEY (user_id, measurement_id)
-    )`
-  );
-
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS addresses (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      street VARCHAR(255) NOT NULL,
-      city VARCHAR(100) NOT NULL,
-      state VARCHAR(2) NOT NULL,
-      zip_code VARCHAR(10) NOT NULL,
-      country VARCHAR(50) NOT NULL,
-      phone VARCHAR(20) NOT NULL
-    )`
-  );
-
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS user_addresses (
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      address_id INTEGER NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
-      is_default BOOLEAN NOT NULL DEFAULT FALSE,
-      address_type VARCHAR(20) NOT NULL,
-      PRIMARY KEY (user_id, address_id)
-    )`
-  );
-}
-
 function mapMeasurement(row: Record<string, unknown>): MeasurementRecord {
   return {
     id: toNumber(row.id),
     heightCm: row.height_cm == null ? null : toNumber(row.height_cm),
     chestCm: row.chest_cm == null ? null : toNumber(row.chest_cm),
+    shoulderWidthCm: row.shoulder_width_cm == null ? null : toNumber(row.shoulder_width_cm),
     sleeveLengthCm: row.sleeve_length_cm == null ? null : toNumber(row.sleeve_length_cm),
     waistCm: row.waist_cm == null ? null : toNumber(row.waist_cm),
     hipCm: row.hip_cm == null ? null : toNumber(row.hip_cm),
@@ -120,8 +73,6 @@ function mapAddress(row: Record<string, unknown>): AddressRecord {
 }
 
 export async function getProfile(userId: number): Promise<ProfileData> {
-  await ensureProfileTables();
-
   const userResult = await pool.query(
     `
       SELECT id, email, first_name, last_name
@@ -140,6 +91,7 @@ export async function getProfile(userId: number): Promise<ProfileData> {
       SELECT m.id,
              m.height_cm,
              m.chest_cm,
+             m.shoulder_width_cm,
              m.sleeve_length_cm,
              m.waist_cm,
              m.hip_cm,
@@ -192,8 +144,6 @@ export async function getProfile(userId: number): Promise<ProfileData> {
 }
 
 export async function getUserIdByEmail(email: string) {
-  await ensureProfileTables();
-
   const userResult = await pool.query(
     `
       SELECT id
@@ -217,14 +167,13 @@ export async function saveMeasurement(
   measurement: {
     heightCm: number | null;
     chestCm: number | null;
+    shoulderWidthCm: number | null;
     sleeveLengthCm: number | null;
     waistCm: number | null;
     hipCm: number | null;
     inseamCm: number | null;
   }
 ) {
-  await ensureProfileTables();
-
   const existingResult = await pool.query(
     `
       SELECT m.id
@@ -243,16 +192,18 @@ export async function saveMeasurement(
         UPDATE measurements
         SET height_cm = $2,
             chest_cm = $3,
-            sleeve_length_cm = $4,
-            waist_cm = $5,
-            hip_cm = $6,
-            inseam_cm = $7
+            shoulder_width_cm = $4,
+            sleeve_length_cm = $5,
+            waist_cm = $6,
+            hip_cm = $7,
+            inseam_cm = $8
         WHERE id = $1
       `,
       [
         existingResult.rows[0].id,
         measurement.heightCm,
         measurement.chestCm,
+        measurement.shoulderWidthCm,
         measurement.sleeveLengthCm,
         measurement.waistCm,
         measurement.hipCm,
@@ -264,13 +215,14 @@ export async function saveMeasurement(
 
   const insertedMeasurement = await pool.query(
     `
-      INSERT INTO measurements (height_cm, chest_cm, sleeve_length_cm, waist_cm, hip_cm, inseam_cm)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO measurements (height_cm, chest_cm, shoulder_width_cm, sleeve_length_cm, waist_cm, hip_cm, inseam_cm)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id
     `,
     [
       measurement.heightCm,
       measurement.chestCm,
+      measurement.shoulderWidthCm,
       measurement.sleeveLengthCm,
       measurement.waistCm,
       measurement.hipCm,
@@ -300,8 +252,6 @@ export async function updateAddress(
     phone: string;
   }
 ) {
-  await ensureProfileTables();
-
   const ownershipResult = await pool.query(
     `
       SELECT 1
@@ -342,8 +292,6 @@ export async function updateAddress(
 }
 
 export async function deleteAddress(userId: number, addressId: number) {
-  await ensureProfileTables();
-
   const ownershipResult = await pool.query(
     `
       SELECT is_default, address_type
@@ -405,8 +353,6 @@ export async function deleteAddress(userId: number, addressId: number) {
 }
 
 export async function copyDefaultShippingAddressToBilling(userId: number) {
-  await ensureProfileTables();
-
   const existingBillingResult = await pool.query(
     `
       SELECT 1
@@ -469,8 +415,6 @@ export async function saveAddress(
     phone: string;
   }
 ) {
-  await ensureProfileTables();
-
   const existingCount = await pool.query(
     `
       SELECT COUNT(*) AS total

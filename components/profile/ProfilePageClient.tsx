@@ -7,6 +7,7 @@ type Measurement = {
   id: number;
   heightCm: number | null;
   chestCm: number | null;
+  shoulderWidthCm: number | null;
   sleeveLengthCm: number | null;
   waistCm: number | null;
   hipCm: number | null;
@@ -42,6 +43,7 @@ type MeasurementForm = {
   heightFeet: string;
   heightInches: string;
   chestInches: string;
+  shoulderWidthInches: string;
   sleeveLengthInches: string;
   waistInches: string;
   hipInches: string;
@@ -143,6 +145,7 @@ function emptyMeasurementForm(): MeasurementForm {
     heightFeet: "",
     heightInches: "",
     chestInches: "",
+    shoulderWidthInches: "",
     sleeveLengthInches: "",
     waistInches: "",
     hipInches: "",
@@ -169,6 +172,8 @@ function measurementToForm(measurement: Measurement): MeasurementForm {
     heightFeet: heightInches == null ? "" : String(Math.floor(heightInches / 12)),
     heightInches: heightInches == null ? "" : String(heightInches % 12),
     chestInches: measurement.chestCm == null ? "" : String(cmToRoundedInches(measurement.chestCm)),
+    shoulderWidthInches:
+      measurement.shoulderWidthCm == null ? "" : String(cmToRoundedInches(measurement.shoulderWidthCm)),
     sleeveLengthInches:
       measurement.sleeveLengthCm == null ? "" : String(cmToRoundedInches(measurement.sleeveLengthCm)),
     waistInches: measurement.waistCm == null ? "" : String(cmToRoundedInches(measurement.waistCm)),
@@ -246,8 +251,8 @@ function formatUsPhone(phone: string) {
   return trimmedPhone.startsWith("+1") ? trimmedPhone : `+1 ${trimmedPhone}`;
 }
 
-function parseOptionalMeasurement(value: string, options?: { allowZero?: boolean }) {
-  const trimmed = value.trim();
+function parseOptionalMeasurement(value: string | undefined, options?: { allowZero?: boolean }) {
+  const trimmed = value?.trim() ?? "";
   if (!trimmed) return null;
 
   const parsed = Number(trimmed);
@@ -260,6 +265,7 @@ function validateMeasurementForm(values: MeasurementForm): MeasurementFormErrors
   const heightFeet = parseOptionalMeasurement(values.heightFeet);
   const heightInches = parseOptionalMeasurement(values.heightInches, { allowZero: true });
   const chestInches = parseOptionalMeasurement(values.chestInches);
+  const shoulderWidthInches = parseOptionalMeasurement(values.shoulderWidthInches);
   const sleeveLengthInches = parseOptionalMeasurement(values.sleeveLengthInches);
   const waistInches = parseOptionalMeasurement(values.waistInches);
   const hipInches = parseOptionalMeasurement(values.hipInches);
@@ -277,6 +283,14 @@ function validateMeasurementForm(values: MeasurementForm): MeasurementFormErrors
   if (Number.isNaN(chestInches)) errors.chestInches = "Enter a valid chest measurement.";
   if (chestInches != null && !Number.isNaN(chestInches) && (chestInches < 20 || chestInches > 80)) {
     errors.chestInches = "Chest must be between 20 and 80 inches.";
+  }
+  if (Number.isNaN(shoulderWidthInches)) errors.shoulderWidthInches = "Enter a valid shoulder width.";
+  if (
+    shoulderWidthInches != null &&
+    !Number.isNaN(shoulderWidthInches) &&
+    (shoulderWidthInches < 10 || shoulderWidthInches > 30)
+  ) {
+    errors.shoulderWidthInches = "Shoulder width must be between 10 and 30 inches.";
   }
   if (Number.isNaN(sleeveLengthInches)) {
     errors.sleeveLengthInches = "Enter a valid arm length.";
@@ -308,6 +322,7 @@ function measurementFormToCentimeters(values: MeasurementForm) {
   const heightFeet = parseOptionalMeasurement(values.heightFeet);
   const heightInches = parseOptionalMeasurement(values.heightInches, { allowZero: true });
   const chestInches = parseOptionalMeasurement(values.chestInches);
+  const shoulderWidthInches = parseOptionalMeasurement(values.shoulderWidthInches);
   const sleeveLengthInches = parseOptionalMeasurement(values.sleeveLengthInches);
   const waistInches = parseOptionalMeasurement(values.waistInches);
   const hipInches = parseOptionalMeasurement(values.hipInches);
@@ -318,6 +333,7 @@ function measurementFormToCentimeters(values: MeasurementForm) {
   return {
     heightCm: totalHeightInches == null ? null : inchesToCm(totalHeightInches),
     chestCm: chestInches == null ? null : inchesToCm(chestInches),
+    shoulderWidthCm: shoulderWidthInches == null ? null : inchesToCm(shoulderWidthInches),
     sleeveLengthCm: sleeveLengthInches == null ? null : inchesToCm(sleeveLengthInches),
     waistCm: waistInches == null ? null : inchesToCm(waistInches),
     hipCm: hipInches == null ? null : inchesToCm(hipInches),
@@ -1053,46 +1069,69 @@ export default function ProfilePageClient({
               </div>
 
               {profile.measurement && !isEditingMeasurement ? (
-                <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Height</p>
-                    <p className="mt-3 text-2xl font-semibold">{formatHeightUs(profile.measurement.heightCm)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.heightCm)}</p>
-                  </div>
-                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Chest</p>
-                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.chestCm)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.chestCm)}</p>
-                  </div>
-                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      Arm Length
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">From shoulder seam to wrist</p>
-                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.sleeveLengthCm)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.sleeveLengthCm)}</p>
-                  </div>
-                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Waist</p>
-                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.waistCm)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.waistCm)}</p>
-                  </div>
-                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Hip</p>
-                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.hipCm)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.hipCm)}</p>
-                  </div>
-                  <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Inseam</p>
-                    <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.inseamCm)}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.inseamCm)}</p>
-                  </div>
+                <div className="mt-6 space-y-6">
+                  <section>
+                    <h3 className="text-sm font-semibold text-zinc-900">Upper body</h3>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Height</p>
+                        <p className="mt-3 text-2xl font-semibold">{formatHeightUs(profile.measurement.heightCm)}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.heightCm)}</p>
+                      </div>
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Chest</p>
+                        <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.chestCm)}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.chestCm)}</p>
+                      </div>
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Shoulder Width</p>
+                        <p className="mt-1 text-xs text-zinc-500">From shoulder seam to shoulder seam</p>
+                        <p className="mt-3 text-2xl font-semibold">
+                          {formatInches(profile.measurement.shoulderWidthCm)}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.shoulderWidthCm)}</p>
+                      </div>
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Arm Length</p>
+                        <p className="mt-1 text-xs text-zinc-500">From shoulder seam to wrist</p>
+                        <p className="mt-3 text-2xl font-semibold">
+                          {formatInches(profile.measurement.sleeveLengthCm)}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.sleeveLengthCm)}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-sm font-semibold text-zinc-900">Pants</h3>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Waist</p>
+                        <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.waistCm)}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.waistCm)}</p>
+                      </div>
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Hip</p>
+                        <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.hipCm)}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.hipCm)}</p>
+                      </div>
+                      <div className="rounded-3xl border border-zinc-200 bg-zinc-50 p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Inseam</p>
+                        <p className="mt-1 text-xs text-zinc-500">From crotch seam to ankle hem</p>
+                        <p className="mt-3 text-2xl font-semibold">{formatInches(profile.measurement.inseamCm)}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{formatCm(profile.measurement.inseamCm)}</p>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               ) : (
-                <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-5">
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6">
+                  <div className="space-y-8">
+                    <section>
+                      <h3 className="text-sm font-semibold text-zinc-900">Upper body</h3>
+                      <div className="mt-4 grid gap-5 md:grid-cols-2">
                     <label className="flex flex-col text-sm text-zinc-700">
-                      <span className="flex min-h-12 items-start">Height</span>
+                      <span className="flex min-h-16 items-start">Height</span>
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <input
                           value={measurementForm.heightFeet}
@@ -1126,7 +1165,7 @@ export default function ProfilePageClient({
                       ) : null}
                     </label>
                     <label className="flex flex-col text-sm text-zinc-700">
-                      <span className="flex min-h-12 items-start">Chest (in)</span>
+                      <span className="flex min-h-16 items-start">Chest (in)</span>
                       <input
                         value={measurementForm.chestInches}
                         onChange={(event) => setMeasurementForm((current) => ({
@@ -1143,8 +1182,29 @@ export default function ProfilePageClient({
                       ) : null}
                     </label>
                     <label className="flex flex-col text-sm text-zinc-700">
-                      <span className="flex min-h-12 items-start">
-                        Arm length (from shoulder seam to wrist) (in)
+                      <span className="flex min-h-16 flex-col items-start">
+                        <span>Shoulder width (in)</span>
+                        <span className="mt-1 text-xs text-zinc-500">From shoulder seam to shoulder seam</span>
+                      </span>
+                      <input
+                        value={measurementForm.shoulderWidthInches}
+                        onChange={(event) => setMeasurementForm((current) => ({
+                          ...current,
+                          shoulderWidthInches: event.target.value,
+                        }))}
+                        inputMode="decimal"
+                        className={`mt-2 w-full rounded-2xl border bg-white px-3 py-2 text-sm text-zinc-900 ${
+                          measurementErrors.shoulderWidthInches ? "border-red-300" : "border-zinc-200"
+                        }`}
+                      />
+                      {measurementErrors.shoulderWidthInches ? (
+                        <div className="mt-2 text-xs text-red-600">{measurementErrors.shoulderWidthInches}</div>
+                      ) : null}
+                    </label>
+                    <label className="flex flex-col text-sm text-zinc-700">
+                      <span className="flex min-h-16 flex-col items-start">
+                        <span>Arm length (in)</span>
+                        <span className="mt-1 text-xs text-zinc-500">From shoulder seam to wrist</span>
                       </span>
                       <input
                         value={measurementForm.sleeveLengthInches}
@@ -1161,8 +1221,14 @@ export default function ProfilePageClient({
                         <div className="mt-2 text-xs text-red-600">{measurementErrors.sleeveLengthInches}</div>
                       ) : null}
                     </label>
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 className="text-sm font-semibold text-zinc-900">Pants</h3>
+                      <div className="mt-4 grid gap-5 md:grid-cols-3">
                     <label className="flex flex-col text-sm text-zinc-700">
-                      <span className="flex min-h-12 items-start">Waist (in)</span>
+                      <span className="flex min-h-16 items-start">Waist (in)</span>
                       <input
                         value={measurementForm.waistInches}
                         onChange={(event) => setMeasurementForm((current) => ({
@@ -1179,7 +1245,7 @@ export default function ProfilePageClient({
                       ) : null}
                     </label>
                     <label className="flex flex-col text-sm text-zinc-700">
-                      <span className="flex min-h-12 items-start">Hip (in)</span>
+                      <span className="flex min-h-16 items-start">Hip (in)</span>
                       <input
                         value={measurementForm.hipInches}
                         onChange={(event) => setMeasurementForm((current) => ({
@@ -1196,7 +1262,10 @@ export default function ProfilePageClient({
                       ) : null}
                     </label>
                     <label className="flex flex-col text-sm text-zinc-700">
-                      <span className="flex min-h-12 items-start">Inseam (in)</span>
+                      <span className="flex min-h-16 flex-col items-start">
+                        <span>Inseam (in)</span>
+                        <span className="mt-1 text-xs text-zinc-500">From crotch seam to ankle hem</span>
+                      </span>
                       <input
                         value={measurementForm.inseamInches}
                         onChange={(event) => setMeasurementForm((current) => ({
@@ -1212,6 +1281,8 @@ export default function ProfilePageClient({
                         <div className="mt-2 text-xs text-red-600">{measurementErrors.inseamInches}</div>
                       ) : null}
                     </label>
+                      </div>
+                    </section>
                   </div>
 
                   {measurementFormError ? (
