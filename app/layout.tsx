@@ -5,6 +5,7 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
+import PageTitle from "@/components/layout/PageTitle";
 import Providers from "@/app/providers";
 
 const GOOGLE_TAG_ID = "G-SBD4K910T7";
@@ -47,6 +48,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>
+          <PageTitle />
           <Header />
           {children}
           <Footer />
