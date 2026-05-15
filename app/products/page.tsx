@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
@@ -8,6 +9,23 @@ import { type Product } from "@/components/products/ProductCard";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
 
 const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
+
+const BRAND_FILTERS = [
+  {
+    brand: "Nike",
+    logo: "/logo/nike.jpg",
+    width: 5000,
+    height: 2813,
+    imageClassName: "max-h-14 max-w-36",
+  },
+  {
+    brand: "Levi's",
+    logo: "/logo/levis.webp",
+    width: 800,
+    height: 800,
+    imageClassName: "max-h-16 max-w-24",
+  },
+] as const;
 
 type ProductsApiItem = {
   product_id?: number | string | null;
@@ -79,6 +97,11 @@ function ProductsPageContent() {
   const categoryFromUrl = searchParams.get("category");
   const selectedCategory =
     categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : null;
+  const brandFromUrl = searchParams.get("brand");
+  const selectedBrand =
+    brandFromUrl && BRAND_FILTERS.some((filter) => filter.brand === brandFromUrl)
+      ? brandFromUrl
+      : null;
 
   const handleSelectCategory = (category: string | null) => {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -87,6 +110,19 @@ function ProductsPageContent() {
       nextParams.delete("category");
     } else {
       nextParams.set("category", category);
+    }
+
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  };
+
+  const handleSelectBrand = (brand: string) => {
+    const nextParams = new URLSearchParams(searchParams.toString());
+
+    if (selectedBrand === brand) {
+      nextParams.delete("brand");
+    } else {
+      nextParams.set("brand", brand);
     }
 
     const nextQuery = nextParams.toString();
@@ -105,9 +141,12 @@ function ProductsPageContent() {
   }, [categories, categoryFromUrl, pathname, router, searchParams]);
 
   const filteredProductsData = useMemo(() => {
-    if (selectedCategory === null) return productsData;
-    return productsData.filter((p) => p?.style === selectedCategory);
-  }, [productsData, selectedCategory]);
+    return productsData.filter((p) => {
+      const matchesCategory = selectedCategory === null || p?.style === selectedCategory;
+      const matchesBrand = selectedBrand === null || p?.brand === selectedBrand;
+      return matchesCategory && matchesBrand;
+    });
+  }, [productsData, selectedBrand, selectedCategory]);
 
   const products = useMemo<Product[]>(() => {
     return filteredProductsData.map((p) => ({
@@ -123,6 +162,34 @@ function ProductsPageContent() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          {BRAND_FILTERS.map((filter) => {
+            const active = selectedBrand === filter.brand;
+
+            return (
+              <button
+                key={filter.brand}
+                type="button"
+                onClick={() => handleSelectBrand(filter.brand)}
+                aria-pressed={active}
+                className={`flex h-24 w-48 items-center justify-center rounded border bg-white px-5 transition ${
+                  active
+                    ? "border-zinc-900 shadow-sm"
+                    : "border-zinc-200 hover:border-zinc-400"
+                }`}
+              >
+                <Image
+                  src={filter.logo}
+                  alt={`${filter.brand} logo`}
+                  width={filter.width}
+                  height={filter.height}
+                  className={`${filter.imageClassName} h-auto w-auto object-contain`}
+                />
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
           <FilterSidebar
             categories={categories}

@@ -35,23 +35,37 @@ type ProductDetail = {
   variants: ProductVariant[];
 };
 
-function cmToRoundedInches(cm: number) {
-  return Math.round(cm / 2.54);
-}
-
-function formatHeightUs(cm: number) {
-  const totalInches = cmToRoundedInches(cm);
-  const feet = Math.floor(totalInches / 12);
-  const inches = totalInches % 12;
-  return `${feet}'${inches}"`;
-}
-
-function formatMeasurementInches(cm: number) {
-  return `${cmToRoundedInches(cm)} in`;
-}
-
 function productPageTitle(productName: string) {
   return `${productName} | OutlierFit`;
+}
+
+type SizeGuideImage = {
+  src: string;
+  width: number;
+  height: number;
+  version?: string;
+};
+
+const TOP_SIZE_GUIDES_BY_BRAND: Record<string, SizeGuideImage> = {
+  "levi's": {
+    src: "/size_guide/top/levi's.png",
+    width: 2172,
+    height: 724,
+  },
+  nike: {
+    src: "/size_guide/top/nike.png",
+    width: 1774,
+    height: 887,
+    version: "20260514-2135",
+  },
+};
+
+function sizeGuideForBrand(brand: string) {
+  return TOP_SIZE_GUIDES_BY_BRAND[brand.trim().toLowerCase()] ?? null;
+}
+
+function versionedImageSrc(image: SizeGuideImage) {
+  return image.version ? `${image.src}?v=${image.version}` : image.src;
 }
 
 export default function ProductDetailClient({ slug }: { slug: string }) {
@@ -65,6 +79,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const productId = useMemo(() => {
     const parsed = Number(slug);
@@ -144,23 +159,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     return Array.from(s);
   }, [variants, selectedColor]);
 
-  const sizeDetailsByLabel = useMemo(() => {
-    const details = new Map<string, { height_cm: number | null; chest_cm: number | null }>();
-
-    for (const variant of variants) {
-      if (selectedColor && variant.color !== selectedColor) continue;
-      if (!variant.size) continue;
-      if (details.has(variant.size)) continue;
-
-      details.set(variant.size, {
-        height_cm: variant.height_cm,
-        chest_cm: variant.chest_cm,
-      });
-    }
-
-    return details;
-  }, [variants, selectedColor]);
-
   const selectedVariant = useMemo(() => {
     if (variants.length === 0) return null;
     if (selectedColor && selectedSize) {
@@ -226,6 +224,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       materials: product.materials ?? [],
     };
   }, [displayVariant, product, selectedColor, selectedSize, selectedVariant]);
+
+  const sizeGuide = useMemo(() => {
+    return product?.brand ? sizeGuideForBrand(product.brand) : null;
+  }, [product?.brand]);
 
   useEffect(() => {
     if (!lowestPricedVariant) return;
@@ -307,28 +309,27 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     </div>
 
                     <div>
-                      <div className="text-sm font-medium text-zinc-900">Size</div>
-                      <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-medium text-zinc-900">Size</div>
+                        {sizeGuide ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowSizeGuide((current) => !current)}
+                            aria-expanded={showSizeGuide}
+                            aria-controls="size-guide"
+                            className="text-sm font-medium text-zinc-700 underline underline-offset-4 hover:text-zinc-950"
+                          >
+                            Size guide
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
                         {availableSizes.map((s) => {
                           const isSelected = s === selectedSize;
                           const isAvailableForColor =
                             selectedColor === null || sizesForSelectedColor.includes(s);
-                          const sizeDetails = sizeDetailsByLabel.get(s);
-                          const sizeMeta = [
-                            sizeDetails?.height_cm != null ? `Height ${sizeDetails.height_cm} cm` : null,
-                            sizeDetails?.chest_cm != null ? `Chest ${sizeDetails.chest_cm} cm` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ");
-                          const sizeMetaUs = [
-                            sizeDetails?.height_cm != null ? `Height ${formatHeightUs(sizeDetails.height_cm)}` : null,
-                            sizeDetails?.chest_cm != null ? `Chest ${formatMeasurementInches(sizeDetails.chest_cm)}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ");
-
                           return (
-                            <div key={s} className="grid grid-cols-1 gap-2 sm:grid-cols-[96px_1fr] sm:items-center sm:gap-3">
+                            <div key={s}>
                               <button
                                 type="button"
                                 onClick={() => setSelectedSize(s)}
@@ -343,17 +344,27 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                               >
                                 {s}
                               </button>
-                              {sizeMeta ? (
-                                <span className="text-xs text-zinc-500">
-                                  {sizeMetaUs ? <span className="block">{sizeMetaUs}</span> : null}
-                                  <span className="block">{sizeMeta}</span>
-                                </span>
-                              ) : null}
                             </div>
                           );
                         })}
                       </div>
                     </div>
+
+                    {sizeGuide && showSizeGuide ? (
+                      <section id="size-guide" className="pt-2">
+                        <h2 className="text-sm font-medium text-zinc-900">{product.brand} size guide</h2>
+                        <div className="mt-3 overflow-hidden rounded border border-zinc-200 bg-white">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={versionedImageSrc(sizeGuide)}
+                            alt={`${product.brand} size guide`}
+                            width={sizeGuide.width}
+                            height={sizeGuide.height}
+                            className="h-auto w-full"
+                          />
+                        </div>
+                      </section>
+                    ) : null}
                   </div>
                 }
               />
