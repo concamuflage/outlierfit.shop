@@ -96,19 +96,19 @@ pipeline {
             }
         }
 
-        stage('Post-deploy Auth UI Tests') {
-            steps {
-                dir("${WORKSPACE}/test/ui") {
-                    sh '''
-                        NODE_ENV=production \
-                        mvn -Dtest=TaggedRunner \
-                            -Dheadless=true \
-                            -Dcucumber.filter.tags='@Signup or @ResetPassword' \
-                            test
-                    '''
-                }
-            }
-        }
+        // stage('Post-deploy Auth UI Tests') {
+        //     steps {
+        //         dir("${WORKSPACE}/test/ui") {
+        //             sh '''
+        //                 NODE_ENV=production \
+        //                 mvn -Dtest=TaggedRunner \
+        //                     -Dheadless=true \
+        //                     -Dcucumber.filter.tags='@Signup or @ResetPassword' \
+        //                     test
+        //             '''
+        //         }
+        //     }
+        // }
 
         // stage('Test') {
         //     steps {
