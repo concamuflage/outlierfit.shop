@@ -1,10 +1,12 @@
+const { getServerEnv } = require("../env");
 const crypto = require("crypto");
 
 const DEFAULT_VERIFICATION_TTL_HOURS = 24;
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
+/** Reads the server-side verification TTL, e.g. 24 means links expire after one day. */
 function getVerificationTtlHours() {
-  const rawValue = Number(process.env.EMAIL_VERIFICATION_TTL_HOURS || DEFAULT_VERIFICATION_TTL_HOURS);
+  const rawValue = Number(getServerEnv("EMAIL_VERIFICATION_TTL_HOURS") || DEFAULT_VERIFICATION_TTL_HOURS);
   if (!Number.isFinite(rawValue) || rawValue <= 0) {
     return DEFAULT_VERIFICATION_TTL_HOURS;
   }
@@ -36,13 +38,14 @@ function isLocalhostUrl(value) {
   }
 }
 
+/** Resolves the Next app origin; local links default to http://localhost:3000. */
 function getVerificationAppBaseUrl() {
-  const explicitEmailUrl = normalizeAppBaseUrl(process.env.EMAIL_VERIFICATION_APP_URL);
+  const explicitEmailUrl = normalizeAppBaseUrl(getServerEnv("EMAIL_VERIFICATION_APP_URL"));
   if (explicitEmailUrl) return explicitEmailUrl;
 
   const fallbackUrls = [
-    normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
-    normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
+    normalizeAppBaseUrl(getServerEnv("CLIENT_ORIGIN")),
+    normalizeAppBaseUrl(getServerEnv("NEXTAUTH_URL")),
   ].filter(Boolean);
 
   if (process.env.NODE_ENV === "production") {
@@ -61,9 +64,10 @@ function buildVerificationLink(email, rawToken) {
   return `${getVerificationAppBaseUrl()}/verify-email?${params.toString()}`;
 }
 
+/** Sends verification using Next/legacy Resend settings; a rejected API key still throws an error. */
 async function sendVerificationEmail({ to, firstName, verificationLink }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
+  const apiKey = getServerEnv("RESEND_API_KEY");
+  const from = getServerEnv("RESEND_FROM_EMAIL");
 
   if (!apiKey || !from) {
     throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");

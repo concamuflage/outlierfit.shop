@@ -33,7 +33,7 @@ export type InvoicePayload = {
 };
 
 type PdfCommand = string;
-const BUSINESS_EMAIL = "info@outlierfit.shop";
+const BUSINESS_EMAIL = "apple_banana_2026@proton.me";
 const BUSINESS_WEBSITE = "www.outlierfit.shop";
 
 function toPdfSafeText(value: string) {

@@ -68,6 +68,7 @@ async function resolveSessionUserId() {
   return null;
 }
 
+/** Returns order items with their current variant weights for reordering, e.g. 0.05625 kg. */
 export async function GET() {
   const userId = await resolveSessionUserId();
 
@@ -98,7 +99,7 @@ export async function GET() {
                 'unitPriceUsd', ov.snapshot_price,
                 'color', c.color,
                 'size', s.size,
-                'weightKg', st.weight_kg,
+                'weightKg', pv.weight_kg,
                 'imageUrl', pvi.image_link,
                 'variantExists', pv.id IS NOT NULL
               )
@@ -117,8 +118,6 @@ export async function GET() {
           ON c.id = pv.color_id
         LEFT JOIN sizes s
           ON s.id = pv.size_id
-        LEFT JOIN styles st
-          ON st.id = p.style_id
         LEFT JOIN LATERAL (
           SELECT image_link
           FROM product_variant_images

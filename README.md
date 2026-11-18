@@ -2,34 +2,93 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run both servers together:
+Install dependencies once at the project root and start the Next.js server:
 
 ```bash
-npm run dev:full
-```
-
-Or run them separately:
-
-Frontend (Next.js):
-
-```bash
+npm install
 npm run dev
 ```
 
-Backend (Node.js):
+Next.js serves the UI, catalog, shipping, authentication, and payments on port
+3000. No Express process or separate API port is needed. `npm run dev:full`
+remains an alias for the same single server. Production uses `npm run build`
+followed by `npm start`.
+
+Domestic checkout adds one provisional **$8.95 per order** fee. Change
+`DOMESTIC_SHIPPING_FEE_USD` in `lib/domestic-shipping.ts` to adjust it.
+This is a merchant-set estimate, not a live USPS quote; larger/farther shipments
+may cost more. Item weights remain product data but no longer price delivery.
+Migration `0000000000006_remove_international_shipping.js` removes the old rate
+table and checkout weight/rate columns while retaining monetary snapshots.
+Existing migrations and their baseline schema remain historical records.
+
+Browser API calls use `/api/store`, for example `/api/store/products` and
+`/api/store/auth/signup`. Existing `/backend/...` URLs are rewritten internally
+to these Next routes for compatibility. NextAuth and server-rendered product
+titles call the server modules directly, without loopback HTTP.
+
+Configure server-only settings in `.env.local` (never `NEXT_PUBLIC_` secrets):
 
 ```bash
-cd backend
-npm run dev
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=your-local-database-password
+PGDATABASE=clothes
 ```
+
+The project-root `.env.local` is the only local configuration file. It contains
+app, database, Resend, Google, Stripe, storage, proxy and test-account settings.
+Next.js, standalone server helpers, Playwright and Java UI tests all use this
+file. Process environment variables can still override settings in CI or production.
+Nested backend and test env files are no longer read. Keep `.env.local` out of Git.
+The `backend/` directory now contains server modules only, not a separate app.
+`API_BASE_URL` and `NEXT_PUBLIC_API_BASE_URL` are no longer used by the app.
+
+When upgrading an existing PM2 deployment, remove its old process once with
+`pm2 delete project888-api`, then deploy only `project888-web` using the updated
+Jenkins pipeline and ecosystem configuration.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Private Product Photos
+
+The Next.js server reads catalog photos from a private Google Cloud Storage bucket
+using Application Default Credentials. Configure these server-only variables in
+`.env.local` for development:
+
+```bash
+GOOGLE_CLOUD_PROJECT=outlierfit
+PRODUCT_IMAGES_BUCKET=outlierfit-dev
+GOOGLE_APPLICATION_CREDENTIALS=/Users/Mark_1/project888/.local/outlierfit-storage-adc.json
+```
+
+The local credential file uses service-account impersonation and is gitignored.
+The `dev-product-images@outlierfit.iam.gserviceaccount.com` account has Object
+Viewer access on the development bucket. The developer account needs Service
+Account Token Creator permission on that service account.
+
+When a local VPN requires an explicit HTTP proxy, set `HTTPS_PROXY` and
+`HTTP_PROXY` to its address in `.env.local`, with
+`NO_PROXY=localhost,127.0.0.1,::1`. For example, the current local VPN exposes
+`http://127.0.0.1:59527`. Its port may change after reconnecting. Run
+`scutil --proxy` outside a sandbox to read the current HTTPS proxy host and port.
+
+For example, a `product_variant_images.image_link` value of
+`/api/product-images/FB7909-010/front.webp` serves the bucket object
+`gs://outlierfit-dev/products/FB7909-010/front.webp`. The route exposes only
+database-registered raster photos. Catalog photos are viewable through the app,
+while direct anonymous bucket access stays blocked.
+
+For deployment, set `PRODUCT_IMAGES_BUCKET` to the intended bucket and grant the
+runtime identity Object Viewer access there. Google-hosted runtimes can use their
+attached service account through ADC.
+
 ## Email Verification
 
-Email verification is handled by the backend and sent through Resend.
+Email verification and password reset run inside Next.js and send through Resend.
 
-Required backend env vars:
+Required server-only environment variables:
 
 ```bash
 RESEND_API_KEY=your-resend-api-key
@@ -37,7 +96,7 @@ RESEND_FROM_EMAIL=onboarding@your-domain.com
 CLIENT_ORIGIN=http://localhost:3000
 ```
 
-Optional backend env vars:
+Optional server-only environment variables:
 
 ```bash
 EMAIL_VERIFICATION_APP_URL=http://localhost:3000
@@ -46,9 +105,10 @@ EMAIL_VERIFICATION_TTL_HOURS=24
 
 Notes:
 
-- `CLIENT_ORIGIN` is already used for CORS and is also the default base URL for verification links.
+- `CLIENT_ORIGIN` is the default base URL for verification and reset links; no separate CORS setup is needed.
 - `EMAIL_VERIFICATION_APP_URL` overrides the link target if you want emails to point somewhere else.
 - New signups must verify their email before they can log in.
+- Moving to one server does not repair an invalid Resend key. A valid key and verified sender are still required.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

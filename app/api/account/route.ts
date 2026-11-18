@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getServerApiBaseUrl } from "@/lib/api-base";
+import { loginAccount } from "@/lib/server/storeApi";
 import { deleteCurrentUserAccount } from "@/lib/server/accountStore";
 import { getUserIdByEmail } from "@/lib/server/profileStore";
 
@@ -9,12 +9,9 @@ function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/** Confirms credentials in the same process before deletion, e.g. an incorrect password returns false. */
 async function confirmPassword(email: string, password: string) {
-  const response = await fetch(`${getServerApiBaseUrl()}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  const response = await loginAccount(email, password);
 
   return response.ok;
 }

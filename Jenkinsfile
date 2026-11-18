@@ -1,10 +1,10 @@
 // Jenkins CI/CD pipeline for project888
 // This pipeline:
 // 1. Checks out code from GitHub
-// 2. Copies environment (.env) files from the VM
-// 3. Installs dependencies for frontend and backend
-// 4. Builds the frontend (Next.js)
-// 5. Deploys both frontend and backend using PM2 
+// 2. Copies the single root .env.local file from the VM
+// 3. Installs all dependencies at the project root
+// 4. Builds the full Next.js app
+// 5. Deploys one Next.js process using PM2
 pipeline {
     agent any
 
@@ -25,7 +25,7 @@ pipeline {
     //             * Runs database migrations against the production database.
     //             * DATABASE_URL is automatically available from the environment block.
     //             */
-    //             dir("${WORKSPACE}/backend") {
+    //             dir("${WORKSPACE}") {
     //                 sh 'npm run migrate -- up'
     //             }
     //         }
@@ -38,33 +38,19 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Copy Environment Files') {
+        stage('Copy Environment File') {
             steps {
-                // Copy env files from /home/concamuflage/project888 to the Jenkins workspace,
-                // preserving directory structure and excluding all other files.
+                // Copy only root configuration; nested legacy env files are not used.
                 sh '''
-                    rsync -av \
-                    --include="*/" \
-                    --include=".env*" \
-                    --exclude="*" \
-                    /home/concamuflage/project888/ .
+                    install -m 600 /home/concamuflage/project888/.env.local .env.local
                 '''
             }
         }
 
-        // Install frontend dependencies from package.json
-        stage('Install Frontend Dependencies') {
+        // Install UI and server dependencies from the root lockfile.
+        stage('Install Dependencies') {
             steps {
                 sh 'npm ci'
-            }
-        }
-
-        // Install backend dependencies inside the backend folder
-        stage('Install Backend Dependencies') {
-            steps {
-                dir("${WORKSPACE}/backend") {
-                    sh 'npm ci'
-                }
             }
         }
 
@@ -80,21 +66,15 @@ pipeline {
             steps {
                 sh '''
                     pm2 startOrReload ecosystem.config.cjs --only project888-web --update-env
+                    # Retire only the old API process after Next has started successfully.
+                    if pm2 describe project888-api >/dev/null 2>&1; then
+                        pm2 delete project888-api
+                    fi
                     pm2 save
                 '''
             }
         }
 
-
-        // Deploy or restart the backend API from the Jenkins workspace.
-        stage('Deploy Express.js') {
-            steps {
-                sh '''
-                    pm2 startOrReload ecosystem.config.cjs --only project888-api --update-env
-                    pm2 save
-                '''
-            }
-        }
 
         // stage('Post-deploy Auth UI Tests') {
         //     steps {

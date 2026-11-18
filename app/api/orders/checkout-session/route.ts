@@ -25,7 +25,6 @@ type CheckoutSessionRequestPayload = CheckoutOrderPayload & {
 type CheckoutSessionSelectionPayload = {
   shippingAddressId?: unknown;
   billingAddressId?: unknown;
-  shippingId?: unknown;
 };
 
 function shouldShareCustomerEmailWithStripe() {
@@ -50,10 +49,7 @@ function readSelectionId(value: unknown) {
   return Number.isInteger(selectedId) && selectedId > 0 ? selectedId : null;
 }
 
-function badRequest(message: string) {
-  return NextResponse.json({ error: message }, { status: 400 });
-}
-
+/** Starts Stripe checkout with authoritative item prices and the flat domestic shipping fee. */
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -74,7 +70,6 @@ export async function POST(request: Request) {
       userId,
       shippingAddressId: readSelectionId(payload?.shippingAddressId),
       billingAddressId: readSelectionId(payload?.billingAddressId),
-      shippingId: readSelectionId(payload?.shippingId),
     })) as CheckoutSessionRequestPayload;
     const origin = getAppOrigin(request);
     const customerEmail = shouldShareCustomerEmailWithStripe() ? session.user.email ?? undefined : undefined;
@@ -143,7 +138,7 @@ export async function POST(request: Request) {
       message.includes("Too many Stripe checkout attempts") ? 429 :
       message.includes("cart is empty") ||
       message.includes("Select shipping") ||
-      message.includes("Selected shipping option") ? 400 :
+      message.includes("billing addresses") ? 400 :
       message.includes("do not belong") ? 403 :
       500;
     return NextResponse.json({ error: message }, { status });

@@ -28,9 +28,10 @@ import org.testng.Assert;
  *
  * <p>This class centralizes authentication, profile/cart/order API calls, Stripe webhook fixtures,
  * and direct database fixture setup/cleanup used by RestAssured tests.
+ * Domestic delivery adds one flat $8.95 fee without a shipping-rate table.
+ * Retail fixtures use recorded USD prices, e.g. two $49.90 shirts subtotal $99.80.
  */
 public final class OrdersApiSupport {
-  private static final BigDecimal RMB_TO_USD = BigDecimal.valueOf(0.14);
 
   private OrdersApiSupport() {}
 
@@ -267,8 +268,7 @@ public final class OrdersApiSupport {
           Map.of("id", fixture.variant().cartItemId(), "qty", fixture.variant().quantity())
         },
         "shippingAddressId", fixture.shippingAddressId(),
-        "billingAddressId", fixture.billingAddressId(),
-        "shippingId", fixture.shipping().id()
+        "billingAddressId", fixture.billingAddressId()
       ))
       .put(ApiEndpoints.path("cart.current"));
   }
@@ -284,7 +284,7 @@ public final class OrdersApiSupport {
       .put(ApiEndpoints.path("cart.current"));
   }
 
-  /** Submits the mock-payment checkout endpoint using the supplied checkout fixture. */
+  /** Submits the domestic mock payload, e.g. shippingMethod="USPS" and shippingUsd=8.95. */
   public static Response submitMockPayment(Cookies cookies, CheckoutFixture fixture) {
     return RestAssured
       .given()
@@ -293,12 +293,9 @@ public final class OrdersApiSupport {
       .accept(ContentType.JSON)
       .body(Map.of(
         "subtotalUsd", fixture.variant().subtotalUsd(),
-        "shippingUsd", fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg()),
-        "totalUsd", fixture.variant().subtotalUsd().add(fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg())),
-        "clothesWeightKg", fixture.variant().clothesWeightKg(),
-        "boxWeightKg", fixture.shipping().boxWeightKg(fixture.variant().clothesWeightKg()),
-        "shippingWeightKg", fixture.shipping().shippingWeightKg(fixture.variant().clothesWeightKg()),
-        "shippingId", fixture.shipping().id(),
+        "shippingUsd", fixture.shipping().shippingUsd(),
+        "shippingMethod", fixture.shipping().mode(),
+        "totalUsd", fixture.variant().subtotalUsd().add(fixture.shipping().shippingUsd()),
         "shippingAddressId", fixture.shippingAddressId(),
         "billingAddressId", fixture.billingAddressId(),
         "items", new Object[] {
@@ -448,10 +445,7 @@ public final class OrdersApiSupport {
               subtotal_usd,
               shipping_usd,
               total_usd,
-              clothes_weight_kg,
-              box_weight_kg,
-              shipping_weight_kg,
-              shipping_id,
+              shipping_method,
               invoice_number,
               invoice_generated_at,
               created_at,
@@ -459,7 +453,7 @@ public final class OrdersApiSupport {
               shipping_address_id,
               billing_address_id
             )
-            VALUES (?, 'unshipped', 'paid', 'rest-assured', ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, 'unshipped', 'paid', 'rest-assured', ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           """,
           Statement.RETURN_GENERATED_KEYS
         )
@@ -468,23 +462,20 @@ public final class OrdersApiSupport {
         insertOrder.setString(2, "rest-assured-" + System.currentTimeMillis());
         insertOrder.setTimestamp(3, now);
         insertOrder.setBigDecimal(4, checkoutFixture.variant().subtotalUsd());
-        insertOrder.setBigDecimal(5, checkoutFixture.shipping().shippingUsd(checkoutFixture.variant().clothesWeightKg()));
+        insertOrder.setBigDecimal(5, checkoutFixture.shipping().shippingUsd());
         insertOrder.setBigDecimal(
           6,
           checkoutFixture.variant().subtotalUsd().add(
-            checkoutFixture.shipping().shippingUsd(checkoutFixture.variant().clothesWeightKg())
+            checkoutFixture.shipping().shippingUsd()
           )
         );
-        insertOrder.setBigDecimal(7, checkoutFixture.variant().clothesWeightKg());
-        insertOrder.setBigDecimal(8, checkoutFixture.shipping().boxWeightKg(checkoutFixture.variant().clothesWeightKg()));
-        insertOrder.setBigDecimal(9, checkoutFixture.shipping().shippingWeightKg(checkoutFixture.variant().clothesWeightKg()));
-        insertOrder.setInt(10, checkoutFixture.shipping().id());
-        insertOrder.setString(11, invoiceNumber);
-        insertOrder.setTimestamp(12, now);
-        insertOrder.setTimestamp(13, now);
-        insertOrder.setTimestamp(14, now);
-        insertOrder.setInt(15, checkoutFixture.shippingAddressId());
-        insertOrder.setInt(16, checkoutFixture.billingAddressId());
+        insertOrder.setString(7, "USPS");
+        insertOrder.setString(8, invoiceNumber);
+        insertOrder.setTimestamp(9, now);
+        insertOrder.setTimestamp(10, now);
+        insertOrder.setTimestamp(11, now);
+        insertOrder.setInt(12, checkoutFixture.shippingAddressId());
+        insertOrder.setInt(13, checkoutFixture.billingAddressId());
         insertOrder.executeUpdate();
 
         try (ResultSet generatedKeys = insertOrder.getGeneratedKeys()) {
@@ -724,14 +715,12 @@ public final class OrdersApiSupport {
 
   /** Creates the expected order values shared by direct DB and mock-payment fixtures. */
   private static OrderFixture createOrderFixture(long orderId, String invoiceNumber, CheckoutFixture fixture) {
-    BigDecimal shippingUsd = fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg());
+    BigDecimal shippingUsd = fixture.shipping().shippingUsd();
     BigDecimal totalUsd = fixture.variant().subtotalUsd().add(shippingUsd);
     return new OrderFixture(
       orderId,
       invoiceNumber,
-      fixture.shipping().id(),
       fixture.shipping().mode(),
-      fixture.shipping().deliveryTime(),
       fixture.shippingAddressId(),
       fixture.billingAddressId(),
       fixture.variant().productId(),
@@ -971,33 +960,12 @@ public final class OrdersApiSupport {
     }
   }
 
-  /** Loads the first available shipping-cost row for checkout fixture calculations. */
-  private static ShippingRow getShippingRow(Connection connection) throws SQLException {
-    try (
-      PreparedStatement statement = connection.prepareStatement(
-        """
-          SELECT id, mode, delivery_time, first_kg_cost_rmb, additional_kg_cost_rmb
-          FROM shipping_cost
-          ORDER BY id ASC
-          LIMIT 1
-        """
-      );
-      ResultSet resultSet = statement.executeQuery()
-    ) {
-      if (!resultSet.next()) {
-        throw new IllegalStateException("No shipping_cost rows exist for the API test fixture");
-      }
-      return new ShippingRow(
-        resultSet.getInt("id"),
-        resultSet.getString("mode"),
-        resultSet.getString("delivery_time"),
-        resultSet.getBigDecimal("first_kg_cost_rmb"),
-        resultSet.getBigDecimal("additional_kg_cost_rmb")
-      );
-    }
+  /** Supplies the domestic delivery fixture without reading a retired rate table. */
+  private static ShippingRow getShippingRow(Connection connection) {
+    return new ShippingRow("USPS");
   }
 
-  /** Loads the first product variant that has enough data for order and invoice tests. */
+  /** Loads recorded USD prices for domestic checkout, e.g. $49.90 for SKU 9653. */
   private static VariantFixture getVariantRow(Connection connection) throws SQLException {
     try (
       PreparedStatement statement = connection.prepareStatement(
@@ -1005,11 +973,10 @@ public final class OrdersApiSupport {
           SELECT
             p.id AS product_id,
             pv.id AS variant_id,
-            pv.cost_rmb,
+            pv.price_usd,
             p.name AS product_name,
             c.color,
             s.size,
-            COALESCE(st.weight_kg, 0) AS style_weight_kg,
             pvi.image_link
           FROM product_variants pv
           JOIN products p
@@ -1018,8 +985,6 @@ public final class OrdersApiSupport {
             ON c.id = pv.color_id
           LEFT JOIN sizes s
             ON s.id = pv.size_id
-          JOIN styles st
-            ON st.id = p.style_id
           LEFT JOIN LATERAL (
             SELECT image_link
             FROM product_variant_images
@@ -1027,7 +992,7 @@ public final class OrdersApiSupport {
             ORDER BY id ASC
             LIMIT 1
           ) pvi ON true
-          WHERE pv.cost_rmb IS NOT NULL
+          WHERE pv.price_usd > 0
           ORDER BY pv.id ASC
           LIMIT 1
         """
@@ -1039,7 +1004,7 @@ public final class OrdersApiSupport {
       }
 
       int quantity = 2;
-      BigDecimal unitPriceUsd = toUsd(resultSet.getBigDecimal("cost_rmb"));
+      BigDecimal unitPriceUsd = resultSet.getBigDecimal("price_usd");
       int productId = resultSet.getInt("product_id");
       int variantId = resultSet.getInt("variant_id");
       return new VariantFixture(
@@ -1052,7 +1017,6 @@ public final class OrdersApiSupport {
         resultSet.getString("size"),
         unitPriceUsd,
         unitPriceUsd.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP),
-        resultSet.getBigDecimal("style_weight_kg").multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP),
         resultSet.getString("image_link")
       );
     }
@@ -1065,10 +1029,6 @@ public final class OrdersApiSupport {
     }
   }
 
-  /** Converts RMB fixture costs to USD using the fixed test exchange rate. */
-  private static BigDecimal toUsd(BigDecimal rmb) {
-    return rmb.multiply(RMB_TO_USD).setScale(2, RoundingMode.HALF_UP);
-  }
 
   /** Creates the HMAC-SHA256 signature Stripe expects in test webhook requests. */
   private static String signStripeWebhookPayload(long timestamp, String payload) {
@@ -1084,17 +1044,14 @@ public final class OrdersApiSupport {
 
   /** Serializes the checkout fixture into the JSON payload stored with a Stripe Checkout Session. */
   private static String checkoutPayloadJson(CheckoutFixture fixture) {
-    BigDecimal shippingUsd = fixture.shipping().shippingUsd(fixture.variant().clothesWeightKg());
+    BigDecimal shippingUsd = fixture.shipping().shippingUsd();
     BigDecimal totalUsd = fixture.variant().subtotalUsd().add(shippingUsd);
     return """
       {
         "subtotalUsd": %s,
         "shippingUsd": %s,
         "totalUsd": %s,
-        "clothesWeightKg": %s,
-        "boxWeightKg": %s,
-        "shippingWeightKg": %s,
-        "shippingId": %d,
+        "shippingMethod": "USPS",
         "shippingAddressId": %d,
         "billingAddressId": %d,
         "items": [
@@ -1110,10 +1067,6 @@ public final class OrdersApiSupport {
         fixture.variant().subtotalUsd().toPlainString(),
         shippingUsd.toPlainString(),
         totalUsd.toPlainString(),
-        fixture.variant().clothesWeightKg().toPlainString(),
-        fixture.shipping().boxWeightKg(fixture.variant().clothesWeightKg()).toPlainString(),
-        fixture.shipping().shippingWeightKg(fixture.variant().clothesWeightKg()).toPlainString(),
-        fixture.shipping().id(),
         fixture.shippingAddressId(),
         fixture.billingAddressId(),
         jsonEscape(fixture.variant().cartItemId()),
@@ -1127,57 +1080,11 @@ public final class OrdersApiSupport {
     return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
-  /** Calculates package box weight from clothes weight using the application's tiered test rules. */
-  private static BigDecimal getBoxWeightKg(BigDecimal clothesWeightKg) {
-    if (clothesWeightKg.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-    if (clothesWeightKg.compareTo(BigDecimal.ONE) <= 0) return BigDecimal.valueOf(0.25).setScale(2, RoundingMode.HALF_UP);
-    if (clothesWeightKg.compareTo(BigDecimal.valueOf(2)) <= 0) return BigDecimal.valueOf(0.30).setScale(2, RoundingMode.HALF_UP);
-    if (clothesWeightKg.compareTo(BigDecimal.valueOf(3)) <= 0) return BigDecimal.valueOf(0.35).setScale(2, RoundingMode.HALF_UP);
-    if (clothesWeightKg.compareTo(BigDecimal.valueOf(4)) <= 0) return BigDecimal.valueOf(0.40).setScale(2, RoundingMode.HALF_UP);
-    if (clothesWeightKg.compareTo(BigDecimal.valueOf(5)) <= 0) return BigDecimal.valueOf(0.45).setScale(2, RoundingMode.HALF_UP);
-
-    int extraKgSteps = clothesWeightKg.setScale(0, RoundingMode.CEILING).intValue() - 5;
-    return BigDecimal.valueOf(0.45 + extraKgSteps * 0.05).setScale(2, RoundingMode.HALF_UP);
-  }
-
-  /** Calculates RMB shipping cost using first-kg and additional-kg rates from the shipping row. */
-  private static BigDecimal calculateShippingCostRmb(BigDecimal totalWeightKg, ShippingRow mode) {
-    if (totalWeightKg.compareTo(BigDecimal.ZERO) <= 0) {
-      return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-    }
-
-    BigDecimal firstKgCost = mode.firstKgCostRmb() == null
-      ? BigDecimal.ZERO
-      : mode.firstKgCostRmb();
-    BigDecimal additionalKgCost = mode.additionalKgCostRmb() == null
-      ? BigDecimal.ZERO
-      : mode.additionalKgCostRmb();
-    BigDecimal extraWeightKg = totalWeightKg.subtract(BigDecimal.ONE).max(BigDecimal.ZERO);
-    int billedAdditionalKg = extraWeightKg.compareTo(BigDecimal.ZERO) > 0
-      ? extraWeightKg.setScale(0, RoundingMode.CEILING).intValue()
-      : 0;
-
-    return firstKgCost.add(additionalKgCost.multiply(BigDecimal.valueOf(billedAdditionalKg))).setScale(2, RoundingMode.HALF_UP);
-  }
-
-  /** Shipping-cost fixture row plus helper methods for derived weights and USD shipping cost. */
-  public record ShippingRow(
-    int id,
-    String mode,
-    String deliveryTime,
-    BigDecimal firstKgCostRmb,
-    BigDecimal additionalKgCostRmb
-  ) {
-    public BigDecimal boxWeightKg(BigDecimal clothesWeightKg) {
-      return getBoxWeightKg(clothesWeightKg);
-    }
-
-    public BigDecimal shippingWeightKg(BigDecimal clothesWeightKg) {
-      return clothesWeightKg.add(boxWeightKg(clothesWeightKg)).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    public BigDecimal shippingUsd(BigDecimal clothesWeightKg) {
-      return toUsd(calculateShippingCostRmb(shippingWeightKg(clothesWeightKg), this));
+  /** Domestic shipping fixture: one $8.95 fee per order, independent of item weight. */
+  public record ShippingRow(String mode) {
+    /** Returns the provisional flat US fee, e.g. 8.95 for one or several items. */
+    public BigDecimal shippingUsd() {
+      return new BigDecimal("8.95");
     }
   }
 
@@ -1192,7 +1099,6 @@ public final class OrdersApiSupport {
     String size,
     BigDecimal unitPriceUsd,
     BigDecimal subtotalUsd,
-    BigDecimal clothesWeightKg,
     String imageUrl
   ) {}
 
@@ -1210,9 +1116,7 @@ public final class OrdersApiSupport {
   public record OrderFixture(
     long orderId,
     String invoiceNumber,
-    int shippingId,
     String shippingMode,
-    String shippingDeliveryTime,
     int shippingAddressId,
     int billingAddressId,
     int productId,

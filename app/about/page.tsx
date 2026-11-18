@@ -1,3 +1,4 @@
+/** Renders the founder story and fit guidance on /about and the homepage /. */
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -6,46 +7,34 @@ export default function AboutPage() {
 
         <div className="mt-6 max-w-3xl space-y-5 text-base leading-8 text-zinc-700">
           <p>
-            As someone who&apos;s 5&apos;5&quot; living in the U.S., I know how frustrating it can
-            be to find clothes that actually fit. Even the smallest sizes from brands like Nike
-            often have body lengths that are too long, and sleeves on jackets or hoodies almost
-            always extend past where they should.
+            As a shorter Asian guy who has lived in the U.S., I know firsthand how frustrating
+            it can be to find clothes that actually fit. Even the smallest sizes often have
+            sleeves that are too long or a body length that doesn&apos;t work for shorter men.
+            I struggled to find even a basic T-shirt that fit me properly.
           </p>
 
           <p>
-            Pants are a bit easier to deal with. You can usually get them hemmed, and some brands
-            even offer that service in-store. But tops are a different story. Many pieces have
-            design details on the sleeves or cuffs, which makes alterations difficult without
-            ruining the original look. I once had a Paul &amp; Shark jacket altered, and honestly,
-            I wasn&apos;t satisfied with the result. That&apos;s why I&apos;m focusing on topwear first:
-            it&apos;s the bigger problem.
+            That&apos;s why I started this business:{" "}
+            <strong>to bring better-fitting clothes to shorter guys like me.</strong>
           </p>
 
           <p>
-            Unlike brands like Ash &amp; Erie, Abbreviated, or Under 5&apos;10, I&apos;m not trying to
-            create a new label specifically for shorter men. Instead, the goal is to bring
-            mainstream brands that already work better for shorter builds. Right now, we&apos;re
-            starting with Nike, and we&apos;ll gradually add more brands. Pants will come in a
-            later phase.
+            We&apos;re still in the early stages, testing the idea and seeing whether there&apos;s
+            enough demand for clothing designed specifically for shorter men. For now, our
+            clothes are sourced from China, so the care labels are still in Chinese.
           </p>
 
           <p>
-            At the moment, our prices aren&apos;t the most competitive. We&apos;re currently purchasing
-            items at retail prices in China and shipping them to customers. As we grow, we plan
-            to source directly from wholesalers to offer better pricing.
+            Because these clothes are designed with Asian body proportions in mind, the sleeves
+            may be shorter than those on typical American clothing. If you&apos;re not Asian, we
+            recommend checking the sleeve measurements carefully before purchasing to make sure
+            they&apos;re long enough for you.
           </p>
 
           <p>
-            If demand continues to grow, the next step will be importing products directly into
-            the U.S. and shipping locally, which will help reduce both costs and delivery times.
+            <strong>All measurements are based on the actual garment in the selected size and style</strong>,
+            so you can check the fit before placing your order.
           </p>
-
-          <p>
-            Our mission is simple: to provide well-fitting products at reasonable prices for
-            people who struggle to find the right fit.
-          </p>
-
-          <p>Happy shopping!</p>
         </div>
       </main>
     </div>

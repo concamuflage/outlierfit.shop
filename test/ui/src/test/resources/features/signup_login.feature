@@ -1,4 +1,4 @@
-@Signup @Regression @Smoke
+@SignupLogin @Regression @Smoke
 Feature: Signup and Login
   # The cleanup step of deleting created user is in the hook.
   # After each scenario, the created user will be deleted through a direct database delete.

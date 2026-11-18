@@ -7,7 +7,7 @@ This folder contains Selenium + TestNG + Cucumber UI tests for the cart flow.
 1. Start the app:
 
 ```bash
-npm run dev:full
+npm run dev
 ```
 
 2. Make sure the site is reachable at `http://localhost:3000`.
@@ -50,7 +50,7 @@ export TEST_USER_PASSWORD=your-password
 mvn test
 ```
 
-Or store them locally in `test/ui/.env.local`:
+Or put them in the project-root `.env.local`, shared with the app and Playwright tests:
 
 ```bash
 TEST_USER_EMAIL=your-email@example.com

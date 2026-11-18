@@ -1,38 +1,13 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { getServerEnv } from "@/backend/env";
 
 // Base URL used as fallback when no valid environment URL is provided in production
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 // Store email that will also receive a copy of the invoice email
 const STORE_EMAIL = "unodostreszlm@gmail.com";
-const BACKEND_ENV_PATHS = ["backend/.env.local", "backend/.env"];
 
 // Normalizes a base URL by trimming whitespace and removing trailing slashes
 function normalizeAppBaseUrl(value: string | undefined) {
   return typeof value === "string" && value.trim() ? value.trim().replace(/\/+$/, "") : "";
-}
-
-function readEnvValueFromFile(filePath: string, key: string) {
-  try {
-    const content = readFileSync(resolve(process.cwd(), filePath), "utf8");
-    const line = content
-      .split(/\r?\n/)
-      .find((entry) => entry.trim().startsWith(`${key}=`));
-    if (!line) {
-      return "";
-    }
-
-    return line
-      .slice(line.indexOf("=") + 1)
-      .trim()
-      .replace(/^['"]|['"]$/g, "");
-  } catch {
-    return "";
-  }
-}
-
-function invoiceEmailEnv(key: "RESEND_API_KEY" | "RESEND_FROM_EMAIL") {
-  return process.env[key] || BACKEND_ENV_PATHS.map((path) => readEnvValueFromFile(path, key)).find(Boolean) || "";
 }
 
 // Checks whether a given URL points to a localhost environment
@@ -104,7 +79,7 @@ async function sendResendEmail({
   }
 }
 
-// Sends separate customer and store invoice-link emails with tailored copy
+/** Sends customer/store invoices using root env settings, e.g. RESEND_FROM_EMAIL from .env.local. */
 export async function sendInvoiceLinkEmail({
   to,
   orderId,
@@ -117,8 +92,8 @@ export async function sendInvoiceLinkEmail({
   paidAt: string;
 }) {
   // Read required configuration from environment variables
-  const apiKey = invoiceEmailEnv("RESEND_API_KEY");
-  const from = invoiceEmailEnv("RESEND_FROM_EMAIL");
+  const apiKey = getServerEnv("RESEND_API_KEY");
+  const from = getServerEnv("RESEND_FROM_EMAIL");
 
   if (!apiKey || !from) {
     throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");

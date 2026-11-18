@@ -17,6 +17,7 @@ type CartItemRowProps = {
   testIdPrefix?: string;
 };
 
+/** Displays a cart item, including its actual weight rounded for display, e.g. 0.06 kg. */
 export default function CartItemRow({
   item,
   onRemove,
@@ -54,7 +55,7 @@ export default function CartItemRow({
             </div>
             {item.weightKg != null ? (
               <div className="mt-1 text-xs text-zinc-500">
-                Estimated weight per item: {item.weightKg.toFixed(2)} kg
+                Weight per item: {item.weightKg.toFixed(2)} kg
               </div>
             ) : null}
           </div>

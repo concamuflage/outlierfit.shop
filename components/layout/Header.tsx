@@ -12,6 +12,9 @@ import SignupModal from "@/components/auth/SignupModal";
 /**
  * Site header with auth actions and cart entry point.
  * Shows login/signup buttons when logged out, and sign-out when logged in.
+ * For example, logged-out visitors on /products see Sign up and Sign in.
+ * Every page shows the expected Boston shipping date, e.g. around December 20.
+ * The banner explains the Asian-proportion long-sleeve fit and discloses Chinese care labels.
  */
 export default function Header() {
   const { data: session } = useSession();
@@ -27,8 +30,6 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const openedFromAuthPage = pathname === "/login" || pathname === "/signup";
-  const trialBannerText =
-    "If you want to buy some clothes that are not on the site, you can send us the link so we can list them on the site. If you have any suggestions, you can also write to us. All products are original, but they are bought in China and only have tags in Chinese. Shipping takes 7-60 days depending on the shipping services you choose. If U.S. Customs applies import tariffs or duties to your shipment, those charges would be the customer's responsibility.";
 
   const handleLoginModalSuccess = () => {
     closeAuthModal();
@@ -44,11 +45,17 @@ export default function Header() {
 
   return (
     <header className="border-b border-zinc-200 bg-white">
-      <div className="border-b border-amber-200 bg-amber-50">
-        <div className="mx-auto max-w-6xl px-4 py-3 text-xs leading-5 text-amber-950 sm:px-6">
-          {trialBannerText}
+      <aside aria-label="Shipping announcement" className="bg-zinc-900 text-white">
+        <div className="mx-auto max-w-6xl space-y-2 px-4 py-3 text-center text-sm leading-5 sm:px-6">
+          <p className="font-semibold">We expect to ship from Boston around December 20.</p>
+          <p>
+            Our long-sleeve styles are designed with Asian body proportions in mind, with a shorter sleeve fit.
+            {" "}Please check sleeve measurements before ordering.
+            {" "}We plan to offer more sleeve-length options for customers of all ethnic backgrounds in the future.
+          </p>
+          <p className="text-xs text-zinc-300">Please note that care labels are in Chinese.</p>
         </div>
-      </div>
+      </aside>
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="text-lg font-semibold tracking-tight sm:text-xl">OutlierFit</div>
         <nav className="flex flex-wrap items-center gap-3 text-sm sm:gap-4 lg:justify-end lg:gap-6">

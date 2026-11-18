@@ -12,9 +12,12 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.openqa.selenium.support.ui.FluentWait;
 
+/** Reads test emails from Gmail, polling for a password-reset link for up to 60 seconds. */
 public final class GmailVerificationClient {
   private static final Pattern VERIFICATION_LINK_PATTERN =
     Pattern.compile("https?://[^\\s\"'<>]+/verify-email\\?[^\\s\"'<>]+");
@@ -66,14 +69,25 @@ public final class GmailVerificationClient {
     return findLatestVerificationEmail(recipientEmail).verificationLink();
   }
 
+  /** Waits for delayed reset mail, e.g. a message arriving after 10 seconds is found on a later poll. */
   public static String findLatestPasswordResetLink(String recipientEmail) {
-    return findLatestLink(
+    String token = accessToken();
+    return waitForPasswordResetLink(
       recipientEmail,
-      "Reset your OutlierFit password",
-      PASSWORD_RESET_LINK_PATTERN,
-      "/reset-password?",
-      "password reset"
+      () -> findLatestLink(recipientEmail, "Reset your OutlierFit password", PASSWORD_RESET_LINK_PATTERN, "/reset-password?", token),
+      Duration.ofSeconds(60),
+      Duration.ofSeconds(3)
     );
+  }
+
+  /** Polls only absent links; e.g. null, null, link succeeds, while an OAuth exception propagates immediately. */
+  static String waitForPasswordResetLink(String recipientEmail, Supplier<String> lookup, Duration timeout, Duration interval) {
+    return new FluentWait<>(lookup)
+      .withTimeout(timeout)
+      .pollingEvery(interval)
+      .withMessage("No Gmail password reset email with a usable link arrived for " + recipientEmail
+        + " within " + timeout.toSeconds() + " seconds.")
+      .until(Supplier::get);
   }
 
   public static InvoiceEmail findLatestCustomerInvoiceEmail(String recipientEmail) {
@@ -137,14 +151,14 @@ public final class GmailVerificationClient {
     throw new IllegalStateException("Gmail messages were found, but none contained a " + linkDescription + " link.");
   }
 
+  /** Performs one Gmail lookup using the same access token; returns null while delivery or indexing is pending. */
   private static String findLatestLink(
     String recipientEmail,
     String subject,
     Pattern linkPattern,
     String requiredPath,
-    String linkDescription
+    String accessToken
   ) {
-    String accessToken = accessToken();
     String query = "to:" + recipientEmail + " subject:\"" + subject + "\" newer_than:14d";
     String listUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
       + "?maxResults=10"
@@ -154,7 +168,7 @@ public final class GmailVerificationClient {
     Map<String, Object> listPayload = getJson(listUrl, accessToken);
     List<Map<String, Object>> messages = listPayloadValue(listPayload, "messages");
     if (messages == null || messages.isEmpty()) {
-      throw new IllegalStateException("No Gmail " + linkDescription + " emails found for " + recipientEmail);
+      return null;
     }
 
     for (Map<String, Object> messageSummary : messages) {
@@ -169,7 +183,7 @@ public final class GmailVerificationClient {
       }
     }
 
-    throw new IllegalStateException("Gmail messages were found, but none contained a " + linkDescription + " link.");
+    return null;
   }
 
   private static String accessToken() {

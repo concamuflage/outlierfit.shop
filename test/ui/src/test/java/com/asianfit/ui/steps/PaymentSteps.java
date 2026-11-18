@@ -12,6 +12,7 @@ import io.cucumber.java.en.When;
 import java.time.Instant;
 import org.testng.Assert;
 
+/** Connects payment scenarios to page objects, e.g. waiting for the app-to-Stripe redirect before entering a card. */
 public class PaymentSteps {
   private CartPage cartPage() {
     return new CartPage(DriverFactory.getDriver());
@@ -80,9 +81,10 @@ public class PaymentSteps {
     cartPage().startStripeCheckoutPayment();
   }
 
+  /** Waits for the hosted redirect and retains timeout details instead of a generic true/false assertion. */
   @Then("I should be redirected to the Stripe Checkout page")
   public void iShouldBeRedirectedToTheStripeCheckoutPage() {
-    Assert.assertTrue(stripeCheckoutPage().isVisible(), "Expected to be on the Stripe Checkout page");
+    stripeCheckoutPage().waitForCheckoutRedirect();
   }
 
   @When("I choose the Stripe Card payment option")
@@ -156,11 +158,12 @@ public class PaymentSteps {
     checkoutSuccessPage().refresh();
   }
 
+  /** Accepts both browser-history /cart and Stripe cancel-link /cart?checkout=1 returns. */
   @Then("I should be returned to the cart page")
   public void iShouldBeReturnedToTheCartPage() {
     Assert.assertTrue(
       cartPage().isAtCartUrl(),
-      "Expected to return to /cart?checkout=1"
+      "Expected to return to the configured site's /cart page (checkout query parameter is optional)"
     );
   }
 

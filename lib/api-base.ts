@@ -1,5 +1,2 @@
-export const CLIENT_API_BASE_PATH = "/backend";
-
-export function getServerApiBaseUrl() {
-  return process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:4000";
-}
+// Browser calls stay on the Next server, e.g. GET /api/store/products.
+export const CLIENT_API_BASE_PATH = "/api/store";

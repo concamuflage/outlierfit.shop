@@ -1,10 +1,12 @@
+const { getServerEnv } = require("../env");
 const crypto = require("crypto");
 
 const DEFAULT_PASSWORD_RESET_TTL_MINUTES = 30;
 const PRODUCTION_APP_BASE_URL = "https://outlierfit.shop";
 
+/** Reads the server-side reset TTL, e.g. 30 means links expire after thirty minutes. */
 function getPasswordResetTtlMinutes() {
-  const rawValue = Number(process.env.PASSWORD_RESET_TTL_MINUTES || DEFAULT_PASSWORD_RESET_TTL_MINUTES);
+  const rawValue = Number(getServerEnv("PASSWORD_RESET_TTL_MINUTES") || DEFAULT_PASSWORD_RESET_TTL_MINUTES);
   if (!Number.isFinite(rawValue) || rawValue <= 0) {
     return DEFAULT_PASSWORD_RESET_TTL_MINUTES;
   }
@@ -36,13 +38,14 @@ function isLocalhostUrl(value) {
   }
 }
 
+/** Resolves the Next app origin; local reset links default to http://localhost:3000. */
 function getPasswordResetAppBaseUrl() {
-  const explicitPasswordResetUrl = normalizeAppBaseUrl(process.env.PASSWORD_RESET_APP_URL);
+  const explicitPasswordResetUrl = normalizeAppBaseUrl(getServerEnv("PASSWORD_RESET_APP_URL"));
   if (explicitPasswordResetUrl) return explicitPasswordResetUrl;
 
   const fallbackUrls = [
-    normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
-    normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
+    normalizeAppBaseUrl(getServerEnv("CLIENT_ORIGIN")),
+    normalizeAppBaseUrl(getServerEnv("NEXTAUTH_URL")),
   ].filter(Boolean);
 
   if (process.env.NODE_ENV === "production") {
@@ -61,9 +64,10 @@ function buildPasswordResetLink(email, rawToken) {
   return `${getPasswordResetAppBaseUrl()}/reset-password?${params.toString()}`;
 }
 
+/** Sends a reset email using Next/legacy Resend settings; a rejected API key still throws an error. */
 async function sendPasswordResetEmail({ to, firstName, resetLink }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
+  const apiKey = getServerEnv("RESEND_API_KEY");
+  const from = getServerEnv("RESEND_FROM_EMAIL");
 
   if (!apiKey || !from) {
     throw new Error("Missing Resend configuration. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");

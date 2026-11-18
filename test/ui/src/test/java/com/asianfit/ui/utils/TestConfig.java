@@ -10,22 +10,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Loads test configuration from system overrides or the one project-root .env.local file. */
 public final class TestConfig {
   private static final List<Path> LOCAL_ENV_PATHS = List.of(
-    Path.of(".env"),
     Path.of(".env.local"),
-    Path.of("../.env"),
     Path.of("../.env.local"),
-    Path.of("../../.env"),
-    Path.of("../../.env.local"),
-    Path.of("backend/.env"),
-    Path.of("backend/database/.env"),
-    Path.of("../backend/.env"),
-    Path.of("../backend/database/.env"),
-    Path.of("../../backend/.env"),
-    Path.of("../../backend/database/.env"),
-    Path.of("test/ui/.env"),
-    Path.of("test/ui/.env.local")
+    Path.of("../../.env.local")
   );
   private static final Map<String, String> LOCAL_ENV = loadLocalEnv();
 
@@ -66,6 +56,7 @@ public final class TestConfig {
     return "production".equalsIgnoreCase(nodeEnv);
   }
 
+  /** Reads TEST_USER_EMAIL from root configuration unless a system override is provided. */
   public static String testUserEmail() {
     String value = System.getProperty("testUserEmail");
     if (value == null || value.isBlank()) {
@@ -76,12 +67,13 @@ public final class TestConfig {
     }
     if (value == null || value.isBlank()) {
       throw new IllegalStateException(
-        "Missing test user email. Set -DtestUserEmail, TEST_USER_EMAIL, or test/ui/.env.local for login-required UI tests"
+        "Missing test user email. Set -DtestUserEmail, TEST_USER_EMAIL, or project-root .env.local for login-required UI tests"
       );
     }
     return value;
   }
 
+  /** Builds the JDBC target, e.g. PGHOST=localhost and PGDATABASE=clothes select the local database. */
   public static String databaseUrl() {
     String value = configuredDatabaseUrl();
     if (value == null || value.isBlank()) {
@@ -108,12 +100,13 @@ public final class TestConfig {
     }
     if (value == null || value.isBlank()) {
       throw new IllegalStateException(
-        "Missing database connection. Set -DtestDatabaseUrl, TEST_DATABASE_URL, DATABASE_URL, or PGHOST/PGPORT/PGDATABASE in test/ui/.env.local"
+        "Missing database connection. Set -DtestDatabaseUrl, TEST_DATABASE_URL, DATABASE_URL, or PGHOST/PGPORT/PGDATABASE in project-root .env.local"
       );
     }
     return toJdbcUrl(value);
   }
 
+  /** Reads the configured database user, e.g. PGUSER=postgres in root .env.local. */
   public static String databaseUser() {
     String value = firstNonBlank(
       System.getProperty("pgUser"),
@@ -123,12 +116,13 @@ public final class TestConfig {
     );
     if (value == null) {
       throw new IllegalStateException(
-        "Missing database user. Set -DpgUser, PGUSER, or test/ui/.env.local"
+        "Missing database user. Set -DpgUser, PGUSER, or project-root .env.local"
       );
     }
     return value;
   }
 
+  /** Reads the database password without requiring a separate test-specific env file. */
   public static String databasePassword() {
     String value = firstNonBlank(
       System.getProperty("pgPassword"),
@@ -138,7 +132,7 @@ public final class TestConfig {
     );
     if (value == null) {
       throw new IllegalStateException(
-        "Missing database password. Set -DpgPassword, PGPASSWORD, or test/ui/.env.local"
+        "Missing database password. Set -DpgPassword, PGPASSWORD, or project-root .env.local"
       );
     }
     return value;
@@ -169,6 +163,7 @@ public final class TestConfig {
     return value;
   }
 
+  /** Reads TEST_USER_PASSWORD from the root env file or an explicit test override. */
   public static String testUserPassword() {
     String value = System.getProperty("testUserPassword");
     if (value == null || value.isBlank()) {
@@ -179,7 +174,7 @@ public final class TestConfig {
     }
     if (value == null || value.isBlank()) {
       throw new IllegalStateException(
-        "Missing test user password. Set -DtestUserPassword, TEST_USER_PASSWORD, or test/ui/.env.local for login-required UI tests"
+        "Missing test user password. Set -DtestUserPassword, TEST_USER_PASSWORD, or project-root .env.local for login-required UI tests"
       );
     }
     return value;
@@ -243,6 +238,7 @@ public final class TestConfig {
     );
   }
 
+  /** Reads the expected sender from shared RESEND_FROM_EMAIL, matching the Next.js server. */
   public static String resendFromEmail() {
     String value = firstNonBlank(
       System.getProperty("resendFromEmail"),
@@ -251,7 +247,7 @@ public final class TestConfig {
     );
     if (value == null) {
       throw new IllegalStateException(
-        "Missing expected sender email. Set -DresendFromEmail, RESEND_FROM_EMAIL, or backend/.env"
+        "Missing expected sender email. Set -DresendFromEmail, RESEND_FROM_EMAIL, or project-root .env.local"
       );
     }
     return value;
@@ -266,6 +262,7 @@ public final class TestConfig {
     );
   }
 
+  /** Reads TEST_UNVERIFIED_USER_EMAIL from the same root file used by other test accounts. */
   public static String unverifiedTestUserEmail() {
     String value = System.getProperty("unverifiedTestUserEmail");
     if (value == null || value.isBlank()) {
@@ -276,12 +273,13 @@ public final class TestConfig {
     }
     if (value == null || value.isBlank()) {
       throw new IllegalStateException(
-        "Missing unverified test user email. Set -DunverifiedTestUserEmail, TEST_UNVERIFIED_USER_EMAIL, or test/ui/.env.local"
+        "Missing unverified test user email. Set -DunverifiedTestUserEmail, TEST_UNVERIFIED_USER_EMAIL, or project-root .env.local"
       );
     }
     return value;
   }
 
+  /** Reads TEST_UNVERIFIED_USER_PASSWORD without a nested test env file. */
   public static String unverifiedTestUserPassword() {
     String value = System.getProperty("unverifiedTestUserPassword");
     if (value == null || value.isBlank()) {
@@ -292,15 +290,20 @@ public final class TestConfig {
     }
     if (value == null || value.isBlank()) {
       throw new IllegalStateException(
-        "Missing unverified test user password. Set -DunverifiedTestUserPassword, TEST_UNVERIFIED_USER_PASSWORD, or test/ui/.env.local"
+        "Missing unverified test user password. Set -DunverifiedTestUserPassword, TEST_UNVERIFIED_USER_PASSWORD, or project-root .env.local"
       );
     }
     return value;
   }
 
+  /** Finds the root from supported working directories, e.g. test/ui resolves ../../.env.local. */
   private static Map<String, String> loadLocalEnv() {
     Map<String, String> values = new HashMap<>();
     for (Path localEnvPath : LOCAL_ENV_PATHS) {
+      if (!Files.exists(localEnvPath.getParent() == null
+          ? Path.of("package.json") : localEnvPath.getParent().resolve("package.json"))) {
+        continue;
+      }
       if (!Files.exists(localEnvPath)) {
         continue;
       }
@@ -322,6 +325,7 @@ public final class TestConfig {
           String value = line.substring(separatorIndex + 1).trim();
           values.put(key, stripWrappingQuotes(value));
         }
+        break;
       } catch (IOException e) {
         throw new IllegalStateException("Failed to read " + localEnvPath, e);
       }

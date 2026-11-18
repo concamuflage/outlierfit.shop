@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Controls the cart drawer with a flat domestic fee and no delivery-option radios. */
 public class CartDrawer extends BasePage {
   private static final By DRAWER = By.cssSelector("[data-testid='cart-drawer']");
   private static final By CART_BUTTON = By.cssSelector("[data-testid='cart-button']");
@@ -18,7 +19,6 @@ public class CartDrawer extends BasePage {
   private static final By SHIPPING = By.cssSelector("[data-testid='cart-drawer-summary-shipping']");
   private static final By ORDER_TOTAL = By.cssSelector("[data-testid='cart-drawer-summary-order-total']");
   private static final By CLEAR_CART = By.cssSelector("[data-testid='cart-drawer-clear-cart']");
-  private static final By SHIPPING_INPUTS = By.cssSelector("[data-testid^='cart-drawer-shipping-option-input-']");
 
   public CartDrawer(WebDriver driver) {
     super(driver);
@@ -59,24 +59,7 @@ public class CartDrawer extends BasePage {
     increaseButton.click();
   }
 
-  public void selectSecondShippingOption() {
-    List<WebElement> inputs = driver.findElements(SHIPPING_INPUTS);
-    if (inputs.size() < 2) {
-      throw new IllegalStateException("Expected at least 2 shipping options in the cart drawer");
-    }
-    WebElement secondInput = inputs.get(1);
-    if (!secondInput.isSelected()) {
-      secondInput.click();
-    }
-  }
 
-  public boolean isSecondShippingOptionSelected() {
-    List<WebElement> inputs = driver.findElements(SHIPPING_INPUTS);
-    if (inputs.size() < 2) {
-      throw new IllegalStateException("Expected at least 2 shipping options in the cart drawer");
-    }
-    return inputs.get(1).isSelected();
-  }
 
   public String firstItemQuantity() {
     return text(FIRST_ITEM_QTY);

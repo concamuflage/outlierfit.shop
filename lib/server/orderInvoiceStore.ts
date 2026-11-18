@@ -1,5 +1,4 @@
 import pool from "@/backend/database/pool";
-import { formatShippingMode } from "@/lib/shipping";
 import type { InvoicePayload } from "@/lib/invoice";
 
 // This module builds an invoice payload for a given order.
@@ -40,8 +39,7 @@ type OrderInvoiceRow = {
   paid_amount: unknown;
   paid_at: unknown;
   customer_email: unknown;
-  shipping_mode: unknown;
-  shipping_delivery_time: unknown;
+  shipping_method: unknown;
   shipping_name: unknown;
   shipping_street: unknown;
   shipping_city: unknown;
@@ -69,6 +67,7 @@ type OrderInvoiceItemRow = {
 
 // Fetches and constructs the full invoice payload for a specific order and user
 // Combines order details, payment info, shipping data, and line items
+/** Builds an owned invoice using the order delivery snapshot, e.g. USPS, without a rate-table join. */
 export async function getInvoicePayloadForOrder(userId: number, orderId: number): Promise<InvoicePayload | null> {
   // Query main order + payment + address data
   const orderResult = await pool.query<OrderInvoiceRow>(
@@ -85,8 +84,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
         p.amount AS paid_amount,
         o.paid_at,
         u.email AS customer_email,
-        sc.mode AS shipping_mode,
-        sc.delivery_time AS shipping_delivery_time,
+        o.shipping_method,
         sa.name AS shipping_name,
         sa.street AS shipping_street,
         sa.city AS shipping_city,
@@ -104,8 +102,6 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
       FROM orders o
       JOIN users u
         ON u.id = o.user_id
-      JOIN shipping_cost sc
-        ON sc.id = o.shipping_id
       JOIN addresses sa
         ON sa.id = o.shipping_address_id
       JOIN addresses ba
@@ -172,7 +168,7 @@ export async function getInvoicePayloadForOrder(userId: number, orderId: number)
     invoiceNumber: String(row.invoice_number ?? ""),
     paidAt: toIsoString(row.paid_at),
     customerEmail: row.customer_email ? String(row.customer_email) : null,
-    shippingModeLabel: `${formatShippingMode(String(row.shipping_mode ?? ""))}${row.shipping_delivery_time ? ` ${String(row.shipping_delivery_time)}` : ""}`,
+    shippingModeLabel: String(row.shipping_method ?? ""),
     subtotalUsd: toNumber(row.subtotal_usd),
     shippingUsd: toNumber(row.shipping_usd),
     totalUsd: paidTotalUsd,

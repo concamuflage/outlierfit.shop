@@ -110,7 +110,8 @@ async function issuePasswordReset(user) {
   }
 }
 
-exports.signup = async (req, res) => {
+/** Handles signup inside Next; valid details return 201 and require email verification as before. */
+exports.signup = async (req) => {
   try {
     const { email, password, firstName, lastName } = req.body || {};
     const normalizedEmail = normalizeEmail(email);
@@ -118,17 +119,17 @@ exports.signup = async (req, res) => {
     const normalizedLastName = normalizeName(lastName);
 
     if (!email || !password || !firstName || !lastName) {
-      return res.status(400).json({ error: "Email, password, first name, and last name are required" });
+      return Response.json({ error: "Email, password, first name, and last name are required" }, { status: 400 });
     }
 
     if (!normalizedEmail) {
-      return res.status(400).json({ error: "A valid email is required." });
+      return Response.json({ error: "A valid email is required." }, { status: 400 });
     }
 
     if (!isStrongPassword(password)) {
-      return res.status(400).json({
+      return Response.json({
         error: PASSWORD_REQUIREMENTS_MESSAGE,
-      });
+      }, { status: 400 });
     }
 
     await ensureUsersTable();
@@ -142,12 +143,12 @@ exports.signup = async (req, res) => {
 
       if (!existingUser.email_verified) {
         await issueEmailVerification(existingUser);
-        return res.status(409).json({
+        return Response.json({
           error: "An account with this email already exists. We sent a new verification email.",
-        });
+        }, { status: 409 });
       }
 
-      return res.status(409).json({ error: "An account with this email already exists. Please sign in." });
+      return Response.json({ error: "An account with this email already exists. Please sign in." }, { status: 409 });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -171,25 +172,26 @@ exports.signup = async (req, res) => {
     const user = result.rows[0];
     await issueEmailVerification(user);
 
-    return res.status(201).json({
+    return Response.json({
       id: user.id,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       message: SIGNUP_SUCCESS_MESSAGE,
-    });
+    }, { status: 201 });
   } catch (err) {
     console.error("signup error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 };
 
-exports.login = async (req, res) => {
+/** Checks a password and verification state; an unverified account returns 403, not a session. */
+exports.login = async (req) => {
   try {
     const { email, password } = req.body || {};
     const normalizedEmail = normalizeEmail(email);
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return Response.json({ error: "Email and password are required" }, { status: 400 });
     }
 
     await ensureUsersTable();
@@ -211,25 +213,25 @@ exports.login = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return Response.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const user = result.rows[0];
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return Response.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     if (!user.email_verified) {
-      return res.status(403).json({
+      return Response.json({
         error: EMAIL_NOT_VERIFIED_MESSAGE,
         code: "EMAIL_NOT_VERIFIED",
-      });
+      }, { status: 403 });
     }
 
     req.clearAuthRateLimit?.();
 
-    return res.json({
+    return Response.json({
       id: user.id,
       email: user.email,
       firstName: user.first_name,
@@ -238,11 +240,12 @@ exports.login = async (req, res) => {
     });
   } catch (err) {
     console.error("login error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 };
 
-exports.verifyEmail = async (req, res) => {
+/** Consumes an email/token query pair; an expired verification link returns 400. */
+exports.verifyEmail = async (req) => {
   try {
     const email = normalizeEmail(req.query.email || req.body?.email);
     const token = typeof (req.query.token || req.body?.token) === "string"
@@ -250,7 +253,7 @@ exports.verifyEmail = async (req, res) => {
       : "";
 
     if (!email || !token) {
-      return res.status(400).json({ error: "Email and token are required." });
+      return Response.json({ error: "Email and token are required." }, { status: 400 });
     }
 
     await ensureUsersTable();
@@ -270,12 +273,12 @@ exports.verifyEmail = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: "Invalid or expired verification link." });
+      return Response.json({ error: "Invalid or expired verification link." }, { status: 400 });
     }
 
     const user = result.rows[0];
     if (user.email_verified) {
-      return res.json({ message: "Your email is already verified. You can sign in." });
+      return Response.json({ message: "Your email is already verified. You can sign in." });
     }
 
     const hashedToken = hashVerificationToken(token);
@@ -295,7 +298,7 @@ exports.verifyEmail = async (req, res) => {
         );
       }
 
-      return res.status(400).json({ error: "Invalid or expired verification link." });
+      return Response.json({ error: "Invalid or expired verification link." }, { status: 400 });
     }
 
     await pool.query(
@@ -309,19 +312,20 @@ exports.verifyEmail = async (req, res) => {
       [user.id]
     );
 
-    return res.json({ message: "Email verified successfully. You can now sign in." });
+    return Response.json({ message: "Email verified successfully. You can now sign in." });
   } catch (err) {
     console.error("verify email error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 };
 
-exports.resendVerification = async (req, res) => {
+/** Reissues verification for an unverified account, e.g. POST with {email: "user@example.com"}. */
+exports.resendVerification = async (req) => {
   try {
     const normalizedEmail = normalizeEmail(req.body?.email);
 
     if (!normalizedEmail) {
-      return res.status(400).json({ error: "Email is required." });
+      return Response.json({ error: "Email is required." }, { status: 400 });
     }
 
     await ensureUsersTable();
@@ -332,29 +336,30 @@ exports.resendVerification = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.json({ message: "If that account exists, a verification email has been sent." });
+      return Response.json({ message: "If that account exists, a verification email has been sent." });
     }
 
     const user = result.rows[0];
     if (user.email_verified) {
-      return res.status(400).json({ error: "This email is already verified. Please sign in." });
+      return Response.json({ error: "This email is already verified. Please sign in." }, { status: 400 });
     }
 
     await issueEmailVerification(user);
 
-    return res.json({ message: "Verification email sent." });
+    return Response.json({ message: "Verification email sent." });
   } catch (err) {
     console.error("resend verification error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 };
 
-exports.requestPasswordReset = async (req, res) => {
+/** Requests a reset link and keeps the existing generic response for unknown email addresses. */
+exports.requestPasswordReset = async (req) => {
   try {
     const normalizedEmail = normalizeEmail(req.body?.email);
 
     if (!normalizedEmail) {
-      return res.status(400).json({ error: "A valid email is required." });
+      return Response.json({ error: "A valid email is required." }, { status: 400 });
     }
 
     await ensureUsersTable();
@@ -371,31 +376,32 @@ exports.requestPasswordReset = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.json({ message: PASSWORD_RESET_REQUEST_MESSAGE });
+      return Response.json({ message: PASSWORD_RESET_REQUEST_MESSAGE });
     }
 
     await issuePasswordReset(result.rows[0]);
-    return res.json({ message: PASSWORD_RESET_REQUEST_MESSAGE });
+    return Response.json({ message: PASSWORD_RESET_REQUEST_MESSAGE });
   } catch (err) {
     console.error("request password reset error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 };
 
-exports.resetPassword = async (req, res) => {
+/** Consumes a valid reset token and strong password; an invalid token returns 400. */
+exports.resetPassword = async (req) => {
   try {
     const email = normalizeEmail(req.body?.email);
     const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
 
     if (!email || !token || !password) {
-      return res.status(400).json({ error: "Email, token, and password are required." });
+      return Response.json({ error: "Email, token, and password are required." }, { status: 400 });
     }
 
     if (!isStrongPassword(password)) {
-      return res.status(400).json({
+      return Response.json({
         error: PASSWORD_REQUIREMENTS_MESSAGE,
-      });
+      }, { status: 400 });
     }
 
     await ensureUsersTable();
@@ -412,7 +418,7 @@ exports.resetPassword = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: "Invalid or expired reset link." });
+      return Response.json({ error: "Invalid or expired reset link." }, { status: 400 });
     }
 
     const user = result.rows[0];
@@ -432,7 +438,7 @@ exports.resetPassword = async (req, res) => {
           [user.id]
         );
       }
-      return res.status(400).json({ error: "Invalid or expired reset link." });
+      return Response.json({ error: "Invalid or expired reset link." }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -450,9 +456,9 @@ exports.resetPassword = async (req, res) => {
       [user.id, passwordHash]
     );
 
-    return res.json({ message: "Your password has been reset. You can now sign in." });
+    return Response.json({ message: "Your password has been reset. You can now sign in." });
   } catch (err) {
     console.error("reset password error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 };

@@ -1,15 +1,21 @@
 package com.asianfit.ui.pages;
 
+import java.net.URI;
+import java.time.Duration;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.NoSuchFrameException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
+/** Handles hosted Checkout layouts, e.g. card fields and the Pay button inside Stripe's payment iframe. */
 public class StripeCheckoutPage extends BasePage {
-  private static final By CARD_NUMBER_INPUT = By.cssSelector(
-    "input[name='number'], input[autocomplete='cc-number'], input[placeholder='Card number']"
-  );
+  private static final String CARD_NUMBER_SELECTOR =
+    "input[name='number'], input[autocomplete='cc-number'], input[placeholder='Card number']";
+  private static final By CARD_NUMBER_INPUT = By.cssSelector(CARD_NUMBER_SELECTOR);
   private static final By EXPIRATION_INPUT = By.cssSelector(
     "input[name='exp-date'], input[autocomplete='cc-exp'], input[placeholder*='MM'], input[placeholder='MM / YY']"
   );
@@ -19,12 +25,14 @@ public class StripeCheckoutPage extends BasePage {
   private static final By CARDHOLDER_NAME_INPUT = By.cssSelector(
     "input[name='cardholderName'], input[autocomplete='cc-name']"
   );
-  private static final By EMAIL_INPUT = By.xpath("//input[@id='email']");
+  private static final By EMAIL_INPUT = By.cssSelector("input#email, input[name='email'], input[autocomplete='email']");
   private static final By ZIP_INPUT = By.cssSelector(
     "input[name='postalCode'], input[autocomplete='postal-code'], input[placeholder='ZIP'], input[placeholder='Postal code']"
   );
   private static final By PHONE_INPUT = By.xpath("//input[@id='phoneNumber']");
-  private static final By CARD_RADIO = By.xpath("//input[@id='payment-method-accordion-item-title-card']");
+  private static final By CARD_CONTROL = By.cssSelector(
+    CARD_NUMBER_SELECTOR + ", #payment-method-accordion-item-title-card, input[type='radio'][value='card']"
+  );
   private static final By PAY_BUTTON = By.xpath("//button[@type='submit']");
   private static final By BUSINESS_BACK_LINK = By.xpath("//a[@data-testid='business-link']");
   private static final By DECLINED_CARD_ERROR = By.xpath(
@@ -46,6 +54,17 @@ public class StripeCheckoutPage extends BasePage {
     } catch (Exception ignored) {
       return false;
     }
+  }
+
+  /** Waits up to 60 seconds for session creation and redirect, e.g. localhost/cart to checkout.stripe.com. */
+  public void waitForCheckoutRedirect() {
+    // Keep the timeout local to this network-dependent transition; never repeat the payment click.
+    new WebDriverWait(driver, Duration.ofSeconds(60))
+      .withMessage(() -> "Expected Stripe Checkout redirect within 60 seconds; current host: "
+        + URI.create(currentUrl()).getHost()
+        + ". Check checkout-session errors if the browser remains on the app.")
+      // Match the actual host, not a local URL with a Stripe address in its query string.
+      .until(ExpectedConditions.urlMatches("^https://(checkout|pay)\\.stripe\\.com(?:[/?#].*)?$"));
   }
 
   public void enterCardNumber(String value) {
@@ -79,17 +98,22 @@ public class StripeCheckoutPage extends BasePage {
     field.sendKeys(value);
   }
 
+  /** Selects Card when needed, or accepts the already-open form, e.g. input[autocomplete='cc-number'] in an iframe. */
   public void chooseCardPaymentOption() {
-    driver.switchTo().defaultContent();
-    WebElement radio = wait.until(ExpectedConditions.presenceOfElementLocated(CARD_RADIO));
-    ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", radio);
-    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", radio);
+    WebElement control = waitForCheckoutField(CARD_CONTROL);
+    boolean cardFormAlreadyOpen = "cc-number".equals(control.getDomAttribute("autocomplete"))
+      || "number".equals(control.getDomAttribute("name"))
+      || "Card number".equals(control.getDomAttribute("placeholder"));
+    if (!cardFormAlreadyOpen) {
+      control.click();
+      waitForCheckoutField(CARD_NUMBER_INPUT);
+    }
   }
 
+  /** Clicks the enabled submit button in its owning frame, e.g. Pay inside a nested checkout iframe. */
   public void submitPayment() {
-    driver.switchTo().defaultContent();
-
-    WebElement payButton = wait.until(ExpectedConditions.presenceOfElementLocated(PAY_BUTTON));
+    // Checkout may frame the submit button along with the card fields; retain that frame for the click.
+    WebElement payButton = waitForCheckoutField(PAY_BUTTON);
     ((JavascriptExecutor) driver).executeScript(
       "const r = arguments[0].getBoundingClientRect();" +
       "window.scrollBy({ top: r.top - (window.innerHeight / 2) + (r.height / 2), behavior: 'instant' });",
@@ -118,9 +142,43 @@ public class StripeCheckoutPage extends BasePage {
     }
   }
 
+  /** Finds and fills the field in its owning frame, e.g. number and expiry can share a nested payment iframe. */
   private void typeIntoField(By locator, String value) {
-    WebElement field = wait.until(ExpectedConditions.elementToBeClickable(locator));
+    WebElement field = waitForCheckoutField(locator);
     ((JavascriptExecutor) driver).executeScript("arguments[0].focus();", field);
     field.sendKeys(value);
+  }
+
+  /** Searches from the top on each retry so iframe rerenders do not leave a stale browsing context. */
+  private WebElement waitForCheckoutField(By locator) {
+    Duration implicitWait = driver.manage().timeouts().getImplicitWaitTimeout();
+    // Empty lookups must not each consume the global implicit wait across Stripe's many frames.
+    driver.manage().timeouts().implicitlyWait(Duration.ZERO);
+    try {
+      return wait.until(ignored -> {
+        driver.switchTo().defaultContent();
+        try {
+          return findCheckoutFieldInFrames(locator);
+        } catch (StaleElementReferenceException | NoSuchFrameException transientFrameChange) {
+          return null;
+        }
+      });
+    } finally {
+      driver.manage().timeouts().implicitlyWait(implicitWait);
+    }
+  }
+
+  /** Recursively finds a usable control and stays in its frame; e.g. nested cc-number fields remain typeable. */
+  private WebElement findCheckoutFieldInFrames(By locator) {
+    for (WebElement field : driver.findElements(locator)) {
+      if (field.isDisplayed() && field.isEnabled()) return field;
+    }
+    for (WebElement frame : driver.findElements(By.cssSelector("iframe, frame"))) {
+      driver.switchTo().frame(frame);
+      WebElement field = findCheckoutFieldInFrames(locator);
+      if (field != null) return field;
+      driver.switchTo().parentFrame();
+    }
+    return null;
   }
 }

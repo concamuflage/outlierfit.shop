@@ -13,21 +13,11 @@ import java.util.Map;
 import com.asianfit.ui.utils.TestConfig;
 import org.testng.Assert;
 
+/** Checks order APIs and invoices after international rate selections have been retired. */
+/** Verifies order APIs and fixtures, e.g. a mock payment returns a paid order with an invoice number. */
 public class OrdersApiSteps {
   private static final String PDF_CONTENT_TYPE = "application/pdf";
 
-  private String formatShippingMode(String mode) {
-    if ("hybrid".equals(mode)) {
-      return "Air Sea Land";
-    }
-    if ("sea_land".equals(mode)) {
-      return "Sea Land";
-    }
-    if (mode == null || mode.isBlank()) {
-      return "";
-    }
-    return Character.toUpperCase(mode.charAt(0)) + mode.substring(1);
-  }
 
   private OrdersApiSupport.MeasurementSnapshot nextMeasurementSnapshot(
     OrdersApiSupport.MeasurementSnapshot current
@@ -73,7 +63,7 @@ public class OrdersApiSteps {
     Assert.assertEquals(response.jsonPath().getInt("items[0].qty"), OrdersApiContext.checkoutFixture().variant().quantity());
     Assert.assertEquals(response.jsonPath().getInt("shippingAddressId"), OrdersApiContext.checkoutFixture().shippingAddressId());
     Assert.assertEquals(response.jsonPath().getInt("billingAddressId"), OrdersApiContext.checkoutFixture().billingAddressId());
-    Assert.assertEquals(response.jsonPath().getInt("shippingId"), OrdersApiContext.checkoutFixture().shipping().id());
+    Assert.assertNull(response.jsonPath().get("shippingId"));
   }
 
   private void assertPdfResponse(Response response, String expectedFilePrefix) {
@@ -316,10 +306,12 @@ public class OrdersApiSteps {
     );
   }
 
+  /** Checks successful mock finalization and includes API errors, e.g. Invalid mock payment payload, on failure. */
   @Then("the mock payment response should create a paid order")
   public void theMockPaymentResponseShouldCreateAPaidOrder() {
     Response response = OrdersApiContext.mockPaymentResponse();
-    response.then().statusCode(200);
+    Assert.assertEquals(response.statusCode(), 200,
+      "Mock payment failed. Response body: " + response.asString());
 
     long orderId = response.jsonPath().getLong("orderId");
     String invoiceNumber = response.jsonPath().getString("invoiceNumber");
@@ -380,7 +372,7 @@ public class OrdersApiSteps {
     Assert.assertEquals(response.jsonPath().getString("invoiceNumber"), OrdersApiContext.fixture().invoiceNumber());
     Assert.assertEquals(response.jsonPath().getString("paymentStatus"), "paid");
     Assert.assertEquals(response.jsonPath().getString("shipmentStatus"), "unshipped");
-    Assert.assertEquals(response.jsonPath().getString("shipping.mode"), OrdersApiContext.fixture().shippingMode());
+    Assert.assertEquals(response.jsonPath().getString("shipping.method"), OrdersApiContext.fixture().shippingMode());
     Assert.assertEquals(response.jsonPath().getInt("items.size()"), 1);
     Assert.assertEquals(response.jsonPath().getInt("items[0].productId"), OrdersApiContext.fixture().productId());
     Assert.assertEquals(response.jsonPath().getInt("items[0].variantId"), OrdersApiContext.fixture().variantId());
@@ -411,11 +403,7 @@ public class OrdersApiSteps {
     Assert.assertNotNull(response.jsonPath().getString("paidAt"));
     Assert.assertEquals(response.jsonPath().getString("customerEmail"), OrdersApiContext.fixture().customerEmail());
 
-    String expectedShippingModeLabel = formatShippingMode(OrdersApiContext.fixture().shippingMode());
-    if (OrdersApiContext.fixture().shippingDeliveryTime() != null && !OrdersApiContext.fixture().shippingDeliveryTime().isBlank()) {
-      expectedShippingModeLabel += " " + OrdersApiContext.fixture().shippingDeliveryTime();
-    }
-    Assert.assertEquals(response.jsonPath().getString("shippingModeLabel"), expectedShippingModeLabel);
+    Assert.assertEquals(response.jsonPath().getString("shippingModeLabel"), "USPS");
 
     Assert.assertTrue(response.jsonPath().getDouble("subtotalUsd") > 0);
     Assert.assertTrue(response.jsonPath().getDouble("shippingUsd") >= 0);

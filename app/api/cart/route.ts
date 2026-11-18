@@ -11,7 +11,6 @@ type SaveCartPayload = {
   }>;
   shippingAddressId?: number | null;
   billingAddressId?: number | null;
-  shippingId?: number | null;
 };
 
 async function resolveSessionUserId() {
@@ -76,6 +75,7 @@ export async function GET() {
   }
 }
 
+/** Saves items and delivery/billing addresses without obsolete shipping options. */
 export async function PUT(request: Request) {
   const userId = await resolveSessionUserId();
   if (!userId) {
@@ -89,8 +89,7 @@ export async function PUT(request: Request) {
 
   if (
     !isValidSelectionId(payload.shippingAddressId) ||
-    !isValidSelectionId(payload.billingAddressId) ||
-    !isValidSelectionId(payload.shippingId)
+    !isValidSelectionId(payload.billingAddressId)
   ) {
     return NextResponse.json({ error: "Invalid cart selections." }, { status: 400 });
   }
@@ -102,7 +101,6 @@ export async function PUT(request: Request) {
         payload.shippingAddressId !== undefined ? payload.shippingAddressId : currentCart.shippingAddressId,
       billingAddressId:
         payload.billingAddressId !== undefined ? payload.billingAddressId : currentCart.billingAddressId,
-      shippingId: payload.shippingId !== undefined ? payload.shippingId : currentCart.shippingId,
     });
     const cart = await getCart(userId);
     return NextResponse.json(cart);

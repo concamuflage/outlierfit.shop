@@ -31,16 +31,9 @@ type SingleOrderRow = {
   subtotal_usd: unknown;
   shipping_usd: unknown;
   total_usd: unknown;
-  clothes_weight_kg: unknown;
-  box_weight_kg: unknown;
-  shipping_weight_kg: unknown;
   paid_at: unknown;
   created_at: unknown;
-  shipping_id: unknown;
-  shipping_mode: unknown;
-  shipping_delivery_time: unknown;
-  first_kg_cost_rmb: unknown;
-  additional_kg_cost_rmb: unknown;
+  shipping_method: unknown;
   shipping_address_id: unknown;
   shipping_name: unknown;
   shipping_street: unknown;
@@ -79,6 +72,7 @@ type RouteContext = {
   }>;
 };
 
+/** Returns an owned order with actual variant weights, e.g. 0.45 kg for SKU 9653. */
 export async function GET(_request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
   const userId =
@@ -108,16 +102,9 @@ export async function GET(_request: Request, context: RouteContext) {
           o.subtotal_usd,
           o.shipping_usd,
           o.total_usd,
-          o.clothes_weight_kg,
-          o.box_weight_kg,
-          o.shipping_weight_kg,
+          o.shipping_method,
           o.paid_at,
           o.created_at,
-          sc.id AS shipping_id,
-          sc.mode AS shipping_mode,
-          sc.delivery_time AS shipping_delivery_time,
-          sc.first_kg_cost_rmb,
-          sc.additional_kg_cost_rmb,
           sa.id AS shipping_address_id,
           sa.name AS shipping_name,
           sa.street AS shipping_street,
@@ -135,8 +122,6 @@ export async function GET(_request: Request, context: RouteContext) {
           ba.country AS billing_country,
           ba.phone AS billing_phone
         FROM orders o
-        JOIN shipping_cost sc
-          ON sc.id = o.shipping_id
         LEFT JOIN addresses sa
           ON sa.id = o.shipping_address_id
         LEFT JOIN addresses ba
@@ -165,7 +150,7 @@ export async function GET(_request: Request, context: RouteContext) {
           p.name AS product_name,
           c.color,
           s.size,
-          st.weight_kg,
+          pv.weight_kg,
           pvi.image_link,
           pv.id IS NOT NULL AS variant_exists
         FROM orders_variants ov
@@ -177,8 +162,6 @@ export async function GET(_request: Request, context: RouteContext) {
           ON c.id = pv.color_id
         LEFT JOIN sizes s
           ON s.id = pv.size_id
-        LEFT JOIN styles st
-          ON st.id = p.style_id
         LEFT JOIN LATERAL (
           SELECT image_link
           FROM product_variant_images
@@ -200,18 +183,9 @@ export async function GET(_request: Request, context: RouteContext) {
       subtotalUsd: toNumber(row.subtotal_usd),
       shippingUsd: toNumber(row.shipping_usd),
       totalUsd: toNumber(row.total_usd),
-      clothesWeightKg: row.clothes_weight_kg == null ? null : toNumber(row.clothes_weight_kg),
-      boxWeightKg: row.box_weight_kg == null ? null : toNumber(row.box_weight_kg),
-      shippingWeightKg: row.shipping_weight_kg == null ? null : toNumber(row.shipping_weight_kg),
       paidAt: toIsoString(row.paid_at),
       createdAt: toIsoString(row.created_at),
-      shipping: {
-        id: toNumber(row.shipping_id),
-        mode: String(row.shipping_mode ?? ""),
-        deliveryTime: row.shipping_delivery_time ? String(row.shipping_delivery_time) : null,
-        firstKgCostRmb: toNumber(row.first_kg_cost_rmb),
-        additionalKgCostRmb: toNumber(row.additional_kg_cost_rmb),
-      },
+      shipping: { method: String(row.shipping_method ?? "") },
       shippingAddress: row.shipping_address_id
         ? {
             id: toNumber(row.shipping_address_id),

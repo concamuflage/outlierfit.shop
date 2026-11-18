@@ -7,7 +7,7 @@ import { formatUsd } from "@/lib/formatters";
 export type Product = {
   slug: string;
   name: string;
-  price: number; // USD
+  price: number | null; // Recorded USD retail price
   brand: string;
   imageUrl: string;
   colors: string[];
@@ -22,12 +22,13 @@ type ProductCardProps = {
 // This is a React functional component named ProductCard.
 // React components are reusable pieces of UI that can accept inputs (props) and render elements.
 // This component renders a card displaying product details.
+/** Renders a catalog item with its recorded USD price, e.g. 19.9 displays as $19.90. */
 export default function ProductCard({ product }: ProductCardProps) {
   // Destructuring `{ product }` means extracting the product property from the props object directly.
   
   // Format the product price as US dollars using Intl.NumberFormat,
   // which formats numbers according to locale and currency rules.
-  const priceText = formatUsd(product.price);
+  const priceText = product.price == null ? "N/A" : formatUsd(product.price, 2);
 
   return (
     // The Link component from Next.js enables client-side navigation to the product's detail page.

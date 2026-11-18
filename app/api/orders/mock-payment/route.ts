@@ -10,6 +10,7 @@ function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+/** Finalizes a dev-only payment using stored amounts and a delivery snapshot, without rate selections. */
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Mock payments are disabled." }, { status: 404 });
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "Unable to save order.";
     const status =
       message.includes("do not belong") ? 403 :
-      message.includes("Selected shipping option") || message.includes("product variants") ? 400 :
+      message.includes("product variants") ? 400 :
       500;
     return NextResponse.json({ error: message }, { status });
   }

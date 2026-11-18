@@ -13,12 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import org.testng.Assert;
 
+/** Verifies item subtotals and one flat domestic shipping fee across cart views. */
 public class CartSteps {
   private String rememberedSubtotal;
   private double rememberedTotalProductPriceUsd;
-  private double rememberedTotalProductWeightKg;
   private final List<Double> addedProductPricesUsd = new ArrayList<>();
-  private final List<Double> addedProductWeightsKg = new ArrayList<>();
 
   private ProductsPage productsPage() {
     return new ProductsPage(DriverFactory.getDriver());
@@ -83,11 +82,8 @@ public class CartSteps {
   @When("I add the product to the cart")
   public void iAddTheProductToTheCart() {
     double priceUsd = productDetailPage().priceUsd();
-    double weightKg = productDetailPage().weightKg();
     rememberedTotalProductPriceUsd += priceUsd;
-    rememberedTotalProductWeightKg += weightKg;
     addedProductPricesUsd.add(priceUsd);
-    addedProductWeightsKg.add(weightKg);
     productDetailPage().addToCart();
   }
 
@@ -116,25 +112,13 @@ public class CartSteps {
     Assert.assertTrue(cartDrawer().isVisible(), "Cart drawer should be visible");
   }
 
-  @Then("the cart should show the correct total weight of the products")
-  public void theCartShouldShowTheCorrectTotalWeightOfTheProducts() {
-    Assert.assertEquals(cartPage().clothesWeightKg(), rememberedTotalProductWeightKg, 0.001);
-  }
 
-  @Then("the cart should show the correct total weight and price of the products")
-  public void theCartShouldShowTheCorrectTotalWeightAndPriceOfTheProducts() {
-    Assert.assertEquals(cartPage().clothesWeightKg(), rememberedTotalProductWeightKg, 0.001);
+  /** Checks the item subtotal before the flat domestic shipping fee. */
+  @Then("the cart should show the correct product subtotal")
+  public void theCartShouldShowTheCorrectProductSubtotal() {
     Assert.assertEquals(cartPage().subtotalUsd(), rememberedTotalProductPriceUsd, 0.01);
   }
 
-  @Then("the cart should show the correct total weight with carton box and shipping cost")
-  public void theCartShouldShowTheCorrectTotalWeightWithCartonBoxAndShippingCost() {
-    ExpectedCartTotals totals = expectedCartTotals();
-
-    Assert.assertEquals(cartPage().boxWeightKg(), totals.boxWeightKg(), 0.001);
-    Assert.assertEquals(cartPage().shipmentWeightKg(), totals.shipmentWeightKg(), 0.001);
-    Assert.assertEquals(cartPage().shippingUsd(), totals.shippingUsd(), 0.01);
-  }
 
   @Then("the cart should show the correct total price with shipping cost")
   public void theCartShouldShowTheCorrectTotalPriceWithShippingCost() {
@@ -188,49 +172,24 @@ public class CartSteps {
   @When("I increase the quantity of the first cart item")
   public void iIncreaseTheQuantityOfTheFirstCartItem() {
     rememberedTotalProductPriceUsd += addedProductPricesUsd.get(0);
-    rememberedTotalProductWeightKg += addedProductWeightsKg.get(0);
     cartPage().increaseFirstItemQuantity();
   }
 
   @When("I increase the quantity of the second cart item")
   public void iIncreaseTheQuantityOfTheSecondCartItem() {
     rememberedTotalProductPriceUsd += addedProductPricesUsd.get(1);
-    rememberedTotalProductWeightKg += addedProductWeightsKg.get(1);
     cartPage().increaseSecondItemQuantity();
   }
 
-  @When("I choose the second shipping option")
-  public void iChooseTheSecondShippingOption() {
-    cartPage().selectSecondShippingOption();
-  }
 
-  @When("I choose the second shipping option in the cart drawer")
-  public void iChooseTheSecondShippingOptionInTheCartDrawer() {
-    cartDrawer().selectSecondShippingOption();
-  }
 
   @When("I increase the quantity of the first cart drawer item")
   public void iIncreaseTheQuantityOfTheFirstCartDrawerItem() {
     rememberedTotalProductPriceUsd += addedProductPricesUsd.get(0);
-    rememberedTotalProductWeightKg += addedProductWeightsKg.get(0);
     cartDrawer().increaseFirstItemQuantity();
   }
 
-  @Then("the cart page should show the second shipping option as selected")
-  public void theCartPageShouldShowTheSecondShippingOptionAsSelected() {
-    Assert.assertTrue(
-      cartPage().isSecondShippingOptionSelected(),
-      "Expected the second shipping option to be selected on the cart page"
-    );
-  }
 
-  @Then("the cart drawer should show the second shipping option as selected")
-  public void theCartDrawerShouldShowTheSecondShippingOptionAsSelected() {
-    Assert.assertTrue(
-      cartDrawer().isSecondShippingOptionSelected(),
-      "Expected the second shipping option to be selected in the cart drawer"
-    );
-  }
 
   @Then("the cart page should display the same items and quantities as the cart drawer")
   public void theCartPageShouldDisplayTheSameItemsAndQuantitiesAsTheCartDrawer() {
@@ -300,42 +259,17 @@ public class CartSteps {
     Assert.assertTrue(productsPage().showsAllFilter(), "Expected products page to show the All filter");
   }
 
-  private double calculateBoxWeightKg(double clothesWeightKg) {
-    if (clothesWeightKg <= 0) return 0;
-    if (clothesWeightKg <= 1) return 0.25;
-    if (clothesWeightKg <= 2) return 0.3;
-    if (clothesWeightKg <= 3) return 0.35;
-    if (clothesWeightKg <= 4) return 0.4;
-    if (clothesWeightKg <= 5) return 0.45;
 
-    double extraKgSteps = Math.ceil(clothesWeightKg) - 5;
-    return 0.45 + extraKgSteps * 0.05;
-  }
 
-  private double calculateShippingCostUsd(double shipmentWeightKg, CartPage.ShippingRates shippingRates) {
-    if (shipmentWeightKg <= 0) return 0;
 
-    // The first kilogram always uses the base rate.
-    // Any remaining weight is billed in whole kilograms, rounded up,
-    // using the selected option's additional-kg rate.
-    double extraWeightKg = Math.max(shipmentWeightKg - 1, 0);
-    double billedAdditionalKg = extraWeightKg > 0 ? Math.ceil(extraWeightKg) : 0;
-    return shippingRates.firstKgUsd() + billedAdditionalKg * shippingRates.additionalKgUsd();
-  }
-
+  /** Flat-rate totals stay independent of weight; e.g. $49.90 + $8.95 = $58.85. */
   private ExpectedCartTotals expectedCartTotals() {
-    double boxWeightKg = calculateBoxWeightKg(rememberedTotalProductWeightKg);
-    double shipmentWeightKg = rememberedTotalProductWeightKg + boxWeightKg;
-    CartPage.ShippingRates shippingRates = cartPage().selectedShippingRatesUsd();
-    double shippingUsd = calculateShippingCostUsd(shipmentWeightKg, shippingRates);
-    double orderTotalUsd = rememberedTotalProductPriceUsd + shippingUsd;
-
-    return new ExpectedCartTotals(boxWeightKg, shipmentWeightKg, shippingUsd, orderTotalUsd);
+    double shippingUsd = 8.95;
+    return new ExpectedCartTotals(shippingUsd, rememberedTotalProductPriceUsd + shippingUsd);
   }
 
+  /** Expected totals include only the flat fee and payable amount. */
   private record ExpectedCartTotals(
-    double boxWeightKg,
-    double shipmentWeightKg,
     double shippingUsd,
     double orderTotalUsd
   ) {}

@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 
+/** Builds the revealed contact address, apple_banana_2026@proton.me, from character codes. */
 function buildEmail() {
   return String.fromCharCode(
-    105, 110, 102, 111, 64, 111, 117, 116, 108, 105, 101, 114, 102, 105, 116,
-    46, 115, 104, 111, 112
+    97, 112, 112, 108, 101, 95, 98, 97, 110, 97, 110, 97, 95, 50, 48, 50,
+    54, 64, 112, 114, 111, 116, 111, 110, 46, 109, 101
   );
 }
 
+/** Renders /contact; selecting Reveal Email displays the configured contact address. */
 export default function ContactPage() {
   const [revealed, setRevealed] = useState(false);
 

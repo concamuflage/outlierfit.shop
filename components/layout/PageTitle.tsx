@@ -18,8 +18,7 @@ const STATIC_TITLES: Record<string, string> = {
   "/verify-email": "Verify Email",
   "/profile": "Profile",
   "/profile/orders": "Orders",
-  "/policies/returns": "Returns Policy",
-  "/policies/shipping": "Shipping Policy",
+  "/policies/shipping-and-returns": "Shipping and Returns Policy",
 };
 
 function withSiteName(title: string) {

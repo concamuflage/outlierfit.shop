@@ -2,11 +2,11 @@ API points for testing
 
 
 Get all products 
-curl http://localhost:4000/products
+curl http://localhost:3000/api/store/products
 
 Get product by id.
-curl http://localhost:4000/products/2
+curl http://localhost:3000/api/store/products/13
 
 Get products by style
-curl http://localhost:4000/products/styles/Long%20Sleeve%20T-Shirt
+curl http://localhost:3000/api/store/products/styles/Shirts
 

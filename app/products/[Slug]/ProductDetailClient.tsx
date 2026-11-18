@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import ProductGallery from "@/components/products/ProductGallery";
 import ProductInfoPanel, {
   type ProductInfoPanelProduct,
+  type GarmentMeasurements,
 } from "@/components/products/ProductInfoPanel";
 import { useCart } from "@/components/cart/CartContext";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
@@ -19,7 +20,9 @@ type ProductVariant = {
   size: string;
   height_cm: number | null;
   chest_cm: number | null;
-  cost_rmb: number | null;
+  garment_measurements?: GarmentMeasurements;
+  price_usd: number | null;
+  weight_kg: number | null;
   qty: number | null;
   images: string[];
 };
@@ -39,35 +42,14 @@ function productPageTitle(productName: string) {
   return `${productName} | OutlierFit`;
 }
 
-type SizeGuideImage = {
-  src: string;
-  width: number;
-  height: number;
-  version?: string;
-};
+// Older catalog data may still contain retired chart images; keep them out of the gallery.
+const PRODUCT_SIZE_GUIDE_SUFFIX = "/size-guide.png";
 
-const TOP_SIZE_GUIDES_BY_BRAND: Record<string, SizeGuideImage> = {
-  "levi's": {
-    src: "/size_guide/top/levi's.png",
-    width: 2172,
-    height: 724,
-  },
-  nike: {
-    src: "/size_guide/top/nike.png",
-    width: 1774,
-    height: 887,
-    version: "20260514-2135",
-  },
-};
-
-function sizeGuideForBrand(brand: string) {
-  return TOP_SIZE_GUIDES_BY_BRAND[brand.trim().toLowerCase()] ?? null;
-}
-
-function versionedImageSrc(image: SizeGuideImage) {
-  return image.version ? `${image.src}?v=${image.version}` : image.src;
-}
-
+/**
+ * Renders product variants, photos, and database-backed garment measurements.
+ * For example, selecting SKU 9653 size M displays chest 102 cm / 40.2 in and weight 0.06 kg.
+ * Adding that variant to the cart uses its recorded $49.90 USD retail price.
+ */
 export default function ProductDetailClient({ slug }: { slug: string }) {
   const { addItem, openCart } = useCart();
   const { status } = useSession();
@@ -79,7 +61,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const productId = useMemo(() => {
     const parsed = Number(slug);
@@ -144,8 +125,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
     return variants.reduce<ProductVariant | null>((lowest, variant) => {
       if (lowest == null) return variant;
-      const lowestCost = lowest.cost_rmb == null ? Number.POSITIVE_INFINITY : Number(lowest.cost_rmb);
-      const variantCost = variant.cost_rmb == null ? Number.POSITIVE_INFINITY : Number(variant.cost_rmb);
+      const lowestCost = lowest.price_usd == null ? Number.POSITIVE_INFINITY : Number(lowest.price_usd);
+      const variantCost = variant.price_usd == null ? Number.POSITIVE_INFINITY : Number(variant.price_usd);
       return variantCost < lowestCost ? variant : lowest;
     }, null);
   }, [variants]);
@@ -191,7 +172,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     for (const v of variants) {
       const imgs = Array.isArray(v.images) ? v.images : [];
       for (const img of imgs) {
-        if (typeof img === "string" && img.trim().length > 0) {
+        if (
+          typeof img === "string" &&
+          img.trim().length > 0 &&
+          !img.endsWith(PRODUCT_SIZE_GUIDE_SUFFIX)
+        ) {
           allImages.add(img);
         }
       }
@@ -212,7 +197,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       size: selectedSize ?? selectedVariant?.size ?? displayVariant.size,
       height_cm: selectedVariant?.height_cm ?? displayVariant.height_cm,
       chest_cm: selectedVariant?.chest_cm ?? displayVariant.chest_cm,
-      weight_kg: product.weight_kg,
+      garment_measurements: (selectedVariant ?? displayVariant).garment_measurements ?? null,
+      weight_kg: displayVariant.weight_kg ?? null,
       description: product.description,
       id: product.product_id,
       name: product.name,
@@ -220,14 +206,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       style: product.style,
       color: selectedColor ?? selectedVariant?.color ?? displayVariant.color,
       qty: selectedVariant?.qty ?? displayVariant.qty,
-      cost_rmb: selectedVariant?.cost_rmb ?? displayVariant.cost_rmb,
+      price_usd: (selectedVariant ?? displayVariant).price_usd,
       materials: product.materials ?? [],
     };
   }, [displayVariant, product, selectedColor, selectedSize, selectedVariant]);
-
-  const sizeGuide = useMemo(() => {
-    return product?.brand ? sizeGuideForBrand(product.brand) : null;
-  }, [product?.brand]);
 
   useEffect(() => {
     if (!lowestPricedVariant) return;
@@ -309,20 +291,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-medium text-zinc-900">Size</div>
-                        {sizeGuide ? (
-                          <button
-                            type="button"
-                            onClick={() => setShowSizeGuide((current) => !current)}
-                            aria-expanded={showSizeGuide}
-                            aria-controls="size-guide"
-                            className="text-sm font-medium text-zinc-700 underline underline-offset-4 hover:text-zinc-950"
-                          >
-                            Size guide
-                          </button>
-                        ) : null}
-                      </div>
+                      <div className="text-sm font-medium text-zinc-900">Size</div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {availableSizes.map((s) => {
                           const isSelected = s === selectedSize;
@@ -350,21 +319,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                       </div>
                     </div>
 
-                    {sizeGuide && showSizeGuide ? (
-                      <section id="size-guide" className="pt-2">
-                        <h2 className="text-sm font-medium text-zinc-900">{product.brand} size guide</h2>
-                        <div className="mt-3 overflow-hidden rounded border border-zinc-200 bg-white">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={versionedImageSrc(sizeGuide)}
-                            alt={`${product.brand} size guide`}
-                            width={sizeGuide.width}
-                            height={sizeGuide.height}
-                            className="h-auto w-full"
-                          />
-                        </div>
-                      </section>
-                    ) : null}
                   </div>
                 }
               />
@@ -372,9 +326,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             {infoProduct ? (
               <button
                 type="button"
-                disabled={!selectedVariant}
+                disabled={!selectedVariant || selectedVariant.price_usd == null || selectedVariant.price_usd <= 0}
                 onClick={() => {
-                  if (!selectedVariant) return;
+                  if (!selectedVariant || selectedVariant.price_usd == null || selectedVariant.price_usd <= 0) return;
                   if (status !== "authenticated") {
                     openLoginModal();
                     return;
@@ -382,14 +336,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   addItem({
                     id: `${product.product_id}-${selectedVariant.variant_id}`,
                     name: product.name,
-                    price:
-                      infoProduct.cost_rmb == null
-                        ? 0
-                        : Math.round(
-                            Number(infoProduct.cost_rmb) *
-                              Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14")
-                          ),
-                    weightKg: product.weight_kg,
+                    price: Number(selectedVariant.price_usd),
+                    weightKg: selectedVariant.weight_kg ?? null,
                     imageUrl: galleryPhotos[0] ?? null,
                     color: selectedVariant.color,
                     size: selectedVariant.size,

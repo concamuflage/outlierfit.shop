@@ -1,9 +1,8 @@
 import pool from "@/backend/database/pool";
 import { createInvoiceNumber } from "@/lib/invoice";
-import { calculateShippingCostRmb, getBoxWeightKg } from "@/lib/shipping";
+import { DOMESTIC_SHIPPING_FEE_USD, DOMESTIC_SHIPPING_METHOD } from "@/lib/domestic-shipping";
 import type Stripe from "stripe";
 
-const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
 
 export type CheckoutOrderItem = {
   cartItemId: string;
@@ -18,10 +17,7 @@ export type CheckoutOrderPayload = {
   subtotalUsd: number;
   shippingUsd: number;
   totalUsd: number;
-  clothesWeightKg: number;
-  boxWeightKg: number;
-  shippingWeightKg: number;
-  shippingId: number;
+  shippingMethod: string;
   shippingAddressId: number;
   billingAddressId: number;
   items: CheckoutOrderItem[];
@@ -78,23 +74,13 @@ export type StripePaymentDiscountDetails = {
 type CartCheckoutRow = {
   shipping_address_id: unknown;
   billing_address_id: unknown;
-  shipping_id: unknown;
   quantity: unknown;
   variant_id: unknown;
-  cost_rmb: unknown;
+  price_usd: unknown;
   product_id: unknown;
   product_name: unknown;
   color: unknown;
   size: unknown;
-  weight_kg: unknown;
-};
-
-type ShippingCostRow = {
-  id: unknown;
-  mode: unknown;
-  delivery_time: unknown;
-  first_kg_cost_rmb: unknown;
-  additional_kg_cost_rmb: unknown;
 };
 
 function getUtcDayBounds(date: Date) {
@@ -132,13 +118,6 @@ function toNumber(value: unknown) {
 
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function priceUsdFromRmb(costRmb: unknown) {
-  if (costRmb == null) {
-    return 0;
-  }
-  return Math.round(toNumber(costRmb) * RMB_TO_USD);
 }
 
 export function expectedStripeAmountCents(payload: CheckoutOrderPayload) {
@@ -187,20 +166,20 @@ export function parseVariantId(cartItemId: string) {
   return Number.isInteger(variantId) && variantId > 0 ? variantId : null;
 }
 
+/** Validates address IDs and monetary snapshots without obsolete rate IDs or package weights. */
 export function isValidCheckoutOrderPayload(payload: unknown): payload is CheckoutOrderPayload {
   if (!payload || typeof payload !== "object") {
     return false;
   }
 
   const candidate = payload as Record<string, unknown>;
+  if (typeof candidate.shippingMethod !== "string" || !candidate.shippingMethod.trim()) {
+    return false;
+  }
   const numericFields = [
     "subtotalUsd",
     "shippingUsd",
     "totalUsd",
-    "clothesWeightKg",
-    "boxWeightKg",
-    "shippingWeightKg",
-    "shippingId",
     "shippingAddressId",
     "billingAddressId",
   ];
@@ -371,16 +350,17 @@ export async function assertStripeCheckoutSessionRateLimit(userId: number) {
   }
 }
 
+/**
+ * Prices a saved cart with the flat domestic fee; two $49.90 shirts total $108.75 including $8.95 shipping.
+ */
 export async function buildAuthoritativeCheckoutOrderPayload({
   userId,
   shippingAddressId,
   billingAddressId,
-  shippingId,
 }: {
   userId: number;
   shippingAddressId?: number | null;
   billingAddressId?: number | null;
-  shippingId?: number | null;
 }): Promise<CheckoutOrderPayload> {
   await ensureStripeCheckoutSessionTable();
 
@@ -389,15 +369,13 @@ export async function buildAuthoritativeCheckoutOrderPayload({
       SELECT
         cts.shipping_address_id,
         cts.billing_address_id,
-        cts.shipping_id,
         ci.quantity,
         pv.id AS variant_id,
-        pv.cost_rmb,
+        pv.price_usd,
         p.id AS product_id,
         p.name AS product_name,
         c.color,
-        s.size,
-        st.weight_kg
+        s.size
       FROM carts cts
       LEFT JOIN cart_items ci
         ON ci.cart_id = cts.id
@@ -409,8 +387,6 @@ export async function buildAuthoritativeCheckoutOrderPayload({
         ON c.id = pv.color_id
       LEFT JOIN sizes s
         ON s.id = pv.size_id
-      LEFT JOIN styles st
-        ON st.id = p.style_id
       WHERE cts.user_id = $1
       ORDER BY ci.created_at ASC NULLS LAST, pv.id ASC NULLS LAST
     `,
@@ -422,20 +398,24 @@ export async function buildAuthoritativeCheckoutOrderPayload({
     throw new Error("Your cart is empty.");
   }
 
+  // An unpriced variant must not become a free item or fall back to a cost conversion.
+  if (cartItems.some((row: CartCheckoutRow) =>
+    row.price_usd == null || !Number.isFinite(toNumber(row.price_usd)) || toNumber(row.price_usd) <= 0
+  )) {
+    throw new Error("Retail price is missing for an item in your cart. Please contact us before checkout.");
+  }
+
   const cartMetadata = cartResult.rows[0];
   const selectedShippingAddressId =
     shippingAddressId == null ? toNumber(cartMetadata?.shipping_address_id) : Number(shippingAddressId);
   const selectedBillingAddressId =
     billingAddressId == null ? toNumber(cartMetadata?.billing_address_id) : Number(billingAddressId);
-  const selectedShippingId =
-    shippingId == null ? toNumber(cartMetadata?.shipping_id) : Number(shippingId);
 
   if (
     !Number.isInteger(selectedShippingAddressId) ||
-    !Number.isInteger(selectedBillingAddressId) ||
-    !Number.isInteger(selectedShippingId)
+    !Number.isInteger(selectedBillingAddressId)
   ) {
-    throw new Error("Select shipping, billing, and delivery details before checkout.");
+    throw new Error("Select shipping and billing addresses before checkout.");
   }
 
   const addressOwnershipResult = await pool.query<AddressOwnershipRow>(
@@ -454,23 +434,10 @@ export async function buildAuthoritativeCheckoutOrderPayload({
     throw new Error("Selected addresses do not belong to the current user.");
   }
 
-  const shippingResult = await pool.query<ShippingCostRow>(
-    `
-      SELECT id, mode, delivery_time, first_kg_cost_rmb, additional_kg_cost_rmb
-      FROM shipping_cost
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [selectedShippingId]
-  );
-  if (shippingResult.rows.length === 0) {
-    throw new Error("Selected shipping option no longer exists.");
-  }
-
   const items = cartItems.map((row: CartCheckoutRow) => ({
     cartItemId: `${toNumber(row.product_id)}-${toNumber(row.variant_id)}`,
     quantity: toNumber(row.quantity),
-    unitPriceUsd: priceUsdFromRmb(row.cost_rmb),
+    unitPriceUsd: toNumber(row.price_usd),
     name: String(row.product_name ?? ""),
     color: row.color == null ? null : String(row.color),
     size: row.size == null ? null : String(row.size),
@@ -479,33 +446,13 @@ export async function buildAuthoritativeCheckoutOrderPayload({
   const subtotalUsd = roundMoney(
     items.reduce((total: number, item: CheckoutOrderItem) => total + item.unitPriceUsd * item.quantity, 0)
   );
-  const clothesWeightKg = cartItems.reduce(
-    (total: number, row: CartCheckoutRow) =>
-      total + (row.weight_kg == null ? 0 : toNumber(row.weight_kg)) * toNumber(row.quantity),
-    0
-  );
-  const boxWeightKg = getBoxWeightKg(clothesWeightKg);
-  const shippingWeightKg = clothesWeightKg + boxWeightKg;
-  const shippingRow = shippingResult.rows[0];
-  const shippingUsd = roundMoney(
-    calculateShippingCostRmb(shippingWeightKg, {
-      id: Number(shippingRow.id),
-      mode: String(shippingRow.mode ?? ""),
-      delivery_time: shippingRow.delivery_time == null ? null : String(shippingRow.delivery_time),
-      first_kg_cost_rmb: shippingRow.first_kg_cost_rmb == null ? null : toNumber(shippingRow.first_kg_cost_rmb),
-      additional_kg_cost_rmb:
-        shippingRow.additional_kg_cost_rmb == null ? null : toNumber(shippingRow.additional_kg_cost_rmb),
-    }) * RMB_TO_USD
-  );
+  const shippingUsd = DOMESTIC_SHIPPING_FEE_USD;
 
   return {
     subtotalUsd,
     shippingUsd,
     totalUsd: roundMoney(subtotalUsd + shippingUsd),
-    clothesWeightKg,
-    boxWeightKg,
-    shippingWeightKg,
-    shippingId: selectedShippingId,
+    shippingMethod: DOMESTIC_SHIPPING_METHOD,
     shippingAddressId: selectedShippingAddressId,
     billingAddressId: selectedBillingAddressId,
     items,
@@ -879,6 +826,12 @@ export function readStripeCustomerId(
   return normalizeStripeId(customer);
 }
 
+/**
+ * Commits a paid order and its stock deduction atomically, once per payment reference.
+ * For example, purchasing 2 units changes inventory from 4 to 2; a duplicate webhook leaves it at 2.
+ * Only Stripe payments require a saved Stripe session; dev mock payments use their own reference.
+ * Insufficient stock rolls back local order writes; it does not reverse an already captured Stripe payment.
+ */
 export async function finalizePaidOrder({
   userId,
   payload,
@@ -892,7 +845,6 @@ export async function finalizePaidOrder({
   paymentReference: string;
   paidAt: Date;
 }) {
-  const shippingId = Number(payload.shippingId);
   const shippingAddressId = Number(payload.shippingAddressId);
   const billingAddressId = Number(payload.billingAddressId);
   const variantItems = payload.items.map((item) => ({
@@ -903,6 +855,17 @@ export async function finalizePaidOrder({
 
   if (variantItems.some((item) => item.variantId == null)) {
     throw new Error("Unable to determine one or more cart variant ids.");
+  }
+
+  const quantitiesByVariant = new Map<number, number>();
+  for (const item of variantItems) {
+    const quantity = (quantitiesByVariant.get(item.variantId!) ?? 0) + item.quantity;
+    if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0
+      || !Number.isSafeInteger(quantity) || quantity > 2147483647) {
+      throw new Error("Order quantities must be positive integers within the inventory range.");
+    }
+    // Aggregate repeated variants so two lines of 2 units require 4 units in stock, not just 2.
+    quantitiesByVariant.set(item.variantId!, quantity);
   }
 
   const client = await pool.connect();
@@ -924,21 +887,23 @@ export async function finalizePaidOrder({
 
     if (existingOrderResult.rows.length > 0) {
       const existingOrder = existingOrderResult.rows[0];
-      const sessionUpdateResult = await client.query(
-        `
-          UPDATE stripe_checkout_sessions
-          SET order_id = $2,
-              completed_at = COALESCE(completed_at, NOW()),
-              updated_at = NOW()
-          WHERE stripe_session_id = $1
-        `,
-        [paymentReference, Number(existingOrder.id)]
-      );
-
-      if (sessionUpdateResult.rowCount === 0) {
-        throw new Error(
-          `Missing persisted Stripe checkout session for ${paymentReference}.`
+      if (paymentProvider === "stripe") {
+        const sessionUpdateResult = await client.query(
+          `
+            UPDATE stripe_checkout_sessions
+            SET order_id = $2,
+                completed_at = COALESCE(completed_at, NOW()),
+                updated_at = NOW()
+            WHERE stripe_session_id = $1
+          `,
+          [paymentReference, Number(existingOrder.id)]
         );
+
+        if (sessionUpdateResult.rowCount === 0) {
+          throw new Error(
+            `Missing persisted Stripe checkout session for ${paymentReference}.`
+          );
+        }
       }
       await client.query("COMMIT");
 
@@ -967,20 +932,6 @@ export async function finalizePaidOrder({
       throw new Error("Selected addresses do not belong to the current user.");
     }
 
-    const shippingExistsResult = await client.query(
-      `
-        SELECT id
-        FROM shipping_cost
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [shippingId]
-    );
-
-    if (shippingExistsResult.rows.length === 0) {
-      throw new Error("Selected shipping option no longer exists.");
-    }
-
     const variantIds = variantItems
       .map((item) => item.variantId)
       .filter((variantId): variantId is number => variantId != null);
@@ -1002,6 +953,26 @@ export async function finalizePaidOrder({
       throw new Error("One or more product variants no longer exist.");
     }
 
+    // Conditional UPDATE locks each row and rechecks available stock after concurrent writes.
+    // A consistent variant order avoids deadlocks for orders containing the same variants.
+    // This runs after the existing-order check, so webhook retries never deduct stock twice.
+    for (const [variantId, quantity] of [...quantitiesByVariant].sort(([a], [b]) => a - b)) {
+      const inventoryResult = await client.query(
+        `
+          UPDATE inventory
+          SET qty = qty - $2,
+              updated_at = NOW()
+          WHERE variant_id = $1
+            AND qty >= $2
+          RETURNING variant_id
+        `,
+        [variantId, quantity]
+      );
+      if (inventoryResult.rowCount !== 1) {
+        throw new Error(`Insufficient stock for product variant ${variantId}. Paid order requires review.`);
+      }
+    }
+
     const orderInsertResult = await client.query(
       `
         INSERT INTO orders (
@@ -1015,10 +986,7 @@ export async function finalizePaidOrder({
           subtotal_usd,
           shipping_usd,
           total_usd,
-          clothes_weight_kg,
-          box_weight_kg,
-          shipping_weight_kg,
-          shipping_id,
+          shipping_method,
           shipping_address_id,
           billing_address_id,
           created_at,
@@ -1038,9 +1006,6 @@ export async function finalizePaidOrder({
           $8,
           $9,
           $10,
-          $11,
-          $12,
-          $13,
           NOW(),
           NOW()
         )
@@ -1054,10 +1019,7 @@ export async function finalizePaidOrder({
         payload.subtotalUsd,
         payload.shippingUsd,
         payload.totalUsd,
-        payload.clothesWeightKg,
-        payload.boxWeightKg,
-        payload.shippingWeightKg,
-        shippingId,
+        payload.shippingMethod || DOMESTIC_SHIPPING_METHOD,
         shippingAddressId,
         billingAddressId,
       ]
@@ -1122,28 +1084,30 @@ export async function finalizePaidOrder({
         UPDATE carts
         SET shipping_address_id = NULL,
             billing_address_id = NULL,
-            shipping_id = NULL,
             updated_at = NOW()
         WHERE user_id = $1
       `,
       [userId]
     );
 
-    const sessionUpdateResult = await client.query(
-      `
-        UPDATE stripe_checkout_sessions
-        SET order_id = $2,
-            completed_at = NOW(),
-            updated_at = NOW()
-        WHERE stripe_session_id = $1
-      `,
-      [paymentReference, orderId]
-    );
-
-    if (sessionUpdateResult.rowCount === 0) {
-      throw new Error(
-        `Missing persisted Stripe checkout session for ${paymentReference}.`
+    // Dev mock payments have no Stripe session; real Stripe orders must still link to their saved session.
+    if (paymentProvider === "stripe") {
+      const sessionUpdateResult = await client.query(
+        `
+          UPDATE stripe_checkout_sessions
+          SET order_id = $2,
+              completed_at = NOW(),
+              updated_at = NOW()
+          WHERE stripe_session_id = $1
+        `,
+        [paymentReference, orderId]
       );
+
+      if (sessionUpdateResult.rowCount === 0) {
+        throw new Error(
+          `Missing persisted Stripe checkout session for ${paymentReference}.`
+        );
+      }
     }
 
     await client.query("COMMIT");

@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const DEFAULT_REDIRECT_URI = "http://localhost:3000/api/auth/callback/google";
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:4000";
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
 const DEFAULT_TARGET_EMAIL = "unodostreszlm@gmail.com";
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 
@@ -138,6 +138,7 @@ async function exchangeCodeForToken({ code, clientId, clientSecret, redirectUri 
   return payload.access_token;
 }
 
+/** Verifies the discovered link against Next, e.g. /api/store/auth/verify-email on port 3000. */
 async function verifyLatestEmail({ accessToken, targetEmail, apiBaseUrl }) {
   const profile = await apiFetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", accessToken);
   if (profile.emailAddress?.toLowerCase() !== targetEmail.toLowerCase()) {
@@ -167,7 +168,7 @@ async function verifyLatestEmail({ accessToken, targetEmail, apiBaseUrl }) {
     if (!verificationLink) continue;
 
     const parsedLink = new URL(verificationLink);
-    const verifyUrl = new URL("/auth/verify-email", apiBaseUrl);
+    const verifyUrl = new URL("/api/store/auth/verify-email", apiBaseUrl);
     verifyUrl.search = parsedLink.search;
 
     const response = await fetch(verifyUrl);
@@ -186,12 +187,13 @@ async function verifyLatestEmail({ accessToken, targetEmail, apiBaseUrl }) {
   throw new Error("Found matching Gmail messages, but none contained a verification link.");
 }
 
+/** Runs the optional Gmail helper against the app origin, e.g. APP_URL=http://localhost:3000. */
 async function main() {
   const clientId = requiredEnv("GOOGLE_CLIENT_ID");
   const clientSecret = requiredEnv("GOOGLE_CLIENT_SECRET");
   const targetEmail = process.env.GMAIL_TARGET_EMAIL || DEFAULT_TARGET_EMAIL;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || DEFAULT_REDIRECT_URI;
-  const apiBaseUrl = process.env.API_BASE_URL || DEFAULT_API_BASE_URL;
+  const apiBaseUrl = process.env.APP_URL || process.env.NEXTAUTH_URL || DEFAULT_API_BASE_URL;
 
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("client_id", clientId);

@@ -2,6 +2,9 @@
 
 This folder is self-contained so you can learn Playwright without changing the existing Selenium/Cucumber UI tests.
 
+Test credentials and service settings are read from the project-root `.env.local`.
+There is no separate Playwright or UI-test env file.
+
 ## First-time setup
 
 ```bash
@@ -15,7 +18,7 @@ npm run install:browsers
 Start the app from the project root:
 
 ```bash
-npm run dev:full
+npm run dev
 ```
 
 Then run Playwright from this folder:

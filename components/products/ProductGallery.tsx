@@ -17,6 +17,10 @@ export type ProductGalleryProps = {
   initialIndex?: number;
 };
 
+/**
+ * Displays product photos with immediately loaded, fixed-size navigation previews.
+ * For example, /api/product-images/Z8038/1.jpg loads in its 80px thumbnail on page load.
+ */
 export default function ProductGallery({ photos, alt, initialIndex = 0 }: ProductGalleryProps) {
   // Defensive: filter out empty/non-string values.
   const safePhotos = useMemo(() => {
@@ -90,12 +94,15 @@ export default function ProductGallery({ photos, alt, initialIndex = 0 }: Produc
               }
               aria-label={`View photo ${idx + 1}`} // aria-label improves accessibility by describing button purpose to screen readers
             >
-              <Image
+              {/* Use the registered image endpoint directly for small previews; keep main-photo optimization. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={src}
                 alt={alt}
-                fill // Next.js <Image fill /> makes the image fill its parent container, which must have position relative
-                sizes="80px" // 'sizes' hints to the browser the image display size for optimization
-                className="object-cover"
+                loading="eager"
+                width={80}
+                height={80}
+                className="h-full w-full object-cover"
               />
             </button>
           );

@@ -20,6 +20,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+/** Exercises owned orders using domestic delivery snapshots rather than international rate tables. */
 public class OrdersApiTest {
   private Cookies authCookies;
   private OrderFixture fixture;
@@ -86,7 +87,7 @@ public class OrdersApiTest {
     Assert.assertEquals(singleOrderResponse.jsonPath().getString("invoiceNumber"), fixture.invoiceNumber());
     Assert.assertEquals(singleOrderResponse.jsonPath().getString("paymentStatus"), "paid");
     Assert.assertEquals(singleOrderResponse.jsonPath().getString("shipmentStatus"), "unshipped");
-    Assert.assertEquals(singleOrderResponse.jsonPath().getString("shipping.mode"), fixture.shippingMode());
+    Assert.assertEquals(singleOrderResponse.jsonPath().getString("shipping.method"), fixture.shippingMode());
     Assert.assertEquals(singleOrderResponse.jsonPath().getInt("items.size()"), 1);
     Assert.assertEquals(singleOrderResponse.jsonPath().getInt("items[0].variantId"), fixture.variantId());
     Assert.assertEquals(singleOrderResponse.jsonPath().getInt("items[0].quantity"), fixture.quantity());
@@ -173,7 +174,6 @@ public class OrdersApiTest {
         userId
       );
       int chosenBillingAddressId = billingAddressId != null ? billingAddressId : shippingAddressId;
-      ShippingRow shipping = getShippingRow(connection);
       int variantId = getRequiredInt(
         connection,
         "SELECT id FROM product_variants ORDER BY id ASC LIMIT 1"
@@ -196,10 +196,7 @@ public class OrdersApiTest {
               subtotal_usd,
               shipping_usd,
               total_usd,
-              clothes_weight_kg,
-              box_weight_kg,
-              shipping_weight_kg,
-              shipping_id,
+              shipping_method,
               invoice_number,
               invoice_generated_at,
               created_at,
@@ -207,7 +204,7 @@ public class OrdersApiTest {
               shipping_address_id,
               billing_address_id
             )
-            VALUES (?, 'unshipped', 'paid', 'rest-assured', ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, 'unshipped', 'paid', 'rest-assured', ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           """,
           Statement.RETURN_GENERATED_KEYS
         )
@@ -216,18 +213,15 @@ public class OrdersApiTest {
         insertOrder.setString(2, "rest-assured-" + System.currentTimeMillis());
         insertOrder.setTimestamp(3, now);
         insertOrder.setBigDecimal(4, new java.math.BigDecimal("72.00"));
-        insertOrder.setBigDecimal(5, new java.math.BigDecimal("20.30"));
-        insertOrder.setBigDecimal(6, new java.math.BigDecimal("92.30"));
-        insertOrder.setBigDecimal(7, new java.math.BigDecimal("1.15"));
-        insertOrder.setBigDecimal(8, new java.math.BigDecimal("0.25"));
-        insertOrder.setBigDecimal(9, new java.math.BigDecimal("1.40"));
-        insertOrder.setInt(10, shipping.id());
-        insertOrder.setString(11, invoiceNumber);
-        insertOrder.setTimestamp(12, now);
-        insertOrder.setTimestamp(13, now);
-        insertOrder.setTimestamp(14, now);
-        insertOrder.setInt(15, shippingAddressId);
-        insertOrder.setInt(16, chosenBillingAddressId);
+        insertOrder.setBigDecimal(5, new java.math.BigDecimal("8.95"));
+        insertOrder.setBigDecimal(6, new java.math.BigDecimal("80.95"));
+        insertOrder.setString(7, "USPS");
+        insertOrder.setString(8, invoiceNumber);
+        insertOrder.setTimestamp(9, now);
+        insertOrder.setTimestamp(10, now);
+        insertOrder.setTimestamp(11, now);
+        insertOrder.setInt(12, shippingAddressId);
+        insertOrder.setInt(13, chosenBillingAddressId);
         insertOrder.executeUpdate();
 
         try (ResultSet generatedKeys = insertOrder.getGeneratedKeys()) {
@@ -252,7 +246,7 @@ public class OrdersApiTest {
         insertOrderVariant.executeUpdate();
       }
 
-      return new OrderFixture(orderId, invoiceNumber, shipping.mode(), variantId, 2);
+      return new OrderFixture(orderId, invoiceNumber, "USPS", variantId, 2);
     }
   }
 
@@ -284,24 +278,6 @@ public class OrdersApiTest {
     }
   }
 
-  private ShippingRow getShippingRow(Connection connection) throws SQLException {
-    try (
-      PreparedStatement statement = connection.prepareStatement(
-        """
-          SELECT id, mode
-          FROM shipping_cost
-          ORDER BY id ASC
-          LIMIT 1
-        """
-      );
-      ResultSet resultSet = statement.executeQuery()
-    ) {
-      if (!resultSet.next()) {
-        throw new IllegalStateException("No shipping_cost rows exist for the API test fixture");
-      }
-      return new ShippingRow(resultSet.getInt("id"), resultSet.getString("mode"));
-    }
-  }
 
   private void bindParams(PreparedStatement statement, Object... params) throws SQLException {
     for (int index = 0; index < params.length; index++) {
@@ -309,7 +285,6 @@ public class OrdersApiTest {
     }
   }
 
-  private record ShippingRow(int id, String mode) {}
 
   private record OrderFixture(long orderId, String invoiceNumber, String shippingMode, int variantId, int quantity) {}
 }

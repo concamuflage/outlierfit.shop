@@ -29,23 +29,10 @@ function loadEnvFile(filePath: string) {
   }
 }
 
+/** Finds the project root from the test module, then reads only root .env.local. */
 function loadLocalEnv() {
-  const cwd = process.cwd();
-  const projectRoot = path.resolve(cwd, "..");
-  const candidatePaths = [
-    path.join(cwd, ".env"),
-    path.join(cwd, ".env.local"),
-    path.join(projectRoot, ".env"),
-    path.join(projectRoot, ".env.local"),
-    path.join(projectRoot, "backend", ".env"),
-    path.join(projectRoot, "backend", "database", ".env"),
-    path.join(projectRoot, "test", "ui", ".env"),
-    path.join(projectRoot, "test", "ui", ".env.local"),
-  ];
-
-  for (const filePath of candidatePaths) {
-    loadEnvFile(filePath);
-  }
+  const projectRoot = path.resolve(__dirname, "../..");
+  loadEnvFile(path.join(projectRoot, ".env.local"));
 }
 
 loadLocalEnv();

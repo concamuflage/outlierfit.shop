@@ -1,31 +1,11 @@
 "use client";
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductGrid from "@/components/products/ProductGrid";
 import { type Product } from "@/components/products/ProductCard";
 import { CLIENT_API_BASE_PATH } from "@/lib/api-base";
-
-const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
-
-const BRAND_FILTERS = [
-  {
-    brand: "Nike",
-    logo: "/logo/nike.jpg",
-    width: 5000,
-    height: 2813,
-    imageClassName: "max-h-14 max-w-36",
-  },
-  {
-    brand: "Levi's",
-    logo: "/logo/levis.webp",
-    width: 800,
-    height: 800,
-    imageClassName: "max-h-16 max-w-24",
-  },
-] as const;
 
 type ProductsApiItem = {
   product_id?: number | string | null;
@@ -35,7 +15,7 @@ type ProductsApiItem = {
   style?: string | null;
   photos?: string[] | null;
   colors?: string[] | null;
-  lowest_cost_rmb?: number | string | null;
+  lowest_price_usd?: number | string | null;
 };
 
 function getPreferredCoverPhoto(photos: string[] | null | undefined) {
@@ -55,6 +35,11 @@ function getPreferredCoverPhoto(photos: string[] | null | undefined) {
   return preferredPhoto ?? cleanedPhotos[0] ?? "";
 }
 
+/**
+ * Renders the catalog with category filtering and no brand selector.
+ * Retired brand URLs are cleaned up, for example /products?brand=Nike becomes /products.
+ * Recorded USD prices are passed through unchanged, e.g. 19.90 displays as $19.90.
+ */
 function ProductsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -97,11 +82,6 @@ function ProductsPageContent() {
   const categoryFromUrl = searchParams.get("category");
   const selectedCategory =
     categoryFromUrl && categories.includes(categoryFromUrl) ? categoryFromUrl : null;
-  const brandFromUrl = searchParams.get("brand");
-  const selectedBrand =
-    brandFromUrl && BRAND_FILTERS.some((filter) => filter.brand === brandFromUrl)
-      ? brandFromUrl
-      : null;
 
   const handleSelectCategory = (category: string | null) => {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -116,37 +96,24 @@ function ProductsPageContent() {
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
   };
 
-  const handleSelectBrand = (brand: string) => {
+  useEffect(() => {
     const nextParams = new URLSearchParams(searchParams.toString());
-
-    if (selectedBrand === brand) {
-      nextParams.delete("brand");
-    } else {
-      nextParams.set("brand", brand);
+    // Clean up brand and invalid-category parameters together to avoid competing redirects.
+    nextParams.delete("brand");
+    if (categoryFromUrl !== null && categories.length > 0 && !categories.includes(categoryFromUrl)) {
+      nextParams.delete("category");
     }
 
     const nextQuery = nextParams.toString();
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
-  };
+    if (nextQuery === searchParams.toString()) return;
 
-  useEffect(() => {
-    if (categoryFromUrl === null) return;
-    if (categories.length === 0) return;
-    if (categories.includes(categoryFromUrl)) return;
-
-    const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.delete("category");
-    const nextQuery = nextParams.toString();
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    const nextPath = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(`${nextPath}${window.location.hash}`, { scroll: false });
   }, [categories, categoryFromUrl, pathname, router, searchParams]);
 
   const filteredProductsData = useMemo(() => {
-    return productsData.filter((p) => {
-      const matchesCategory = selectedCategory === null || p?.style === selectedCategory;
-      const matchesBrand = selectedBrand === null || p?.brand === selectedBrand;
-      return matchesCategory && matchesBrand;
-    });
-  }, [productsData, selectedBrand, selectedCategory]);
+    return productsData.filter((p) => selectedCategory === null || p?.style === selectedCategory);
+  }, [productsData, selectedCategory]);
 
   const products = useMemo<Product[]>(() => {
     return filteredProductsData.map((p) => ({
@@ -155,41 +122,13 @@ function ProductsPageContent() {
       brand: p.brand ?? "",
       imageUrl: getPreferredCoverPhoto(p.photos),
       colors: Array.isArray(p.colors) ? p.colors : [],
-      price: p.lowest_cost_rmb == null ? 0 : Number(p.lowest_cost_rmb) * RMB_TO_USD,
+      price: p.lowest_price_usd == null ? null : Number(p.lowest_price_usd),
     }));
   }, [filteredProductsData]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          {BRAND_FILTERS.map((filter) => {
-            const active = selectedBrand === filter.brand;
-
-            return (
-              <button
-                key={filter.brand}
-                type="button"
-                onClick={() => handleSelectBrand(filter.brand)}
-                aria-pressed={active}
-                className={`flex h-24 w-48 items-center justify-center rounded border bg-white px-5 transition ${
-                  active
-                    ? "border-zinc-900 shadow-sm"
-                    : "border-zinc-200 hover:border-zinc-400"
-                }`}
-              >
-                <Image
-                  src={filter.logo}
-                  alt={`${filter.brand} logo`}
-                  width={filter.width}
-                  height={filter.height}
-                  className={`${filter.imageClassName} h-auto w-auto object-contain`}
-                />
-              </button>
-            );
-          })}
-        </div>
-
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
           <FilterSidebar
             categories={categories}

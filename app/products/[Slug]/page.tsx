@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import ProductDetailClient from "@/app/products/[Slug]/ProductDetailClient";
-import { getServerApiBaseUrl } from "@/lib/api-base";
+import { getProductById } from "@/backend/controllers/productsController";
 
 type ProductPageProps = {
   params: Promise<{ Slug: string }>;
@@ -16,6 +16,7 @@ function pageTitle(title: string) {
   return `${title} | ${SITE_NAME}`;
 }
 
+/** Loads the product title directly, e.g. slug "13" resolves to "Cotton Shirt" without HTTP. */
 async function getProductName(slug: string) {
   const productId = Number(slug);
   if (!Number.isFinite(productId)) {
@@ -23,9 +24,7 @@ async function getProductName(slug: string) {
   }
 
   try {
-    const response = await fetch(`${getServerApiBaseUrl()}/products/${productId}`, {
-      cache: "no-store",
-    });
+    const response = await getProductById({ params: { id: productId } });
     const product = (await response.json().catch(() => null)) as ProductTitlePayload | null;
     const productName = typeof product?.name === "string" ? product.name.trim() : "";
 

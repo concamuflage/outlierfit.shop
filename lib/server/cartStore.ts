@@ -1,7 +1,5 @@
 import pool from "@/backend/database/pool";
 
-const RMB_TO_USD = Number(process.env.NEXT_PUBLIC_RMB_TO_USD ?? "0.14");
-
 export type PersistedCartItem = {
   id: string;
   name: string;
@@ -17,7 +15,6 @@ export type PersistedCart = {
   items: PersistedCartItem[];
   shippingAddressId: number | null;
   billingAddressId: number | null;
-  shippingId: number | null;
 };
 
 type SaveCartItem = {
@@ -28,16 +25,14 @@ type SaveCartItem = {
 type SaveCartSelection = {
   shippingAddressId?: number | null;
   billingAddressId?: number | null;
-  shippingId?: number | null;
 };
 
 type CartRow = {
   shipping_address_id: unknown;
   billing_address_id: unknown;
-  shipping_id: unknown;
   quantity: unknown;
   variant_id: unknown;
-  cost_rmb: unknown;
+  price_usd: unknown;
   product_id: unknown;
   product_name: unknown;
   color: unknown;
@@ -60,13 +55,7 @@ function parseVariantId(cartItemId: string) {
   return Number.isInteger(variantId) && variantId > 0 ? variantId : null;
 }
 
-function priceUsdFromRmb(costRmb: unknown) {
-  if (costRmb == null) {
-    return 0;
-  }
-  return Math.round(toNumber(costRmb) * RMB_TO_USD);
-}
-
+/** Ensures cart storage with address choices only; no shipping-rate table is required. */
 async function ensureCartTables() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS carts (
@@ -74,7 +63,6 @@ async function ensureCartTables() {
       user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
       shipping_address_id INTEGER REFERENCES addresses(id) ON DELETE SET NULL,
       billing_address_id INTEGER REFERENCES addresses(id) ON DELETE SET NULL,
-      shipping_id INTEGER REFERENCES shipping_cost(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`
@@ -92,6 +80,7 @@ async function ensureCartTables() {
   );
 }
 
+/** Loads recorded USD prices and actual weights, e.g. SKU 9653 is $49.90 and 0.45 kg. */
 export async function getCart(userId: number): Promise<PersistedCart> {
   await ensureCartTables();
 
@@ -100,15 +89,14 @@ export async function getCart(userId: number): Promise<PersistedCart> {
       SELECT
         cts.shipping_address_id,
         cts.billing_address_id,
-        cts.shipping_id,
         ci.quantity,
         pv.id AS variant_id,
-        pv.cost_rmb,
+        pv.price_usd,
         p.id AS product_id,
         p.name AS product_name,
         c.color,
         s.size,
-        st.weight_kg,
+        pv.weight_kg,
         pvi.image_link
       FROM carts cts
       LEFT JOIN cart_items ci
@@ -121,8 +109,6 @@ export async function getCart(userId: number): Promise<PersistedCart> {
         ON c.id = pv.color_id
       LEFT JOIN sizes s
         ON s.id = pv.size_id
-      LEFT JOIN styles st
-        ON st.id = p.style_id
       LEFT JOIN LATERAL (
         SELECT image_link
         FROM product_variant_images
@@ -141,7 +127,7 @@ export async function getCart(userId: number): Promise<PersistedCart> {
     .map((row: CartRow) => ({
       id: `${toNumber(row.product_id)}-${toNumber(row.variant_id)}`,
       name: String(row.product_name ?? ""),
-      price: priceUsdFromRmb(row.cost_rmb),
+      price: row.price_usd == null ? 0 : toNumber(row.price_usd),
       weightKg: row.weight_kg == null ? null : toNumber(row.weight_kg),
       imageUrl: row.image_link ? String(row.image_link) : null,
       color: row.color ? String(row.color) : null,
@@ -155,10 +141,10 @@ export async function getCart(userId: number): Promise<PersistedCart> {
     items,
     shippingAddressId: metadataRow?.shipping_address_id == null ? null : toNumber(metadataRow.shipping_address_id),
     billingAddressId: metadataRow?.billing_address_id == null ? null : toNumber(metadataRow.billing_address_id),
-    shippingId: metadataRow?.shipping_id == null ? null : toNumber(metadataRow.shipping_id),
   };
 }
 
+/** Saves items and address selections, e.g. a US order has no selectable air/sea rate ID. */
 export async function saveCart(userId: number, items: SaveCartItem[], selections?: SaveCartSelection) {
   await ensureCartTables();
 
@@ -182,13 +168,12 @@ export async function saveCart(userId: number, items: SaveCartItem[], selections
 
     const cartResult = await client.query(
       `
-        INSERT INTO carts (user_id, shipping_address_id, billing_address_id, shipping_id, updated_at)
-        VALUES ($1, $2, $3, $4, NOW())
+        INSERT INTO carts (user_id, shipping_address_id, billing_address_id, updated_at)
+        VALUES ($1, $2, $3, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
           shipping_address_id = EXCLUDED.shipping_address_id,
           billing_address_id = EXCLUDED.billing_address_id,
-          shipping_id = EXCLUDED.shipping_id,
           updated_at = NOW()
         RETURNING id
       `,
@@ -196,7 +181,6 @@ export async function saveCart(userId: number, items: SaveCartItem[], selections
         userId,
         selections?.shippingAddressId ?? null,
         selections?.billingAddressId ?? null,
-        selections?.shippingId ?? null,
       ]
     );
 

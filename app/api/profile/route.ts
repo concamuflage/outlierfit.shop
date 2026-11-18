@@ -74,6 +74,11 @@ export async function GET() {
   }
 }
 
+/**
+ * Saves authenticated profile updates, including upper body length stored in centimeters.
+ * For example, { section: "measurement", measurement: { heightCm: 69.9 } } saves a 27.5-inch entry.
+ * Whole-body values are separate: weightLb: 150 and bodyHeightCm: 172.7 never overwrite torso length.
+ */
 export async function POST(request: Request) {
   const { userId } = await resolveSessionUserId();
   if (!userId) {
@@ -87,6 +92,15 @@ export async function POST(request: Request) {
 
   try {
     if (payload.section === "measurement") {
+      const weightLb = toOptionalNumber(payload.measurement?.weightLb);
+      const bodyHeightCm = toOptionalNumber(payload.measurement?.bodyHeightCm);
+      // New fields reject invalid supplied values rather than silently clearing them; omitted values stay optional.
+      for (const field of ["weightLb", "bodyHeightCm"] as const) {
+        const raw = payload.measurement?.[field];
+        if (raw != null && raw !== "" && toOptionalNumber(raw) == null) {
+          return badRequest(field === "weightLb" ? "Enter a valid weight in pounds." : "Enter a valid height.");
+        }
+      }
       const heightCm = toOptionalNumber(payload.measurement?.heightCm);
       const chestCm = toOptionalNumber(payload.measurement?.chestCm);
       const shoulderWidthCm = toOptionalNumber(payload.measurement?.shoulderWidthCm);
@@ -95,7 +109,7 @@ export async function POST(request: Request) {
       const hipCm = toOptionalNumber(payload.measurement?.hipCm);
       const inseamCm = toOptionalNumber(payload.measurement?.inseamCm);
 
-      const hasInvalidValue = [heightCm, chestCm, shoulderWidthCm, sleeveLengthCm, waistCm, hipCm, inseamCm].some(
+      const hasInvalidValue = [weightLb, bodyHeightCm, heightCm, chestCm, shoulderWidthCm, sleeveLengthCm, waistCm, hipCm, inseamCm].some(
         (value) => value !== null && value <= 0
       );
       if (hasInvalidValue) {
@@ -103,7 +117,10 @@ export async function POST(request: Request) {
       }
 
       const rangeError =
-        validateMeasurementRange("Height", heightCm, 91.4, 243.8) ??
+        validateMeasurementRange("Weight", weightLb, 0.01, 99999.99) ??
+        validateMeasurementRange("Height", bodyHeightCm, 91.4, 243.8) ??
+        // heightCm retains its storage name; it now represents upper body length, not full height.
+        validateMeasurementRange("Upper body length", heightCm, 0, 243.8) ??
         validateMeasurementRange("Chest", chestCm, 50.8, 203.2) ??
         validateMeasurementRange("Shoulder width", shoulderWidthCm, 25.4, 76.2) ??
         validateMeasurementRange("Arm length", sleeveLengthCm, 38.1, 114.3) ??
@@ -116,6 +133,8 @@ export async function POST(request: Request) {
       }
 
       await saveMeasurement(userId, {
+        weightLb,
+        bodyHeightCm,
         heightCm,
         chestCm,
         shoulderWidthCm,

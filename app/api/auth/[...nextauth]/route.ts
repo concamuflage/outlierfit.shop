@@ -6,12 +6,12 @@
 // IMPORTANT:
 // - This code runs on the Next.js server (Node.js or serverless),
 //   NOT in the browser.
-// - This is a separate server/runtime from your backend `server.js`.
+// - Catalog, account and payment routes all share this Next.js server.
 //
 // Request flow:
 // Browser -> /api/auth/* (NextAuth server)
 //                     -> authorize() (in lib/auth.ts)
-//                     -> fetch() -> backend server (server.js)
+//                     -> loginAccount() -> PostgreSQL (no loopback HTTP)
 //
 // NextAuth handles sessions, cookies, and callbacks here.
 

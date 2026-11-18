@@ -2,13 +2,12 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
 import { useCart } from "@/components/cart/CartContext";
-import { useShippingOptions } from "@/components/cart/useShippingOptions";
 import { formatUsd } from "@/lib/formatters";
-import { getBoxWeightKg } from "@/lib/shipping";
+import { DOMESTIC_SHIPPING_FEE_USD } from "@/lib/domestic-shipping";
 const US_STATES = [
   { value: "AL", label: "Alabama" },
   { value: "AK", label: "Alaska" },
@@ -83,7 +82,6 @@ type ProfilePayload = {
 type CartSelectionsPayload = {
   shippingAddressId: number | null;
   billingAddressId: number | null;
-  shippingId: number | null;
 };
 
 type AddressForm = {
@@ -416,16 +414,13 @@ function AddressEditor({
   );
 }
 
+/** Reviews domestic checkout with a flat fee; only shipping and billing addresses need selection. */
 function CartPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const opensCheckoutFromUrl = searchParams.get("checkout") === "1";
   const {
     items,
     subtotal,
-    totalWeightKg,
-    selectedShippingModeId,
-    setSelectedShippingModeId,
     removeItem,
     updateQty,
     clearCart,
@@ -455,14 +450,6 @@ function CartPageContent() {
   const [stripeCheckoutLoading, setStripeCheckoutLoading] = useState(false);
   const [stripeCheckoutError, setStripeCheckoutError] = useState<string | null>(null);
   const checkoutReviewRef = useRef<HTMLElement | null>(null);
-  const boxWeightKg = useMemo(() => getBoxWeightKg(totalWeightKg), [totalWeightKg]);
-  const shipmentWeightKg = useMemo(() => totalWeightKg + boxWeightKg, [boxWeightKg, totalWeightKg]);
-  const {
-    shippingError,
-    shippingLoading,
-    shippingOptions,
-    selectedShippingOption,
-  } = useShippingOptions(shipmentWeightKg, selectedShippingModeId, setSelectedShippingModeId);
 
   const shippingAddresses = profileData?.shippingAddresses ?? [];
   const billingAddresses = profileData?.billingAddresses ?? [];
@@ -475,17 +462,16 @@ function CartPageContent() {
   }, [profileData, selectedBillingAddressId]);
   const alternativeShippingAddresses = shippingAddresses.filter((address) => address.id !== selectedShippingAddressId);
   const alternativeBillingAddresses = billingAddresses.filter((address) => address.id !== selectedBillingAddressId);
-  const checkoutOrderTotal = subtotal + (selectedShippingOption?.shippingCostUsd ?? 0);
   const effectiveBillingAddress = billingSameAsShipping ? selectedShippingAddress : selectedBillingAddress;
   const canStartStripeCheckout = Boolean(
     selectedShippingAddress &&
       effectiveBillingAddress &&
-      selectedShippingOption &&
       items.length > 0
   );
   
+  /** Starts checkout using address IDs; the server, not the browser, sets prices and the flat shipping fee. */
   async function handleStripeCheckout() {
-    if (!canStartStripeCheckout || !selectedShippingAddress || !effectiveBillingAddress || !selectedShippingOption) {
+    if (!canStartStripeCheckout || !selectedShippingAddress || !effectiveBillingAddress) {
       setStripeCheckoutError("Select shipping and billing details before completing payment.");
       return;
     }
@@ -498,13 +484,6 @@ function CartPageContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subtotalUsd: subtotal,
-          shippingUsd: selectedShippingOption.shippingCostUsd ?? 0,
-          totalUsd: checkoutOrderTotal,
-          clothesWeightKg: totalWeightKg,
-          boxWeightKg,
-          shippingWeightKg: shipmentWeightKg,
-          shippingId: selectedShippingOption.id,
           shippingAddressId: selectedShippingAddressId,
           billingAddressId: effectiveBillingAddress?.id,
           items: items.map((item) => ({
@@ -535,6 +514,7 @@ function CartPageContent() {
     }
   }
 
+  /** Restores shipping/billing address IDs only; the domestic fee needs no rate selection. */
   const loadCheckoutProfile = useCallback(async () => {
     setProfileLoading(true);
     setProfileError(null);
@@ -586,10 +566,9 @@ function CartPageContent() {
     setSelectedShippingAddressId(nextShippingId);
     setSelectedBillingAddressId(nextBillingId);
     setBillingSameAsShipping(nextProfile.billingAddresses.length === 0 || sameAsShipping);
-    setSelectedShippingModeId(persistedCart.shippingId);
     setCheckoutSelectionsHydrated(true);
     setProfileLoading(false);
-  }, [setSelectedShippingModeId]);
+  }, []);
 
   async function handleCheckoutClick() {
     const nextOpen = !showCheckoutReview;
@@ -610,18 +589,6 @@ function CartPageContent() {
     return () => window.clearTimeout(timeoutId);
   }, [loadCheckoutProfile, profileData, profileLoading, showCheckoutReview]);
 
-  useEffect(() => {
-    if (!checkoutSelectionsHydrated || shippingOptions.length === 0) {
-      return;
-    }
-
-    if (
-      selectedShippingModeId == null ||
-      !shippingOptions.some((option) => option.id === selectedShippingModeId)
-    ) {
-      setSelectedShippingModeId(shippingOptions[0]?.id ?? null);
-    }
-  }, [checkoutSelectionsHydrated, selectedShippingModeId, setSelectedShippingModeId, shippingOptions]);
 
   useEffect(() => {
     if (!showCheckoutReview || !profileData || !checkoutSelectionsHydrated) {
@@ -637,7 +604,6 @@ function CartPageContent() {
         items: items.map((item) => ({ id: item.id, qty: item.qty })),
         shippingAddressId: selectedShippingAddressId,
         billingAddressId: billingSameAsShipping ? selectedShippingAddressId : selectedBillingAddressId,
-        shippingId: selectedShippingModeId,
       }),
       signal: controller.signal,
     }).catch(() => {});
@@ -650,7 +616,6 @@ function CartPageContent() {
     profileData,
     selectedBillingAddressId,
     selectedShippingAddressId,
-    selectedShippingModeId,
     showCheckoutReview,
   ]);
 
@@ -841,14 +806,6 @@ function CartPageContent() {
               <aside className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
                 <OrderSummary
                   subtotal={subtotal}
-                  totalWeightKg={totalWeightKg}
-                  shippingOptions={shippingOptions}
-                  selectedShippingModeId={selectedShippingModeId}
-                  selectedShippingOption={selectedShippingOption}
-                  onSelectShippingMode={setSelectedShippingModeId}
-                  shippingError={shippingError}
-                  shippingLoading={shippingLoading}
-                  radioName="shipping-mode"
                   testIdPrefix="cart"
                 />
                 <button
@@ -926,11 +883,11 @@ function CartPageContent() {
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-zinc-600">Shipping</span>
-                                <span className="font-medium text-zinc-900">{formatUsd(selectedShippingOption?.shippingCostUsd ?? 0, 2)}</span>
+                                <span className="font-medium text-zinc-900">{formatUsd(DOMESTIC_SHIPPING_FEE_USD, 2)}</span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-zinc-600">Total</span>
-                                <span className="font-semibold text-zinc-900">{formatUsd(checkoutOrderTotal, 2)}</span>
+                                <span className="font-semibold text-zinc-900">{formatUsd(subtotal + DOMESTIC_SHIPPING_FEE_USD, 2)}</span>
                               </div>
                             </div>
                           </div>
@@ -1279,7 +1236,7 @@ function CartPageContent() {
 
                 {!canStartStripeCheckout ? (
                   <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    Add/select a shipping address, set billing details, and choose a shipping option before completing payment.
+                    Add/select a shipping address and set billing details before completing payment.
                   </div>
                 ) : null}
 

@@ -2,6 +2,8 @@ import pool from "@/backend/database/pool";
 
 type MeasurementRecord = {
   id: number;
+  weightLb: number | null;
+  bodyHeightCm: number | null;
   heightCm: number | null;
   chestCm: number | null;
   shoulderWidthCm: number | null;
@@ -44,9 +46,12 @@ function trimText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** Maps optional whole-body values, e.g. weight_lb: "150.00" becomes weightLb: 150. */
 function mapMeasurement(row: Record<string, unknown>): MeasurementRecord {
   return {
     id: toNumber(row.id),
+    weightLb: row.weight_lb == null ? null : toNumber(row.weight_lb),
+    bodyHeightCm: row.body_height_cm == null ? null : toNumber(row.body_height_cm),
     heightCm: row.height_cm == null ? null : toNumber(row.height_cm),
     chestCm: row.chest_cm == null ? null : toNumber(row.chest_cm),
     shoulderWidthCm: row.shoulder_width_cm == null ? null : toNumber(row.shoulder_width_cm),
@@ -72,6 +77,7 @@ function mapAddress(row: Record<string, unknown>): AddressRecord {
   };
 }
 
+/** Loads profile measurements with independent full height and torso length, e.g. 172.7 cm and 69.9 cm. */
 export async function getProfile(userId: number): Promise<ProfileData> {
   const userResult = await pool.query(
     `
@@ -89,6 +95,8 @@ export async function getProfile(userId: number): Promise<ProfileData> {
   const measurementResult = await pool.query(
     `
       SELECT m.id,
+             m.weight_lb,
+             m.body_height_cm,
              m.height_cm,
              m.chest_cm,
              m.shoulder_width_cm,
@@ -162,9 +170,12 @@ export async function getUserIdByEmail(email: string) {
   return toNumber(userResult.rows[0].id);
 }
 
+/** Saves optional pounds and centimeter lengths, e.g. weightLb: 150 and bodyHeightCm: 172.7. */
 export async function saveMeasurement(
   userId: number,
   measurement: {
+    weightLb: number | null;
+    bodyHeightCm: number | null;
     heightCm: number | null;
     chestCm: number | null;
     shoulderWidthCm: number | null;
@@ -196,7 +207,9 @@ export async function saveMeasurement(
             sleeve_length_cm = $5,
             waist_cm = $6,
             hip_cm = $7,
-            inseam_cm = $8
+            inseam_cm = $8,
+            weight_lb = $9,
+            body_height_cm = $10
         WHERE id = $1
       `,
       [
@@ -208,6 +221,8 @@ export async function saveMeasurement(
         measurement.waistCm,
         measurement.hipCm,
         measurement.inseamCm,
+        measurement.weightLb,
+        measurement.bodyHeightCm,
       ]
     );
     return;
@@ -215,8 +230,8 @@ export async function saveMeasurement(
 
   const insertedMeasurement = await pool.query(
     `
-      INSERT INTO measurements (height_cm, chest_cm, shoulder_width_cm, sleeve_length_cm, waist_cm, hip_cm, inseam_cm)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO measurements (height_cm, chest_cm, shoulder_width_cm, sleeve_length_cm, waist_cm, hip_cm, inseam_cm, weight_lb, body_height_cm)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `,
     [
@@ -227,6 +242,8 @@ export async function saveMeasurement(
       measurement.waistCm,
       measurement.hipCm,
       measurement.inseamCm,
+      measurement.weightLb,
+      measurement.bodyHeightCm,
     ]
   );
 

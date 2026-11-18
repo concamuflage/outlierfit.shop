@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useCart } from "@/components/cart/CartContext"; // useCart is a custom hook that provides access to the shopping cart's state and actions.
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
-import { useShippingOptions } from "@/components/cart/useShippingOptions";
-import { getBoxWeightKg } from "@/lib/shipping";
 
+/** Renders the cart drawer with cent-precision prices, e.g. $19.90 rather than $20, plus the flat US fee. */
 export default function CartDrawer() {
   
   // Destructure values and functions from useCart hook:
@@ -21,22 +20,11 @@ export default function CartDrawer() {
     items,
     isOpen,
     subtotal,
-    totalWeightKg,
-    selectedShippingModeId,
-    setSelectedShippingModeId,
     closeCart,
     removeItem,
     updateQty,
     clearCart,
   } = useCart();
-  const boxWeightKg = getBoxWeightKg(totalWeightKg);
-  const shipmentWeightKg = totalWeightKg + boxWeightKg;
-  const {
-    shippingError,
-    shippingLoading,
-    shippingOptions,
-    selectedShippingOption,
-  } = useShippingOptions(shipmentWeightKg, selectedShippingModeId, setSelectedShippingModeId);
 
   return (
     <div
@@ -89,20 +77,12 @@ export default function CartDrawer() {
               items={items}
               onRemove={removeItem}
               onUpdateQty={updateQty}
-              priceFractionDigits={0}
+              priceFractionDigits={2}
               testIdPrefix="cart-drawer"
             />
             <section className="rounded-[2rem] border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
               <OrderSummary
                 subtotal={subtotal}
-                totalWeightKg={totalWeightKg}
-                shippingOptions={shippingOptions}
-                selectedShippingModeId={selectedShippingModeId}
-                selectedShippingOption={selectedShippingOption}
-                onSelectShippingMode={setSelectedShippingModeId}
-                shippingError={shippingError}
-                shippingLoading={shippingLoading}
-                radioName="drawer-shipping-mode"
                 testIdPrefix="cart-drawer"
                 legacySubtotalTestId="cart-drawer-subtotal"
               />

@@ -9,6 +9,10 @@ import java.sql.SQLException;
 import java.time.Instant;
 import org.testng.Assert;
 
+/**
+ * Verifies webhook responses with domestic totals, e.g. a paid session plus the $8.95 shipping fee.
+ * Database-only cs_test_api_* fixtures do not exist in Stripe and cannot satisfy server-side session retrieval.
+ */
 public class StripeWebhookApiSteps {
   private final OrdersApiSteps ordersApiSteps = new OrdersApiSteps();
 
@@ -118,6 +122,7 @@ public class StripeWebhookApiSteps {
       );
   }
 
+  /** Converts item subtotal plus the flat US fee to Stripe cents. */
   private int totalAmountCents() {
     return OrdersApiContext
       .checkoutFixture()
@@ -127,7 +132,7 @@ public class StripeWebhookApiSteps {
         OrdersApiContext
           .checkoutFixture()
           .shipping()
-          .shippingUsd(OrdersApiContext.checkoutFixture().variant().clothesWeightKg())
+          .shippingUsd()
       )
       .movePointRight(2)
       .intValueExact();
@@ -178,15 +183,20 @@ public class StripeWebhookApiSteps {
     OrdersApiContext.setStripeSecondWebhookResponse(OrdersApiSupport.postSignedStripeWebhook(payload));
   }
 
+  /** Includes the webhook response body on failure, e.g. {"error":"Webhook processing failed."}. */
   @Then("the webhook response should be accepted")
   public void theWebhookResponseShouldBeAccepted() {
-    OrdersApiContext.stripeWebhookResponse().then().statusCode(200);
+    Assert.assertEquals(OrdersApiContext.stripeWebhookResponse().statusCode(), 200,
+      "Webhook rejected. Response body: " + OrdersApiContext.stripeWebhookResponse().asString()
+        + ". Database-only cs_test_api_* IDs cannot be retrieved from Stripe; check the Next server error log.");
   }
 
+  /** Reports each delivery separately, e.g. first delivery fails before a duplicate can be acknowledged. */
   @Then("each webhook response should be accepted")
   public void eachWebhookResponseShouldBeAccepted() {
-    OrdersApiContext.stripeWebhookResponse().then().statusCode(200);
-    OrdersApiContext.stripeSecondWebhookResponse().then().statusCode(200);
+    theWebhookResponseShouldBeAccepted();
+    Assert.assertEquals(OrdersApiContext.stripeSecondWebhookResponse().statusCode(), 200,
+      "Duplicate webhook rejected. Response body: " + OrdersApiContext.stripeSecondWebhookResponse().asString());
   }
 
   @Then("the webhook event should be recorded")
