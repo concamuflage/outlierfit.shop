@@ -1,0 +1,13 @@
+// Explicit staging test job; it does not deploy or promote a release.
+pipeline {
+    agent any
+    options { disableConcurrentBuilds(); timestamps() }
+    environment { HOME = '/var/lib/jenkins' }
+    stages {
+        stage('Checkout') { steps { checkout scm } }
+        stage('Full Staging UI Feature Tests') {
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps { sh 'bash scripts/deploy/ci.sh staging full' }
+        }
+    }
+}

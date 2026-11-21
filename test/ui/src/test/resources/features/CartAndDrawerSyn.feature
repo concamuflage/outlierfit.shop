@@ -1,4 +1,4 @@
-@CartAndDrawerSync@Regression
+@CartAndDrawerSync @Regression
 Feature: Cart and drawer stay in sync
 
   Scenario: changing the item quantity in the cart drawer updates the cart page

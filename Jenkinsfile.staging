@@ -1,0 +1,30 @@
+// Mirrors Jihuota: build once, deploy blue-green, smoke, publish, then promote.
+pipeline {
+    agent any
+    options { disableConcurrentBuilds(); timestamps() }
+    parameters { booleanParam(name: 'AUTO_PROMOTE', defaultValue: true, description: 'Promote after staging passes; disable during initial DNS/TLS setup') }
+    triggers { pollSCM('H/5 * * * *') }
+    environment { HOME = '/var/lib/jenkins' }
+    stages {
+        stage('Checkout') { steps { checkout scm } }
+        stage('Build, Migrate, Package On Jenkins') { steps { sh 'bash scripts/deploy/ci.sh staging build' } }
+        stage('Blue-Green Deploy On Staging VM') { steps { sh 'bash scripts/deploy/ci.sh staging deploy' } }
+        stage('Health Check') { steps { sh 'bash scripts/deploy/ci.sh staging health' } }
+        stage('Post-deploy Fast UI Smoke Tests') { steps { sh 'bash scripts/deploy/ci.sh staging smoke' } }
+        stage('Post-deploy Auth Email Smoke Tests') {
+            options { timeout(time: 15, unit: 'MINUTES') }
+            steps { sh 'bash scripts/deploy/ci.sh staging auth' }
+        }
+        stage('Publish Promotable Artifact') { steps { sh 'bash scripts/deploy/ci.sh staging publish' } }
+        stage('Finalize Staging Deploy') { steps { sh 'bash scripts/deploy/ci.sh staging finalize' } }
+        stage('Trigger Production Deploy') {
+            when { expression { params.AUTO_PROMOTE } }
+            steps {
+                script {
+                    build job: 'outlierfit-production', parameters: [string(name: 'DEPLOY_COMMIT_SHA', value: sh(script: 'git rev-parse HEAD', returnStdout: true).trim())], wait: false
+                }
+            }
+        }
+    }
+    post { failure { sh 'bash scripts/deploy/ci.sh staging rollback' } }
+}

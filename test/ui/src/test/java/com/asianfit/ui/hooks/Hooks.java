@@ -7,6 +7,7 @@ import io.cucumber.java.After;
 import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
 
+/** Isolates browser scenarios and cleans generated accounts, e.g. signup/login smoke users after CI runs. */
 public class Hooks {
   private static final long STEP_PAUSE_MS = 1200;
 
@@ -17,7 +18,8 @@ public class Hooks {
     DriverFactory.createDriver();
   }
 
-  @Before("@Cart or @CartAndDrawerSync")
+  /** Starts cart-based scenarios empty, including @Checkout tests that share the configured CI user. */
+  @Before("@Cart or @CartAndDrawerSync or @Checkout")
   public void cleanCartBeforeScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }
@@ -41,7 +43,8 @@ public class Hooks {
     DriverFactory.quitDriver();
   }
 
-  @After("@Signup or @ResetPassword")
+  /** Deletes generated accounts after both legacy @Signup and current @SignupLogin scenarios. */
+  @After("@Signup or @SignupLogin or @ResetPassword")
   public void cleanSignupUserAfterScenario() {
     String signupEmail = SignupTestState.signupEmail();
     try {
@@ -65,7 +68,8 @@ public class Hooks {
     }
   }
 
-  @After("@Cart or @CartAndDrawerSync")
+  /** Removes cart fixtures after pass or failure, e.g. a cancelled checkout must not affect the next scenario. */
+  @After("@Cart or @CartAndDrawerSync or @Checkout")
   public void cleanCartAfterScenario() {
     DatabaseCleanup.deleteTestUserCart();
   }

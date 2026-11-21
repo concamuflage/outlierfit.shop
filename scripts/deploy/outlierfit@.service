@@ -1,0 +1,21 @@
+[Unit]
+Description=OutlierFit Next.js on port %i
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=outlierfit
+Group=outlierfit
+WorkingDirectory=/opt/outlierfit/slots/%i
+EnvironmentFile=/etc/outlierfit/runtime.env
+ExecStart=/usr/local/bin/node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port %i
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

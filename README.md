@@ -18,9 +18,17 @@ Domestic checkout adds one provisional **$8.95 per order** fee. Change
 `DOMESTIC_SHIPPING_FEE_USD` in `lib/domestic-shipping.ts` to adjust it.
 This is a merchant-set estimate, not a live USPS quote; larger/farther shipments
 may cost more. Item weights remain product data but no longer price delivery.
-Migration `0000000000006_remove_international_shipping.js` removes the old rate
-table and checkout weight/rate columns while retaining monetary snapshots.
-Existing migrations and their baseline schema remain historical records.
+The single migration `0000000000000_baseline.js` creates the current schema from
+`db/schema/baseline.sql`, without product, user, or order data. It includes the
+domestic-shipping changes and does not create the retired international rate table.
+Run `npm run migrate:up` on an empty database, then import catalog data separately.
+Add new incremental migrations for future changes; do not regenerate the baseline
+after it has been deployed.
+
+An existing database matching this baseline must be marked as already migrated,
+not run through schema creation. After backup and schema comparison, use
+`npm run migrate:up -- --fake` once to record the baseline without running its SQL.
+Do not use `--fake` on an empty database or to bypass unapplied future migrations.
 
 Browser API calls use `/api/store`, for example `/api/store/products` and
 `/api/store/auth/signup`. Existing `/backend/...` URLs are rewritten internally
@@ -31,11 +39,15 @@ Configure server-only settings in `.env.local` (never `NEXT_PUBLIC_` secrets):
 
 ```bash
 PGHOST=localhost
-PGPORT=5432
+PGPORT=5433
 PGUSER=postgres
 PGPASSWORD=your-local-database-password
 PGDATABASE=clothes
 ```
+
+OutlierFit's local database runs on the isolated PostgreSQL 17.12 instance at
+`localhost:5433`. The older shared PostgreSQL instance remains on port 5432 for
+other projects. The pgAdmin entry is `OutlierFit Dev PostgreSQL 17.12`.
 
 The project-root `.env.local` is the only local configuration file. It contains
 app, database, Resend, Google, Stripe, storage, proxy and test-account settings.
@@ -48,6 +60,39 @@ The `backend/` directory now contains server modules only, not a separate app.
 When upgrading an existing PM2 deployment, remove its old process once with
 `pm2 delete project888-api`, then deploy only `project888-web` using the updated
 Jenkins pipeline and ecosystem configuration.
+
+## Cloud Deployment
+
+The new VMs use Nginx and two systemd-managed Next.js ports (3001/3002), rather
+than running the application in the Jenkins workspace. Jenkins checks out
+`codex/deployment` and builds the release on the build VM.
+The staging job polls that branch every five minutes, so Jenkins need not expose
+an unauthenticated public webhook endpoint.
+
+- `Jenkinsfile.staging`: checkout; build/migrate/package; blue-green deployment;
+  health check; fast headless UI smoke; serial signup/login email smoke; publish
+  the verified artifact; finalize; optionally trigger production.
+- `Jenkinsfile`: promote the exact staging-tested commit and checksum-verified
+  artifact; migrate production; deploy; health/UI/email smoke; finalize.
+- `Jenkinsfile.staging.full-tests`: manually run the serial non-payment staging
+  UI suite. Payment and synthetic webhook API scenarios are deliberately separate.
+
+For example, a release is stored in `/opt/outlierfit/releases/<commit SHA>`.
+Nginx switches to its inactive port only after the catalog endpoint is healthy;
+the old backend remains running until smoke tests pass. Failures restore the
+previous application backend. Database migrations are **not** automatically
+reversed: future migrations must remain compatible with the previous release.
+
+Environment credentials come from the `outlierfit-staging-env`,
+`outlierfit-production-env`, and `outlierfit-ci-env` Secret Manager secrets.
+Runtime identities can read only their own environment and private image bucket.
+The root-only certificate credential is separate from application secrets.
+Never commit `.env.local`, `.local/`, admin credentials, or private SSH keys.
+
+Both sites initially use **Stripe test mode**. Switching to real payments needs
+live-mode keys and separate live-mode webhook endpoints/secrets. Catalog data
+and registered product photos are imported once, independently of schema
+migrations; redeployments do not reset inventory or copy dev users/orders.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 

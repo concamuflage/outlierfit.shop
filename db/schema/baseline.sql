@@ -8,6 +8,7 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -15,6 +16,21 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- PostgreSQL normally creates public before node-pg-migrate initializes its history table.
+CREATE SCHEMA IF NOT EXISTS public;
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS 'standard public schema';
+
 
 --
 -- Name: set_orders_updated_at(); Type: FUNCTION; Schema: public; Owner: -
@@ -137,7 +153,6 @@ CREATE TABLE public.carts (
     user_id integer NOT NULL,
     shipping_address_id integer,
     billing_address_id integer,
-    shipping_id integer,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -241,8 +256,34 @@ CREATE TABLE public.measurements (
     id integer NOT NULL,
     height_cm numeric(5,2),
     chest_cm numeric(5,2),
-    sleeve_length_cm numeric(5,2)
+    sleeve_length_cm numeric(5,2),
+    waist_cm numeric(5,2),
+    hip_cm numeric(5,2),
+    inseam_cm numeric(5,2),
+    shoulder_width_cm numeric(5,2),
+    weight_lb numeric(7,2),
+    body_height_cm numeric(5,1),
+    CONSTRAINT measurements_body_height_cm_check CHECK ((body_height_cm > (0)::numeric)),
+    CONSTRAINT measurements_hip_cm_check CHECK (((hip_cm IS NULL) OR ((hip_cm > (0)::numeric) AND ((hip_cm >= (60)::numeric) AND (hip_cm <= (220)::numeric))))),
+    CONSTRAINT measurements_inseam_cm_check CHECK (((inseam_cm IS NULL) OR ((inseam_cm > (0)::numeric) AND ((inseam_cm >= (40)::numeric) AND (inseam_cm <= (120)::numeric))))),
+    CONSTRAINT measurements_shoulder_width_cm_check CHECK (((shoulder_width_cm IS NULL) OR ((shoulder_width_cm > (0)::numeric) AND ((shoulder_width_cm >= 25.4) AND (shoulder_width_cm <= 76.2))))),
+    CONSTRAINT measurements_waist_cm_check CHECK (((waist_cm IS NULL) OR ((waist_cm > (0)::numeric) AND ((waist_cm >= (45)::numeric) AND (waist_cm <= (200)::numeric))))),
+    CONSTRAINT measurements_weight_lb_check CHECK ((weight_lb > (0)::numeric))
 );
+
+
+--
+-- Name: COLUMN measurements.weight_lb; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.measurements.weight_lb IS 'Optional body weight in pounds. Example: 150.00 lb.';
+
+
+--
+-- Name: COLUMN measurements.body_height_cm; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.measurements.body_height_cm IS 'Optional standing full-body height in centimeters, separate from upper body length. Example: 172.7 cm for 68 inches.';
 
 
 --
@@ -280,10 +321,6 @@ CREATE TABLE public.orders (
     subtotal_usd numeric(10,2) NOT NULL,
     shipping_usd numeric(10,2) NOT NULL,
     total_usd numeric(10,2) NOT NULL,
-    clothes_weight_kg numeric(8,2),
-    box_weight_kg numeric(8,2),
-    shipping_weight_kg numeric(8,2),
-    shipping_id integer NOT NULL,
     invoice_number character varying(40),
     invoice_generated_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -291,6 +328,7 @@ CREATE TABLE public.orders (
     shipping_address_id integer,
     billing_address_id integer,
     user_id integer NOT NULL,
+    shipping_method text DEFAULT 'USPS'::text NOT NULL,
     CONSTRAINT orders_payment_status_check CHECK (((payment_status)::text = ANY ((ARRAY['unpaid'::character varying, 'paid'::character varying, 'failed'::character varying, 'refunded'::character varying])::text[]))),
     CONSTRAINT orders_shipment_status_check CHECK (((shipment_status)::text = ANY ((ARRAY['unshipped'::character varying, 'shipped'::character varying, 'received by customer'::character varying, 'returned on the way'::character varying, 'return received'::character varying])::text[])))
 );
@@ -367,7 +405,12 @@ CREATE TABLE public.payments (
     paid_at timestamp with time zone,
     failed_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    stripe_promotion_code_id text,
+    stripe_coupon_id text,
+    promotion_code text,
+    discount_amount integer,
+    discount_currency text
 );
 
 
@@ -445,8 +488,44 @@ CREATE TABLE public.product_variants (
     sleeve numeric(5,2),
     height numeric(5,2),
     chest numeric(5,2),
-    cost_rmb numeric(12,2)
+    cost_rmb numeric(12,2),
+    shoulder_width_cm numeric(5,2),
+    weight_kg numeric(11,5),
+    hem_circumference_cm numeric(5,2),
+    price_usd numeric(10,2),
+    CONSTRAINT product_variants_hem_circumference_cm_check CHECK ((hem_circumference_cm > (0)::numeric)),
+    CONSTRAINT product_variants_price_usd_check CHECK ((price_usd > (0)::numeric)),
+    CONSTRAINT product_variants_shoulder_width_cm_check CHECK ((shoulder_width_cm > (0)::numeric)),
+    CONSTRAINT product_variants_weight_kg_check CHECK ((weight_kg > (0)::numeric))
 );
+
+
+--
+-- Name: COLUMN product_variants.shoulder_width_cm; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_variants.shoulder_width_cm IS 'Garment shoulder seam-to-seam width in centimeters. Example: 44 for SKU 9653 size M.';
+
+
+--
+-- Name: COLUMN product_variants.weight_kg; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_variants.weight_kg IS 'Actual unpackaged item weight in kilograms. Example: 0.05625 for SKU 9653.';
+
+
+--
+-- Name: COLUMN product_variants.hem_circumference_cm; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_variants.hem_circumference_cm IS 'Finished garment hem circumference in centimeters. Example: 108 for SKU Z8038 size M.';
+
+
+--
+-- Name: COLUMN product_variants.price_usd; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_variants.price_usd IS 'Recorded retail price in USD; not calculated from cost_rmb. Example: 19.90 for SKU Z8038.';
 
 
 --
@@ -500,39 +579,6 @@ CREATE SEQUENCE public.products_id_seq
 --
 
 ALTER SEQUENCE public.products_id_seq OWNED BY public.products.id;
-
-
---
--- Name: shipping_cost; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shipping_cost (
-    id integer NOT NULL,
-    mode character varying(50) NOT NULL,
-    first_kg_cost_rmb numeric(10,2) NOT NULL,
-    additional_kg_cost_rmb numeric(10,2) NOT NULL,
-    delivery_time character varying(50)
-);
-
-
---
--- Name: shipping_cost_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.shipping_cost_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: shipping_cost_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.shipping_cost_id_seq OWNED BY public.shipping_cost.id;
 
 
 --
@@ -692,7 +738,9 @@ CREATE TABLE public.users (
     email_verification_token text,
     email_verification_expires timestamp without time zone,
     password_reset_token text,
-    password_reset_expires timestamp without time zone
+    password_reset_expires timestamp without time zone,
+    deleted_at timestamp with time zone,
+    deleted_email text
 );
 
 
@@ -798,13 +846,6 @@ ALTER TABLE ONLY public.product_variants ALTER COLUMN id SET DEFAULT nextval('pu
 --
 
 ALTER TABLE ONLY public.products ALTER COLUMN id SET DEFAULT nextval('public.products_id_seq'::regclass);
-
-
---
--- Name: shipping_cost id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shipping_cost ALTER COLUMN id SET DEFAULT nextval('public.shipping_cost_id_seq'::regclass);
 
 
 --
@@ -1012,22 +1053,6 @@ ALTER TABLE ONLY public.products
 
 
 --
--- Name: shipping_cost shipping_cost_mode_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shipping_cost
-    ADD CONSTRAINT shipping_cost_mode_key UNIQUE (mode);
-
-
---
--- Name: shipping_cost shipping_cost_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shipping_cost
-    ADD CONSTRAINT shipping_cost_pkey PRIMARY KEY (id);
-
-
---
 -- Name: sizes sizes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1143,6 +1168,13 @@ CREATE INDEX idx_payments_payment_intent ON public.payments USING btree (stripe_
 
 
 --
+-- Name: idx_payments_promotion_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_payments_promotion_code ON public.payments USING btree (promotion_code);
+
+
+--
 -- Name: idx_webhook_event_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1202,14 +1234,6 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- Name: carts fk_carts_shipping; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.carts
-    ADD CONSTRAINT fk_carts_shipping FOREIGN KEY (shipping_id) REFERENCES public.shipping_cost(id) ON DELETE SET NULL;
-
-
---
 -- Name: carts fk_carts_shipping_address; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1255,14 +1279,6 @@ ALTER TABLE ONLY public.orders
 
 ALTER TABLE ONLY public.orders
     ADD CONSTRAINT orders_shipping_address_id_fkey FOREIGN KEY (shipping_address_id) REFERENCES public.addresses(id);
-
-
---
--- Name: orders orders_shipping_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orders
-    ADD CONSTRAINT orders_shipping_id_fkey FOREIGN KEY (shipping_id) REFERENCES public.shipping_cost(id) ON DELETE RESTRICT;
 
 
 --
