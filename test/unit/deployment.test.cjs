@@ -43,3 +43,28 @@ test('artifact packaging excludes secrets and the sensitive public scan', () => 
   assert.ok(source.includes('--exclude=public/products/levis/000VT-0000/passport.png'));
   assert.doesNotMatch(source, /source \.env/);
 });
+
+/** Tests actual tar exclusion behavior using fake files, e.g. a passport-named fixture is absent from the archive. */
+test('tar artifact excludes private fixtures while retaining normal product assets', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'outlierfit-package-'));
+  const fixture = path.join(directory, 'source');
+  try {
+    for (const file of ['.env.local', '.local/credential.json', '.git/config', 'public/products/levis/000VT-0000/passport.png', 'public/products/9653/1.jpg']) {
+      const filename = path.join(fixture, file);
+      fs.mkdirSync(path.dirname(filename), { recursive: true });
+      fs.writeFileSync(filename, 'synthetic test fixture, not real data');
+    }
+    const archive = path.join(directory, 'artifact.tar');
+    const result = spawnSync('tar', ['--exclude=.git', '--exclude=.env*', '--exclude=.local',
+      '--exclude=public/products/levis/000VT-0000/passport.png', '-cf', archive, '.'], {
+      cwd: fixture, env: { ...process.env, COPYFILE_DISABLE: '1' }, encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const listing = spawnSync('tar', ['-tf', archive], { encoding: 'utf8' });
+    assert.equal(listing.status, 0);
+    assert.match(listing.stdout, /public\/products\/9653\/1\.jpg/);
+    assert.doesNotMatch(listing.stdout, /passport\.png|\.env\.local|\.local\/|\.git\//);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
