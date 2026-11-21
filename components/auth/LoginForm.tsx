@@ -32,6 +32,7 @@ const EMAIL_NOT_VERIFIED_MESSAGE = "Please verify your email before signing in."
 /**
  * Login form UI and client-side submission handler.
  * Delegates auth to NextAuth credentials provider.
+ * Successful modal login clears cached guest redirects, e.g. /cart must open after signing in.
  */
 export default function LoginForm({ onSuccess, compact = false }: LoginFormProps) {
   const router = useRouter();
@@ -46,6 +47,7 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
   /**
    * Submit handler for the login form.
    * Prevents full-page reload and calls NextAuth.
+   * Refreshes auth-dependent routes before closing a modal, e.g. a prefetched /cart login redirect.
    */
   // Handles form submission when user clicks "Sign in"
   const handleSubmit = async (event: React.FormEvent) => {
@@ -96,6 +98,8 @@ export default function LoginForm({ onSuccess, compact = false }: LoginFormProps
 
     setLoading(false);
     if (onSuccess) {
+      // Client-side signIn sets cookies but does not invalidate Next's guest route cache.
+      router.refresh();
       onSuccess();
       return;
     }

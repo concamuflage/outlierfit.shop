@@ -5,7 +5,7 @@ import { useCart } from "@/components/cart/CartContext"; // useCart is a custom 
 import ItemsPanel from "@/components/cart/ItemsPanel";
 import OrderSummary from "@/components/cart/OrderSummary";
 
-/** Renders the cart drawer with cent-precision prices, e.g. $19.90 rather than $20, plus the flat US fee. */
+/** Renders cart totals without prefetching auth-dependent routes, e.g. /cart before modal login. */
 export default function CartDrawer() {
   
   // Destructure values and functions from useCart hook:
@@ -91,9 +91,10 @@ export default function CartDrawer() {
 
           <div className="border-t border-zinc-200 px-4 py-4 sm:px-6">
             <div className="mt-4 grid gap-2">
-              {/* Link to the full cart page; clicking it also closes the drawer */}
+              {/* A hidden drawer must not cache a guest /cart redirect before the customer signs in. */}
               <Link
                 href="/cart"
+                prefetch={false}
                 className="rounded-full bg-zinc-900 px-4 py-2 text-center text-sm text-white hover:bg-zinc-800"
                 onClick={closeCart}
                 data-testid="cart-drawer-view-cart"
