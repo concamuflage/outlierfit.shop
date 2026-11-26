@@ -40,6 +40,66 @@ function load(relative, mocks = {}) {
   return loaded.exports;
 }
 
+/** Distinguishes automatic Google page-view beacons from forbidden writes, e.g. POST /api/cart still fails. */
+test("production smoke discards analytics but rejects all other browser writes", async () => {
+  let contextFixture;
+  load("playwright-tests/production/fixtures.ts", {
+    "@playwright/test": {
+      /** Uses Node assertions to exercise the real fixture without starting Playwright or contacting production. */
+      expect: (actual, message) => ({
+        /** Checks the fixed production origin before installing the route guard. */
+        toBe: expected => assert.equal(actual, expected, message),
+        /** Preserves the teardown failure for any recorded application mutation. */
+        toEqual: expected => assert.deepEqual(actual, expected, message),
+      }),
+    },
+    "playwright-bdd": {
+      test: {
+        /** Captures the fixture callback for isolated route requests such as a Google collection beacon. */
+        extend: fixtures => { contextFixture = fixtures.context; return {}; },
+      },
+      /** Avoids generating or running any BDD scenarios during this guard contract check. */
+      createBdd: () => ({}),
+    },
+  });
+  const actions = [];
+  /** Drives the captured guard using fake routes, recording abort/continue without making network requests. */
+  async function exercise(requests) {
+    let intercept;
+    await contextFixture({ baseURL: "https://outlierfit.shop", context: {
+      /** Records the actual interceptor installed by the production fixture. */
+      route: async (_pattern, handler) => { intercept = handler; },
+    } }, async () => {
+      for (const [method, url] of requests) await intercept({
+        /** Supplies only method and URL, with no real browser session or request body. */
+        request: () => ({ method: () => method, url: () => url }),
+        /** Records suppression instead of transmitting a beacon or a production write. */
+        abort: async () => { actions.push("abort"); },
+        /** Records allowed read-only requests without opening a socket. */
+        continue: async () => { actions.push("continue"); },
+      });
+    });
+  }
+  await exercise([
+    ["GET", "https://outlierfit.shop/products"],
+    ["POST", "https://www.google-analytics.com/g/collect?v=2"],
+    ["POST", "https://www.google.com/g/collect?v=2"],
+  ]);
+  assert.deepEqual(actions, ["continue", "abort", "abort"]);
+  for (const [method, url] of [
+    ["POST", "https://outlierfit.shop/api/cart"],
+    ["POST", "https://outlierfit.shop/g/collect"],
+    ["POST", "https://www.google.com.example.invalid/g/collect"],
+    ["POST", "https://www.google.com/api/orders"],
+    ["DELETE", "https://www.google-analytics.com/g/collect"],
+    ["POST", "http://www.google.com/g/collect"],
+  ]) {
+    actions.length = 0;
+    await assert.rejects(exercise([[method, url]]), /Production smoke must not attempt state-changing browser requests/);
+    assert.deepEqual(actions, ["abort"]);
+  }
+});
+
 /** Covers Gmail indexing races: the original token still qualifies by time, but resend must choose its replacement. */
 test("verification resend lookup skips an invalidated original link", async () => {
   const after = Date.now();

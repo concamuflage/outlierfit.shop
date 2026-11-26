@@ -244,6 +244,10 @@ and Generic brand. These are executable Gherkin scenarios, not the old script.
 `production/` step definitions/fixtures, and never imports the staging database
 fixture. The fixture blocks non-read-only browser requests; there is no signup,
 email verification, cart modification, or test-card payment on live production.
+Google Analytics `POST /g/collect` beacons to `https://www.google-analytics.com`
+and `https://www.google.com` are aborted without failing the smoke gate, preventing
+test page views from reaching analytics. All other writes still abort and fail,
+including `POST https://outlierfit.shop/g/collect` and `POST /api/cart`.
 Existing staging `@smoke` cases that create accounts or payments are deliberately
 not included. The normal/staging config excludes `features/production/` entirely.
 
