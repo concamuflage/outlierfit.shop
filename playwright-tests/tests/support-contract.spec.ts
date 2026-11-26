@@ -3,6 +3,49 @@ import { isIP } from "node:net";
 import { assertSafeTarget, assertTestStripeKey } from "../support/testEnv";
 import { Sandbox } from "../support/sandbox";
 import { installLocalAuthClient } from "../support/fixtures";
+import { StripePage } from "../pages/StripePage";
+
+for (const collapsed of [true, false]) {
+  /** Exercises hosted Card selection offline, e.g. a collapsed iframe form opens before 4242 is entered. */
+  test(`Stripe card form ${collapsed ? "opens from the Card button" : "stays open when already expanded"} @regression`, async ({ page }) => {
+    await page.setContent('<iframe title="Synthetic hosted Checkout"></iframe>');
+    const hosted = page.frameLocator("iframe");
+    /** Mounts an isolated Checkout-shaped form; submitting increments a counter instead of contacting Stripe. */
+    await hosted.locator("body").evaluate((body, initiallyCollapsed) => {
+      body.innerHTML = `
+        ${initiallyCollapsed ? '<button type="button" id="card-choice">Card</button>' : ""}
+        <form ${initiallyCollapsed ? "hidden" : ""}>
+          <input name="cardNumber" autocomplete="cc-number">
+          <input name="cardExpiry" autocomplete="cc-exp">
+          <input name="cardCvc" autocomplete="cc-csc">
+          <input name="billingName" autocomplete="cc-name">
+          <input name="email" autocomplete="email">
+          <button type="submit">Pay</button>
+        </form>`;
+      const form = body.querySelector("form")!;
+      /** Mirrors Stripe's accordion side effect: choosing Card reveals its inputs without submitting. */
+      body.querySelector("#card-choice")?.addEventListener("click", () => {
+        form.hidden = false;
+        body.dataset.cardSelections = String(Number(body.dataset.cardSelections || 0) + 1);
+      });
+      /** Records each submit so the helper cannot silently repeat a payment click. */
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        body.dataset.submissions = String(Number(body.dataset.submissions || 0) + 1);
+      });
+    }, collapsed);
+    const stripe = new StripePage(page);
+    await stripe.fillCard("unit@example.invalid");
+    for (const [name, value] of [
+      ["cardNumber", "4242424242424242"], ["cardExpiry", "1234"], ["cardCvc", "123"],
+      ["billingName", "UI Test User"], ["email", "unit@example.invalid"],
+    ]) await expect(hosted.locator(`input[name="${name}"]`)).toHaveValue(value);
+    await expect(hosted.locator("body")).not.toHaveAttribute("data-submissions");
+    if (collapsed) await expect(hosted.locator("body")).toHaveAttribute("data-card-selections", "1");
+    await stripe.submit();
+    await expect(hosted.locator("body")).toHaveAttribute("data-submissions", "1");
+  });
+}
 
 /** Records route setup without a browser or HTTP requests, e.g. whether staging was left untouched. */
 function authRouteRecorder() {

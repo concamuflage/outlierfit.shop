@@ -1,16 +1,17 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Frame, type Locator, type Page } from "@playwright/test";
 
-/** Handles hosted Checkout's changing frame layout without stale Selenium frame references. */
+/** Handles hosted Checkout's changing frame layout, including the collapsed Card button inside its iframe. */
 export class StripePage {
   /** Uses a browser already navigated to a separately validated cs_test_ session. */
   constructor(readonly page: Page) {}
 
-  /** Finds a visible field in any current frame, e.g. cc-number in a newly mounted payment iframe. */
-  async field(selector: string): Promise<Locator> {
+  /** Finds a visible control across current frames, e.g. a cc-number selector or an exact Card button locator. */
+  async field(selector: string | ((frame: Frame) => Locator)): Promise<Locator> {
     let result: Locator | undefined;
     await expect(async () => {
       for (const frame of this.page.frames()) {
-        for (const locator of await frame.locator(selector).all()) {
+        const candidates = typeof selector === "string" ? frame.locator(selector) : selector(frame);
+        for (const locator of await candidates.all()) {
           if (await locator.isVisible()) { result = locator; return; }
         }
       }
@@ -19,10 +20,14 @@ export class StripePage {
     return result!;
   }
 
-  /** Fills only documented test-card data after the caller verifies Stripe session.livemode is false. */
+  /** Opens Card when collapsed, then fills 4242424242424242 only after the caller verifies test mode. */
   async fillCard(email: string) {
     const number = "input[name=number],input[name=cardNumber],input[autocomplete=cc-number],input[placeholder='Card number']";
-    const control = await this.field(number + ",#payment-method-accordion-item-title-card,input[type=radio][value=card]");
+    // Hosted Checkout now exposes Card as a button; retain older radio/accordion and already-open forms.
+    /** Resolves the exact Card button as well as legacy controls within each newly mounted frame. */
+    const cardControls = (frame: Frame) => frame.getByRole("button", { name: "Card", exact: true })
+      .or(frame.locator(number + ",#payment-method-accordion-item-title-card,input[type=radio][value=card]"));
+    const control = await this.field(cardControls);
     if (await control.evaluate(el => el.tagName !== "INPUT" || (el as HTMLInputElement).type === "radio")) await control.click();
     await (await this.field(number)).fill("4242424242424242");
     await (await this.field("input[name='exp-date'],input[name=cardExpiry],input[autocomplete=cc-exp]")).fill("1234");
