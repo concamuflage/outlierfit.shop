@@ -1,6 +1,6 @@
 import { expect, type Frame, type Locator, type Page } from "@playwright/test";
 
-/** Handles hosted Checkout's changing frame layout, including the collapsed Card button inside its iframe. */
+/** Handles hosted Checkout's frames, Card selection, and visible billing fields without saving Link details. */
 export class StripePage {
   /** Uses a browser already navigated to a separately validated cs_test_ session. */
   constructor(readonly page: Page) {}
@@ -20,8 +20,8 @@ export class StripePage {
     return result!;
   }
 
-  /** Opens Card when collapsed, then fills 4242424242424242 only after the caller verifies test mode. */
-  async fillCard(email: string) {
+  /** Fills test card 4242424242424242 and billing ZIP 02135 after the caller verifies test mode. */
+  async fillCard(email: string, billingZip = "02135") {
     const number = "input[name=number],input[name=cardNumber],input[autocomplete=cc-number],input[placeholder='Card number']";
     // Hosted Checkout now exposes Card as a button; retain older radio/accordion and already-open forms.
     /** Resolves the exact Card button as well as legacy controls within each newly mounted frame. */
@@ -36,6 +36,23 @@ export class StripePage {
     for (const frame of this.page.frames()) {
       const input = frame.locator("input#email,input[name=email],input[autocomplete=email]").first();
       if (await input.isVisible() && await input.isEditable()) await input.fill(email);
+    }
+    await this.fillBillingDetails(billingZip);
+  }
+
+  /** Completes US billing when displayed, e.g. ZIP 02135, and opts out of optional Link phone enrollment. */
+  async fillBillingDetails(zip: string) {
+    for (const frame of this.page.frames()) {
+      const country = frame.locator("select[name=country],select[autocomplete~='country']").first();
+      if (await country.isVisible()) await country.selectOption("US");
+    }
+    // Country selection can mount a new ZIP field; inspect fresh locators after the selection completes.
+    for (const frame of this.page.frames()) {
+      const postal = frame.locator("input[name=postalCode],input[name=billingPostalCode],input[autocomplete~='postal-code']").first();
+      if (await postal.isVisible()) await postal.fill(zip);
+      const saveDetails = frame.locator("input[name=linkOptIn],#payment-linkOptInInput")
+        .or(frame.getByRole("checkbox", { name: /^Save my info(?:rmation)?/i })).first();
+      if (await saveDetails.isVisible()) await saveDetails.uncheck();
     }
   }
 

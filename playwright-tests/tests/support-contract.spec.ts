@@ -6,7 +6,7 @@ import { installLocalAuthClient } from "../support/fixtures";
 import { StripePage } from "../pages/StripePage";
 
 for (const collapsed of [true, false]) {
-  /** Exercises hosted Card selection offline, e.g. a collapsed iframe form opens before 4242 is entered. */
+  /** Exercises Card selection and US billing offline, e.g. ZIP 02135 and no Link phone enrollment. */
   test(`Stripe card form ${collapsed ? "opens from the Card button" : "stays open when already expanded"} @regression`, async ({ page }) => {
     await page.setContent('<iframe title="Synthetic hosted Checkout"></iframe>');
     const hosted = page.frameLocator("iframe");
@@ -20,6 +20,13 @@ for (const collapsed of [true, false]) {
           <input name="cardCvc" autocomplete="cc-csc">
           <input name="billingName" autocomplete="cc-name">
           <input name="email" autocomplete="email">
+          <select name="country" autocomplete="billing country" aria-label="Country">
+            <option value="CA" selected>Canada</option>
+            <option value="US">United States</option>
+          </select>
+          <input name="postalCode" autocomplete="billing postal-code" required pattern="[0-9]{5}" hidden>
+          <label><input type="checkbox" name="linkOptIn" checked>Save my information for faster checkout</label>
+          <input name="linkMobilePhone" type="tel" required>
           <button type="submit">Pay</button>
         </form>`;
       const form = body.querySelector("form")!;
@@ -27,6 +34,17 @@ for (const collapsed of [true, false]) {
       body.querySelector("#card-choice")?.addEventListener("click", () => {
         form.hidden = false;
         body.dataset.cardSelections = String(Number(body.dataset.cardSelections || 0) + 1);
+      });
+      /** Models country-dependent ZIP mounting; selecting US exposes a required five-digit postal code. */
+      body.querySelector("select")!.addEventListener("change", () => {
+        body.querySelector<HTMLInputElement>("input[name=postalCode]")!.hidden = false;
+      });
+      /** Models Link opt-in: an unchecked save-details box removes the phone-number requirement. */
+      body.querySelector("input[name=linkOptIn]")!.addEventListener("change", event => {
+        const optedIn = (event.target as HTMLInputElement).checked;
+        const phone = body.querySelector<HTMLInputElement>("input[name=linkMobilePhone]")!;
+        phone.required = optedIn;
+        phone.hidden = !optedIn;
       });
       /** Records each submit so the helper cannot silently repeat a payment click. */
       form.addEventListener("submit", event => {
@@ -38,8 +56,11 @@ for (const collapsed of [true, false]) {
     await stripe.fillCard("unit@example.invalid");
     for (const [name, value] of [
       ["cardNumber", "4242424242424242"], ["cardExpiry", "1234"], ["cardCvc", "123"],
-      ["billingName", "UI Test User"], ["email", "unit@example.invalid"],
+      ["billingName", "UI Test User"], ["email", "unit@example.invalid"], ["postalCode", "02135"],
     ]) await expect(hosted.locator(`input[name="${name}"]`)).toHaveValue(value);
+    await expect(hosted.getByRole("combobox", { name: "Country", exact: true })).toHaveValue("US");
+    await expect(hosted.getByRole("checkbox", { name: "Save my information for faster checkout" })).not.toBeChecked();
+    await expect(hosted.locator("input[name=linkMobilePhone]")).toBeHidden();
     await expect(hosted.locator("body")).not.toHaveAttribute("data-submissions");
     if (collapsed) await expect(hosted.locator("body")).toHaveAttribute("data-card-selections", "1");
     await stripe.submit();
