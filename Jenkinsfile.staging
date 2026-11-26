@@ -1,4 +1,4 @@
-// Mirrors Jihuota: build once, deploy blue-green, smoke, publish, then promote.
+// Build once, deploy blue-green, gate promotion on Playwright regression, then publish the verified artifact.
 pipeline {
     agent any
     options { disableConcurrentBuilds(); timestamps() }
@@ -10,10 +10,15 @@ pipeline {
         stage('Build, Migrate, Package On Jenkins') { steps { sh 'bash scripts/deploy/ci.sh staging build' } }
         stage('Blue-Green Deploy On Staging VM') { steps { sh 'bash scripts/deploy/ci.sh staging deploy' } }
         stage('Health Check') { steps { sh 'bash scripts/deploy/ci.sh staging health' } }
-        stage('Post-deploy Fast UI Smoke Tests') { steps { sh 'bash scripts/deploy/ci.sh staging smoke' } }
-        stage('Post-deploy Auth Email Smoke Tests') {
-            options { timeout(time: 15, unit: 'MINUTES') }
-            steps { sh 'bash scripts/deploy/ci.sh staging auth' }
+        stage('Post-deploy Playwright Regression Tests') {
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps { sh 'bash scripts/deploy/ci.sh staging regression' }
+            post {
+                always {
+                    junit testResults: 'playwright-tests/test-results/junit.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'playwright-tests/playwright-report/**,playwright-tests/test-results/**', allowEmptyArchive: true
+                }
+            }
         }
         stage('Publish Promotable Artifact') { steps { sh 'bash scripts/deploy/ci.sh staging publish' } }
         stage('Finalize Staging Deploy') { steps { sh 'bash scripts/deploy/ci.sh staging finalize' } }

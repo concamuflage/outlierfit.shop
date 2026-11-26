@@ -38,10 +38,12 @@ function isLocalhostUrl(value) {
   }
 }
 
-/** Resolves the Next app origin; local reset links default to http://localhost:3000. */
+/** Honors explicit origins even in a production build, e.g. APP_URL=http://localhost:3000 for local reset links. */
 function getPasswordResetAppBaseUrl() {
   const explicitPasswordResetUrl = normalizeAppBaseUrl(getServerEnv("PASSWORD_RESET_APP_URL"));
   if (explicitPasswordResetUrl) return explicitPasswordResetUrl;
+  const explicitAppUrl = normalizeAppBaseUrl(getServerEnv("APP_URL"));
+  if (explicitAppUrl) return explicitAppUrl;
 
   const fallbackUrls = [
     normalizeAppBaseUrl(getServerEnv("CLIENT_ORIGIN")),

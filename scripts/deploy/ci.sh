@@ -54,14 +54,29 @@ case "$action" in
     [ "$healthy" = 1 ] || { echo "Public HTTPS health check failed for $domain" >&2; exit 1; }
     ;;
   smoke)
-    export PLAYWRIGHT_BASE_URL="https://$domain"
-    node scripts/deploy/smoke.cjs
+    [ "$environment" = production ] || { echo 'Production smoke features require production' >&2; exit 2; }
+    rm -rf -- playwright-tests/test-results-production playwright-tests/playwright-report-production
+    (cd playwright-tests && npm ci --include=dev --no-audit --no-fund)
+    # This config pins the public production origin and has no database, mail, or Stripe credentials/fixtures.
+    CI=1 HTTP_PROXY= HTTPS_PROXY= ALL_PROXY= NO_PROXY='*' \
+      http_proxy= https_proxy= all_proxy= no_proxy='*' \
+      npm --prefix playwright-tests run test:smoke:production
     ;;
-  auth|full)
-    test -d test/ui
-    ssh "${ssh_options[@]}" -N -L 15432:127.0.0.1:5432 "$ssh_target" &
-    tunnel=$!; trap 'kill "$tunnel" 2>/dev/null || true' EXIT
-    node scripts/deploy/auth-smoke.mjs "$environment" "$domain" "$action"
+  regression)
+    [ "$environment" = staging ] || { echo 'Playwright regression is staging-only' >&2; exit 2; }
+    # Failed setup must not publish an old successful report from this Jenkins workspace.
+    rm -rf -- playwright-tests/test-results playwright-tests/playwright-report
+    (cd playwright-tests && npm ci --include=dev --no-audit --no-fund)
+    ssh "${ssh_options[@]}" -o ExitOnForwardFailure=yes -N -L 127.0.0.1:15432:127.0.0.1:5432 "$ssh_target" &
+    tunnel=$!; trap 'kill "$tunnel" 2>/dev/null || true; wait "$tunnel" 2>/dev/null || true' EXIT
+    ready=0
+    for attempt in $(seq 1 20); do
+      kill -0 "$tunnel" 2>/dev/null || { echo 'Staging database tunnel exited' >&2; exit 1; }
+      if node -e 'const s=require("net").connect(15432,"127.0.0.1",()=>{s.end();process.exit(0)});s.on("error",()=>process.exit(1))'; then ready=1; break; fi
+      sleep 1
+    done
+    [ "$ready" = 1 ] || { echo 'Staging database tunnel did not become ready' >&2; exit 1; }
+    node scripts/deploy/playwright-regression.mjs
     ;;
   publish)
     install -d "$artifact_root/$sha"

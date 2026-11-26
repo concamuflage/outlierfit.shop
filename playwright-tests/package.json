@@ -4,12 +4,38 @@
   "private": true,
   "scripts": {
     "install:browsers": "playwright install",
+    "bddgen": "bddgen",
+    "pretest": "bddgen",
     "test": "playwright test",
+    "pretest:smoke": "bddgen",
+    "test:smoke": "playwright test --grep @smoke",
+    "pretest:smoke:production": "bddgen --config playwright.production.config.ts",
+    "test:smoke:production": "playwright test --config playwright.production.config.ts",
+    "pretest:regression": "bddgen",
+    "test:regression": "playwright test --grep @regression --grep-invert '@payment|@mail|@dev-only'",
+    "pretest:regression:staging": "PLAYWRIGHT_STAGING_REGRESSION=1 bddgen",
+    "test:regression:staging": "PLAYWRIGHT_STAGING_REGRESSION=1 playwright test --workers=3",
+    "pretest:mail": "bddgen",
+    "test:mail": "playwright test --grep @mail",
+    "pretest:payment": "bddgen",
+    "test:payment": "playwright test --grep @payment",
+    "typecheck": "tsc --noEmit",
+    "pretest:headed": "bddgen",
     "test:headed": "playwright test --headed",
+    "pretest:ui": "bddgen",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.15.6",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.2.3",
+    "pg": "^8.17.1",
+    "playwright-bdd": "^9.2.1",
+    "stripe": "^18.5.0",
+    "typescript": "^5",
+    "undici": "^6.23.0"
   }
 }

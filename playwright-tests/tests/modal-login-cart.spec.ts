@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/fixtures";
 
-// Use only a dedicated verified test account; this regression never edits a cart or starts a payment.
+// Each run gets a disposable verified account; it never edits a cart or starts a payment.
 test.use({ headless: true, channel: "chrome" });
 
 for (const viewport of [
@@ -8,10 +8,7 @@ for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
 ]) {
   /** Reproduces guest navigation then modal login; View cart must open /cart, not its cached login redirect. */
-  test(`modal login opens the cart from the drawer on ${viewport.name}`, async ({ page }) => {
-    const email = process.env.TEST_USER_EMAIL;
-    const password = process.env.TEST_USER_PASSWORD;
-    test.skip(!email || !password, "Requires a dedicated verified TEST_USER_EMAIL and TEST_USER_PASSWORD.");
+  test(`modal login opens the cart from the drawer on ${viewport.name} @smoke @regression`, async ({ page, account }) => {
     await page.setViewportSize(viewport);
 
     // Establish the negative control before exercising the same browser after login.
@@ -20,8 +17,8 @@ for (const viewport of [
     await page.goto("/products", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     const form = page.locator("form").filter({ has: page.locator("input[type=email]") });
-    await form.locator("input[type=email]").fill(email!);
-    await form.locator("input[type=password]").fill(password!);
+    await form.locator("input[type=email]").fill(account.email);
+    await form.locator("input[type=password]").fill(account.password);
     await form.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
 

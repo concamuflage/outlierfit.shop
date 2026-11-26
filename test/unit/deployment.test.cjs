@@ -5,6 +5,89 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
 
+/** Ensures production uses safe tagged Gherkin features, not the removed standalone or Java smoke runners. */
+test('production promotion runs only production-safe Playwright smoke features before finalization', () => {
+  const root = path.resolve(__dirname, '../..');
+  const pipeline = fs.readFileSync(path.join(root, 'Jenkinsfile'), 'utf8');
+  assert.ok(pipeline.indexOf('production smoke') > pipeline.indexOf('production deploy'));
+  assert.ok(pipeline.indexOf('production smoke') < pipeline.indexOf('production finalize'));
+  assert.doesNotMatch(pipeline, /production auth|mvn\b/);
+  assert.match(pipeline, /test-results-production\/junit\.xml/);
+  const ci = fs.readFileSync(path.join(root, 'scripts/deploy/ci.sh'), 'utf8');
+  assert.match(ci, /run test:smoke:production/);
+  assert.doesNotMatch(ci, /auth-smoke\.mjs|smoke\.cjs/);
+  for (const filename of ['scripts/deploy/smoke.cjs', 'scripts/deploy/auth-smoke.mjs']) {
+    assert.equal(fs.existsSync(path.join(root, filename)), false);
+  }
+  const config = fs.readFileSync(path.join(root, 'playwright-tests/playwright.production.config.ts'), 'utf8');
+  assert.match(config, /features\/production\/\*\.feature/);
+  assert.match(config, /baseURL: "https:\/\/outlierfit\.shop"/);
+  assert.doesNotMatch(config, /support\/fixtures|support\/bdd|TEST_DATABASE_URL/);
+  const fixtures = fs.readFileSync(path.join(root, 'playwright-tests/production/fixtures.ts'), 'utf8');
+  assert.match(fixtures, /\["GET", "HEAD", "OPTIONS"\]/);
+  assert.match(fixtures, /route\.abort/);
+  const scripts = JSON.parse(fs.readFileSync(path.join(root, 'playwright-tests/package.json'), 'utf8')).scripts;
+  assert.match(scripts['test:smoke:production'], /--config playwright\.production\.config\.ts$/);
+  // Let the dedicated config require BOTH tags; a CLI --grep would override its production-safe filter.
+  assert.doesNotMatch(scripts['test:smoke:production'], /--grep/);
+  assert.match(config, /grep:.*@smoke.*@production-safe/);
+});
+
+/** Checks the complete staging gate environment without Secret Manager access or any browser/payment actions. */
+test('Playwright regression is pinned to staging test mode and its tunneled database', async () => {
+  const { buildStagingRegressionEnv } = await import('../../scripts/deploy/playwright-regression.mjs');
+  const runtime = {
+    APP_URL: 'https://staging.outlierfit.shop', NEXTAUTH_URL: 'https://staging.outlierfit.shop',
+    PGDATABASE: 'outlierfit_staging', PGUSER: 'unit-user', PGPASSWORD: 'unit:$password@',
+    STRIPE_SECRET_KEY: 'sk_test_unit', RESEND_FROM_EMAIL: 'unit@example.invalid',
+  };
+  const ci = { GMAIL_ACCESS_TOKEN: 'unit-token', STRIPE_SECRET_KEY: 'sk_live_ignored', TEST_DATABASE_URL: 'postgresql://wrong/database' };
+  const env = buildStagingRegressionEnv(runtime, ci, { HTTPS_PROXY: 'http://wrong-proxy.invalid', PLAYWRIGHT_BASE_URL: 'https://outlierfit.shop' });
+  assert.equal(env.PLAYWRIGHT_BASE_URL, 'https://staging.outlierfit.shop');
+  assert.equal(env.PLAYWRIGHT_STAGING_REGRESSION, '1');
+  assert.equal(env.STRIPE_SECRET_KEY, 'sk_test_unit');
+  const db = new URL(env.TEST_DATABASE_URL);
+  assert.equal(db.hostname, '127.0.0.1');
+  assert.equal(db.port, '15432');
+  assert.equal(db.pathname, '/outlierfit_staging');
+  assert.equal(decodeURIComponent(db.password), runtime.PGPASSWORD);
+  assert.equal(env.RUN_MAIL_TESTS, '1');
+  assert.equal(env.RUN_PAYMENT_TESTS, '1');
+  assert.equal(env.RUN_MOCK_PAYMENT_TESTS, '0');
+  assert.equal(env.NO_PROXY, '*');
+  assert.equal(env.HTTPS_PROXY, '');
+  for (const [changes, message] of [
+    [{ PGDATABASE: 'outlierfit_production' }, /staging database/],
+    [{ STRIPE_SECRET_KEY: 'sk_live_unit' }, /test-mode key/],
+    [{ APP_URL: 'https://outlierfit.shop' }, /staging origin/],
+    [{ EMAIL_VERIFICATION_APP_URL: 'http://localhost:3000' }, /staging origin/],
+  ]) assert.throws(() => buildStagingRegressionEnv({ ...runtime, ...changes }, ci, {}), message);
+  assert.throws(() => buildStagingRegressionEnv(runtime, {}, {}), /Gmail credentials/);
+});
+
+/** Ensures regression, rather than Java/smoke, gates staging publication; production's pipeline is a separate file. */
+test('staging deployment publishes artifacts only after the Playwright regression gate', () => {
+  const root = path.resolve(__dirname, '../..');
+  const pipeline = fs.readFileSync(path.join(root, 'Jenkinsfile.staging'), 'utf8');
+  assert.match(pipeline, /ci\.sh staging regression/);
+  assert.doesNotMatch(pipeline, /ci\.sh staging (smoke|auth|full)\b|mvn\b/);
+  assert.ok(pipeline.indexOf('staging regression') > pipeline.indexOf('staging deploy'));
+  assert.ok(pipeline.indexOf('staging regression') < pipeline.indexOf('staging publish'));
+  assert.match(pipeline, /playwright-tests\/test-results\/junit\.xml/);
+  assert.match(pipeline, /archiveArtifacts/);
+  const scripts = JSON.parse(fs.readFileSync(path.join(root, 'playwright-tests/package.json'), 'utf8')).scripts;
+  assert.match(scripts['test:regression:staging'], /PLAYWRIGHT_STAGING_REGRESSION=1/);
+  assert.match(scripts['test:regression:staging'], /--workers=3/);
+  assert.equal(scripts['pretest:regression:staging'], 'PLAYWRIGHT_STAGING_REGRESSION=1 bddgen');
+  // Per-project filters must not be overridden by a command-wide grep-invert, which could duplicate mail scenarios.
+  assert.doesNotMatch(scripts['test:regression:staging'], /--grep/);
+  const config = fs.readFileSync(path.join(root, 'playwright-tests/playwright.config.ts'), 'utf8');
+  assert.match(config, /name: "chromium-ui"[\s\S]*?fullyParallel: true,[\s\S]*?workers: 3/);
+  for (const project of ['chromium-external', 'api', 'support']) {
+    assert.match(config, new RegExp(`name: "${project}"[\\s\\S]*?workers: 1`));
+  }
+});
+
 /** Checks private env serialization, e.g. a dollar sign remains data rather than executable shell syntax. */
 test('deployment environment files are private and reject multiline entries', async () => {
   const { writeEnv } = await import('../../scripts/deploy/secret-env.mjs');

@@ -1,69 +1,48 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { parse } from "dotenv";
 
-const loadedValues = new Map<string, string>();
+const filename = path.resolve(__dirname, "../../.env.local");
+const local = fs.existsSync(filename) ? parse(fs.readFileSync(filename)) : {};
 
-function stripWrappingQuotes(value: string) {
-  if (value.length < 2) return value;
-
-  const wrappedInDoubleQuotes = value.startsWith("\"") && value.endsWith("\"");
-  const wrappedInSingleQuotes = value.startsWith("'") && value.endsWith("'");
-  return wrappedInDoubleQuotes || wrappedInSingleQuotes ? value.slice(1, -1) : value;
-}
-
-function loadEnvFile(filePath: string) {
-  if (!fs.existsSync(filePath)) return;
-
-  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-
-    const separatorIndex = line.indexOf("=");
-    if (separatorIndex <= 0) continue;
-
-    const key = line.slice(0, separatorIndex).trim();
-    const value = stripWrappingQuotes(line.slice(separatorIndex + 1).trim());
-    loadedValues.set(key, value);
-  }
-}
-
-/** Finds the project root from the test module, then reads only root .env.local. */
-function loadLocalEnv() {
-  const projectRoot = path.resolve(__dirname, "../..");
-  loadEnvFile(path.join(projectRoot, ".env.local"));
-}
-
-loadLocalEnv();
-
+/** Reads the root env file with process overrides, e.g. PGPORT=5433 supplied by CI wins. */
 export function envValue(name: string, fallback?: string) {
-  return process.env[name] || loadedValues.get(name) || fallback;
+  return process.env[name] || local[name] || fallback;
 }
 
+/** Requires a setting without logging its value, e.g. missing PGPASSWORD fails before fixture writes. */
 export function requiredEnvValue(name: string) {
   const value = envValue(name);
-  if (!value) {
-    throw new Error(`Missing required environment value: ${name}`);
-  }
+  if (!value) throw new Error(`Missing required environment value: ${name}`);
   return value;
 }
 
+/** Blocks production and lookalike hosts; e.g. only localhost or the exact HTTPS staging hostname is allowed. */
+export function assertSafeTarget(value: string) {
+  const url = new URL(value);
+  const localHost = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if ((!localHost && !(url.hostname === "staging.outlierfit.shop" && url.protocol === "https:")) ||
+      url.username || url.password || !["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Tests may target only localhost or https://staging.outlierfit.shop, never production.");
+  }
+  return url.origin;
+}
+
+/** Rejects live or missing keys before payment actions, e.g. rk_live_* is never accepted on localhost. */
+export function assertTestStripeKey(key: string) {
+  if (!/^[sr]k_test_.+/.test(key)) throw new Error("Payment tests require a test-mode Stripe key; live keys are forbidden.");
+  return key;
+}
+
+/** Returns the configured sender for delivered-mail assertions, e.g. a verified Resend sender address. */
 export function expectedResendFromEmail() {
   return requiredEnvValue("RESEND_FROM_EMAIL");
 }
 
-export function generateGmailAlias(email: string) {
-  const atIndex = email.indexOf("@");
-  if (atIndex <= 0) {
-    throw new Error(`Signup email must be valid: ${email}`);
-  }
-
-  const localPart = email.slice(0, atIndex);
-  const domain = email.slice(atIndex + 1);
-  if (domain.toLowerCase() !== "gmail.com") {
-    throw new Error("Generated signup email uses Gmail plus-addressing, so the base email must be a Gmail address.");
-  }
-
-  return `${localPart}+ui${randomUUID().replaceAll("-", "")}@gmail.com`;
+/** Generates an owned alias, e.g. name+pw<UUID>@gmail.com, rather than reusing a personal account. */
+export function generateGmailAlias(email = envValue("TEST_EMAIL_BASE", "concamuflage@gmail.com")!) {
+  const [name, domain] = email.split("@");
+  if (!name || domain?.toLowerCase() !== "gmail.com") throw new Error("TEST_EMAIL_BASE must be a Gmail address.");
+  return `${name}+pw${randomUUID().replaceAll("-", "")}@${domain}`;
 }

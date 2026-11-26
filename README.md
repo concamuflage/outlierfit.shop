@@ -70,12 +70,58 @@ The staging job polls that branch every five minutes, so Jenkins need not expose
 an unauthenticated public webhook endpoint.
 
 - `Jenkinsfile.staging`: checkout; build/migrate/package; blue-green deployment;
-  health check; fast headless UI smoke; serial signup/login email smoke; publish
+  health check; Playwright regression (UI and API); publish
   the verified artifact; finalize; optionally trigger production.
 - `Jenkinsfile`: promote the exact staging-tested commit and checksum-verified
-  artifact; migrate production; deploy; health/UI/email smoke; finalize.
-- `Jenkinsfile.staging.full-tests`: manually run the serial non-payment staging
-  UI suite. Payment and synthetic webhook API scenarios are deliberately separate.
+  artifact; migrate production; deploy; health check; tagged Playwright smoke
+  features against production; finalize. Failure rolls back the app backend.
+- `Jenkinsfile.staging.full-tests`: manually run the same staging Playwright
+  regression gate without deployment or promotion.
+
+Staging's post-deployment test gate runs only Playwright `@regression` cases,
+excluding `@dev-only` mock checkout. It includes real email and Stripe test-mode
+flows and runs on Jenkins against `https://staging.outlierfit.shop`. Ordinary UI
+scenarios run in parallel with up to three workers. Email/payment scenarios, API
+tests, and support checks each use a separate single-worker project, with a total
+limit of three workers across the run. The combined report includes each test once.
+The old standalone UI smoke and Java auth runners no longer run in staging jobs.
+Build-time Node unit checks are unchanged. Production uses the separate
+`playwright.production.config.ts` and `features/production/smoke.feature`.
+Jenkins selects `@smoke` feature scenarios against `https://outlierfit.shop`,
+covering catalog/photos, product details, and shipping/returns. The config loads
+only production-safe steps, without DB fixtures or email/payment credentials;
+its browser fixture blocks state-changing requests. Existing signup/payment smoke
+tags remain available for staging, not live production. The standalone smoke
+script and Java auth/email smoke runner have been removed from deployment.
+Production reports are archived under `playwright-report-production/` and
+`test-results-production/`, with JUnit results visible in the Jenkins build.
+`scripts/deploy/ci.sh staging regression` installs the test package, opens a
+temporary private DB tunnel, and calls `scripts/deploy/playwright-regression.mjs`.
+The runner reads only staging and CI secrets, requires `outlierfit_staging` and a
+test-mode Stripe key, enables mail/payment cases, and disables local proxy settings.
+The Jenkins VM must have Chrome installed; Gmail OAuth settings remain in
+`outlierfit-ci-env`, not committed files. Staging's configured Stripe webhook must
+deliver real test events to that staging app.
+
+Jenkins publishes JUnit results under each build's **Test Result** and archives
+`playwright-tests/playwright-report/` plus failure artifacts under **Artifacts**.
+Those artifacts can contain test-account links and must remain authenticated.
+Failed regression stops artifact publication/promotion and rolls staging back.
+For example, the manual suite can be rerun through its existing Jenkins job, but
+it still shares staging's public IP rate limits; do not overlap it with a deploy.
+
+Jenkins is available at https://jenkins.outlierfit.shop while its VM is running.
+Sign in with the existing private Jenkins account, then open, for example,
+`/job/outlierfit-staging/3/console` to inspect that build's output.
+Nginx terminates HTTPS; Jenkins itself remains on `127.0.0.1:8080`.
+Anonymous access is disabled, login submissions are rate limited, and the public
+HTTP CLI is blocked. `scripts/deploy/setup-jenkins-web.sh` installs the gateway
+from `scripts/deploy/jenkins-nginx.conf`; its Cloudflare DNS credential stays
+root-only and outside the repository. The reserved Jenkins IP keeps DNS stable
+across VM restarts. The link is unavailable when the Jenkins VM is stopped.
+Its DNS A record points to `34.170.47.211`, reserved as `outlierfit-jenkins-ip`
+in `us-central1`. The `outlierfit-jenkins-https` firewall rule exposes only ports
+80/443 on the Jenkins VM; it does not expose the controller's port 8080.
 
 For example, a release is stored in `/opt/outlierfit/releases/<commit SHA>`.
 Nginx switches to its inactive port only after the catalog endpoint is healthy;
@@ -89,8 +135,8 @@ Runtime identities can read only their own environment and private image bucket.
 The root-only certificate credential is separate from application secrets.
 Never commit `.env.local`, `.local/`, admin credentials, or private SSH keys.
 
-Both sites initially use **Stripe test mode**. Switching to real payments needs
-live-mode keys and separate live-mode webhook endpoints/secrets. Catalog data
+Staging uses **Stripe test mode**; production uses its separate **live-mode**
+API key and webhook signing secret in `outlierfit-production-env`. Catalog data
 and registered product photos are imported once, independently of schema
 migrations; redeployments do not reset inventory or copy dev users/orders.
 

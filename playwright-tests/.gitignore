@@ -1,5 +1,9 @@
 node_modules/
 playwright-report/
 test-results/
+.features-gen/
+.features-gen-production/
+playwright-report-production/
+test-results-production/
 .env
 .env.local

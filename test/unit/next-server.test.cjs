@@ -40,6 +40,75 @@ function load(relative, mocks = {}) {
   return loaded.exports;
 }
 
+/** Covers Gmail indexing races: the original token still qualifies by time, but resend must choose its replacement. */
+test("verification resend lookup skips an invalidated original link", async () => {
+  const after = Date.now();
+  const original = "http://localhost:3000/verify-email?email=unit%40example.invalid&token=original";
+  const replacement = "http://localhost:3000/verify-email?email=unit%40example.invalid&token=replacement";
+  /** Satisfies dispatcher construction without sockets, proxy configuration, or real Google requests. */
+  class OfflineDispatcher {}
+  const mail = load("playwright-tests/support/gmailVerificationClient.ts", {
+    undici: {
+      Agent: OfflineDispatcher,
+      ProxyAgent: OfflineDispatcher,
+      /** Returns the original message first even though the replacement exists, matching a stale Gmail listing. */
+      fetch: async url => {
+        const pathname = new URL(url).pathname;
+        if (pathname.endsWith("/messages")) return Response.json({ messages: [{ id: "old" }, { id: "new" }] });
+        const isOriginal = pathname.endsWith("/old");
+        return Response.json({
+          // The original is deliberately inside the lookup's two-second clock tolerance.
+          internalDate: String(after + (isOriginal ? -500 : 100)),
+          payload: { body: { data: Buffer.from(isOriginal ? original : replacement).toString("base64url") } },
+        });
+      },
+    },
+    "./testEnv": {
+      /** Uses helper defaults only, without reading the developer's env file or credentials. */
+      envValue: (_key, fallback) => fallback,
+      /** Supplies a fake access token that is only passed to the in-memory fetch above. */
+      requiredEnvValue: () => "unit-access-token",
+    },
+  });
+  assert.equal((await mail.findMail("unit@example.invalid", "verification", after)).link, original);
+  assert.equal((await mail.findMail("unit@example.invalid", "verification", after, [original])).link, replacement);
+});
+
+/** Keeps configured local/staging/production links on their own server, including local NODE_ENV=production builds. */
+test("email and invoice links honor explicit APP_URL in every build mode", () => {
+  const original = process.env.NODE_ENV;
+  try {
+    for (const mode of ["production", "development"]) {
+      process.env.NODE_ENV = mode;
+      for (const origin of ["http://localhost:3000", "https://staging.outlierfit.shop", "https://outlierfit.shop"]) {
+        const settings = { APP_URL: `${origin}/` };
+        /** Supplies only synthetic origins; no root env credentials, email transport, or network is used. */
+        const getServerEnv = key => settings[key];
+        const verification = load("backend/services/emailVerification.js", { "../env": { getServerEnv } });
+        const reset = load("backend/services/passwordReset.js", { "../env": { getServerEnv } });
+        const invoice = load("lib/server/invoiceEmail.ts", { "@/backend/env": { getServerEnv } });
+        assert.equal(new URL(verification.buildVerificationLink("unit@example.invalid", "unit-token")).origin, origin);
+        assert.equal(new URL(reset.buildPasswordResetLink("unit@example.invalid", "unit-token")).origin, origin);
+        assert.equal(invoice.buildInvoicePdfLink(1), `${origin}/api/profile/orders/1/invoice/pdf`);
+      }
+    }
+    const settings = {
+      APP_URL: "http://localhost:3000",
+      EMAIL_VERIFICATION_APP_URL: "http://localhost:3100",
+      PASSWORD_RESET_APP_URL: "http://localhost:3200",
+    };
+    /** Preserves service-specific overrides, e.g. reset mail may explicitly target localhost:3200. */
+    const getServerEnv = key => settings[key];
+    const verification = load("backend/services/emailVerification.js", { "../env": { getServerEnv } });
+    const reset = load("backend/services/passwordReset.js", { "../env": { getServerEnv } });
+    assert.equal(new URL(verification.buildVerificationLink("unit@example.invalid", "unit-token")).origin, "http://localhost:3100");
+    assert.equal(new URL(reset.buildPasswordResetLink("unit@example.invalid", "unit-token")).origin, "http://localhost:3200");
+  } finally {
+    if (original === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = original;
+  }
+});
+
 /** Builds dispatch fixtures; e.g. a verified login clears the existing rate-limit bucket. */
 function dispatcher() {
   return load("lib/server/storeApi.ts", {

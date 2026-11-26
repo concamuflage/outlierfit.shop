@@ -38,10 +38,12 @@ function isLocalhostUrl(value) {
   }
 }
 
-/** Resolves the Next app origin; local links default to http://localhost:3000. */
+/** Honors explicit origins even in a production build, e.g. APP_URL=http://localhost:3000 for local UI tests. */
 function getVerificationAppBaseUrl() {
   const explicitEmailUrl = normalizeAppBaseUrl(getServerEnv("EMAIL_VERIFICATION_APP_URL"));
   if (explicitEmailUrl) return explicitEmailUrl;
+  const explicitAppUrl = normalizeAppBaseUrl(getServerEnv("APP_URL"));
+  if (explicitAppUrl) return explicitAppUrl;
 
   const fallbackUrls = [
     normalizeAppBaseUrl(getServerEnv("CLIENT_ORIGIN")),

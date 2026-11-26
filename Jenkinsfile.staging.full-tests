@@ -1,13 +1,19 @@
-// Explicit staging test job; it does not deploy or promote a release.
+// Explicit Playwright regression job against staging; it does not deploy or promote a release.
 pipeline {
     agent any
     options { disableConcurrentBuilds(); timestamps() }
     environment { HOME = '/var/lib/jenkins' }
     stages {
         stage('Checkout') { steps { checkout scm } }
-        stage('Full Staging UI Feature Tests') {
+        stage('Staging Playwright Regression Tests') {
             options { timeout(time: 30, unit: 'MINUTES') }
-            steps { sh 'bash scripts/deploy/ci.sh staging full' }
+            steps { sh 'bash scripts/deploy/ci.sh staging regression' }
+            post {
+                always {
+                    junit testResults: 'playwright-tests/test-results/junit.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'playwright-tests/playwright-report/**,playwright-tests/test-results/**', allowEmptyArchive: true
+                }
+            }
         }
     }
 }

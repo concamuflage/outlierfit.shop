@@ -20,12 +20,12 @@ function isLocalhostUrl(value: string) {
   }
 }
 
-// Determines the base URL for invoice links based on environment variables
-// In production: prefers non-localhost URLs, falls back to a constant
-// In development: uses the first available URL or localhost
+/** Uses explicit APP_URL even for local production builds, e.g. http://localhost:3000/api/profile/orders/1/invoice/pdf. */
 function getInvoiceAppBaseUrl() {
+  const explicitAppUrl = normalizeAppBaseUrl(getServerEnv("APP_URL"));
+  if (explicitAppUrl) return explicitAppUrl;
+
   const fallbackUrls = [
-    normalizeAppBaseUrl(process.env.APP_URL),
     normalizeAppBaseUrl(process.env.NEXTAUTH_URL),
     normalizeAppBaseUrl(process.env.CLIENT_ORIGIN),
   ].filter(Boolean);

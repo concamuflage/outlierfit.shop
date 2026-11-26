@@ -1,4 +1,4 @@
-// Promotes the exact staging-tested artifact; production never repeats npm ci or next build.
+// Promotes the exact staging-tested app artifact; only smoke-test dependencies are installed on Jenkins.
 pipeline {
     agent any
     options { disableConcurrentBuilds(); timestamps() }
@@ -19,10 +19,15 @@ pipeline {
         }
         stage('Promote Artifact And Migrate Production') { steps { sh 'bash scripts/deploy/ci.sh production deploy' } }
         stage('Health Check') { steps { sh 'bash scripts/deploy/ci.sh production health' } }
-        stage('Post-deploy Fast UI Smoke Tests') { steps { sh 'bash scripts/deploy/ci.sh production smoke' } }
-        stage('Post-deploy Auth Email Smoke Tests') {
-            options { timeout(time: 15, unit: 'MINUTES') }
-            steps { sh 'bash scripts/deploy/ci.sh production auth' }
+        stage('Post-deploy Playwright Smoke Features') {
+            options { timeout(time: 10, unit: 'MINUTES') }
+            steps { sh 'bash scripts/deploy/ci.sh production smoke' }
+            post {
+                always {
+                    junit testResults: 'playwright-tests/test-results-production/junit.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'playwright-tests/playwright-report-production/**,playwright-tests/test-results-production/**', allowEmptyArchive: true
+                }
+            }
         }
         stage('Finalize Production Deploy') { steps { sh 'bash scripts/deploy/ci.sh production finalize' } }
     }
