@@ -56,7 +56,12 @@ case "$action" in
   smoke)
     [ "$environment" = production ] || { echo 'Production smoke features require production' >&2; exit 2; }
     rm -rf -- playwright-tests/test-results-production playwright-tests/playwright-report-production
-    (cd playwright-tests && npm ci --include=dev --no-audit --no-fund)
+    (
+      cd playwright-tests
+      npm ci --include=dev --no-audit --no-fund
+      # Installed Chrome is not enough: failure-video capture requires this Playwright version's cached FFmpeg.
+      npx playwright install ffmpeg
+    )
     # This config pins the public production origin and has no database, mail, or Stripe credentials/fixtures.
     CI=1 HTTP_PROXY= HTTPS_PROXY= ALL_PROXY= NO_PROXY='*' \
       http_proxy= https_proxy= all_proxy= no_proxy='*' \
@@ -66,7 +71,12 @@ case "$action" in
     [ "$environment" = staging ] || { echo 'Playwright regression is staging-only' >&2; exit 2; }
     # Failed setup must not publish an old successful report from this Jenkins workspace.
     rm -rf -- playwright-tests/test-results playwright-tests/playwright-report
-    (cd playwright-tests && npm ci --include=dev --no-audit --no-fund)
+    (
+      cd playwright-tests
+      npm ci --include=dev --no-audit --no-fund
+      # Run as the Jenkins user so FFmpeg lands in the same browser cache the test workers read.
+      npx playwright install ffmpeg
+    )
     ssh "${ssh_options[@]}" -o ExitOnForwardFailure=yes -N -L 127.0.0.1:15432:127.0.0.1:5432 "$ssh_target" &
     tunnel=$!; trap 'kill "$tunnel" 2>/dev/null || true; wait "$tunnel" 2>/dev/null || true' EXIT
     ready=0

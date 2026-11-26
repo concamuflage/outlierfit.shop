@@ -142,6 +142,22 @@ migrations; redeployments do not reset inventory or copy dev users/orders.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Sitemap
+
+`npm run build` runs `next-sitemap` after building the app. The sitemap includes
+public pages and one URL per product returned by the storefront catalog, for
+example product ID `13` becomes `https://outlierfit.shop/products/13`. Account,
+authentication, cart, checkout, admin, and API routes are excluded. Product names
+are not used as URL slugs. The generator needs the normal PostgreSQL settings
+and closes its build-time connection; a failed catalog query fails generation
+instead of silently omitting all products. No running HTTP app is required.
+
+Generated `public/sitemap*.xml` and `public/robots.txt` remain gitignored build
+artifacts. Rebuild and deploy to update the public sitemap, then resubmit
+`https://outlierfit.shop/sitemap.xml` in Search Console. Removing a URL from the
+sitemap is not an authentication or deindexing mechanism; existing route guards
+remain unchanged.
+
 ## Private Product Photos
 
 The Next.js server reads catalog photos from a private Google Cloud Storage bucket

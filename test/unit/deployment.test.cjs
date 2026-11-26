@@ -5,6 +5,18 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
 
+/** Both browser gates need Playwright's versioned FFmpeg cache, e.g. ffmpeg-1011, even with system Chrome installed. */
+test('Jenkins installs FFmpeg after package dependencies before either browser suite', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../scripts/deploy/ci.sh'), 'utf8');
+  for (const action of ['smoke', 'regression']) {
+    const section = source.split(`  ${action})`)[1].split('\n    ;;')[0];
+    const install = section.indexOf('npx playwright install ffmpeg');
+    assert.ok(install > section.indexOf('npm ci --include=dev'));
+    const run = action === 'smoke' ? section.indexOf('run test:smoke:production') : section.indexOf('node scripts/deploy/playwright-regression.mjs');
+    assert.ok(run > install);
+  }
+});
+
 /** Ensures production uses safe tagged Gherkin features, not the removed standalone or Java smoke runners. */
 test('production promotion runs only production-safe Playwright smoke features before finalization', () => {
   const root = path.resolve(__dirname, '../..');

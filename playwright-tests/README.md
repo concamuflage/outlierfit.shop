@@ -218,7 +218,11 @@ unit checks are unchanged. The manual
 
 The wrapper installs this package's pinned dependencies, uses the Jenkins VM's
 installed Chrome, reads `outlierfit-staging-env` and `outlierfit-ci-env` in memory,
-and connects fixtures to the staging DB through an SSH tunnel. It rejects a live
+and installs Playwright's matching FFmpeg binary using `npx playwright install ffmpeg`.
+Chrome alone does not supply the versioned FFmpeg cache used by failure-video
+recording. Both staging regression and production smoke install it as the Jenkins
+user after `npm ci`; a missing/download-failed binary stops setup before tests.
+The wrapper connects fixtures to the staging DB through an SSH tunnel. It rejects a live
 Stripe key, production DB, or wrong configured origin, and disables proxies.
 No local dev credentials are uploaded. Jenkins collects JUnit and HTML reports,
 including failed-test artifacts, before any promotion can proceed. Keep artifacts
